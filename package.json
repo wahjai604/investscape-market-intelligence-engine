@@ -1,0 +1,35 @@
+{
+  "name": "@investscape/market-intelligence-engine",
+  "version": "0.1.0",
+  "description": "Market Intelligence & Statistical Risk engines (Phase 1) for InvestScape.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "directories": {
+    "test": "__tests__"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "PROPRIETARY",
+  "licenseText": "© 2026 Lighthouse Research Ltd. Proprietary software. See LICENSE file.",
+  "type": "commonjs",
+  "dependencies": {
+    "@investscape/calc-engine": "file:../investscape-calc-engine",
+    "@investscape/economic-engine": "file:../investscape-economic-engine"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.1.2",
+    "jest": "^30.4.2",
+    "ts-jest": "^29.4.12",
+    "typescript": "^5.9.3"
+  }
+}
