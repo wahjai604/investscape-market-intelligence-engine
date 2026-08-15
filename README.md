@@ -13,7 +13,7 @@ Two engines, in one package:
 
 Plus a headless visualization adapter layer (`src/visualization/`) converting domain outputs into ApexCharts/ApexMaps-ready view models, with no UI library dependency.
 
-**This is Phase 1.** Forecasting, regression, Monte Carlo simulation, probability-of-threshold, prediction intervals, and portfolio covariance/correlation risk are Phase 2 — documented interfaces only (`phase2-contracts.ts` in both module trees), not implemented. See [docs/README.md](docs/README.md) for the full rationale, module boundaries, and formulas.
+**This is Phase 1.** Forecasting, regression (with `ModelDiagnostics`), back-testing diagnostics, Monte Carlo simulation, probability-of-threshold, and portfolio covariance/correlation risk are all Phase 2 — documented interfaces only (`phase2-contracts.ts` in both module trees), not implemented. Portfolio covariance/correlation risk specifically is flagged `"PHASE 2+"` in its own doc comment — the most speculative and least-specified of the scaffolds, per the master spec's own Phase Scope Matrix. See [docs/README.md](docs/README.md) §8 for the full rationale, module boundaries, and formulas.
 
 ## Scope
 
@@ -25,7 +25,7 @@ Plus a headless visualization adapter layer (`src/visualization/`) converting do
 | `statistical-risk/outliers.ts` | Z-score, IQR outlier bounds, outlier detection |
 | `statistical-risk/correlation.ts` | Pearson correlation (exploratory only — never implies causation) |
 | `statistical-risk/weighted.ts` | weighted mean |
-| `statistical-risk/phase2-contracts.ts` | Monte Carlo / probability-of-threshold interfaces — not implemented |
+| `statistical-risk/phase2-contracts.ts` | Monte Carlo / probability-of-threshold and portfolio covariance/correlation ("PHASE 2+") interfaces — not implemented |
 | `market-intelligence/domain.ts` | `MarketObservation`, `GeographyRef`, `SourceMetadata` and the rest of the spec's data contracts |
 | `market-intelligence/geography.ts` | Wraps/unwraps economic-engine's region/city/neighborhood ids into `GeographyRef` |
 | `market-intelligence/comparability.ts` | Required-before-aggregation comparability checks |
@@ -33,13 +33,13 @@ Plus a headless visualization adapter layer (`src/visualization/`) converting do
 | `market-intelligence/benchmarking.ts` | Subject vs. market median / peer percentile / historical range / z-score |
 | `market-intelligence/data-quality.ts` | Composite 0–100 data-quality score with component breakdown |
 | `market-intelligence/economic-engine-adapters.ts` | The one place this package calls `@investscape/economic-engine`'s real functions |
-| `market-intelligence/phase2-contracts.ts` | Forecasting interfaces (depend on `MarketObservation`) — not implemented |
+| `market-intelligence/phase2-contracts.ts` | Forecasting, regression/`ModelDiagnostics`, and back-testing interfaces (all depend on `MarketObservation`) — not implemented |
 | `visualization/apex-adapter.ts` | Reshapes already-computed results into chart view models — never recomputes a statistic |
 
 ## Testing
 
 - **Test suites:** 16
-- **Test cases:** 105 (105/105 passing)
+- **Test cases:** 111 (111/111 passing)
 - Includes every exact required value from the master spec (mean, median, R-7 quantile, sample/population SD, CAGR, Pearson, zero-dispersion/empty-input/zero-denominator edge cases), plus the architecture review's three additional required tests: the geography round-trip, the confidence-vocabulary data-quality interaction (using a real `confidence: 'low'` economic-engine bundle), and the freshness-TTL agreement check against economic-engine's real `DATA_FRESHNESS_TTL` constants.
 
 ```bash
