@@ -1,6 +1,6 @@
 {
   "name": "@investscape/market-intelligence-engine",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Market Intelligence & Statistical Risk engines (Phase 1) for InvestScape.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
