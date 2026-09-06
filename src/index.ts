@@ -30,3 +30,4 @@
 export * as statisticalRisk from "./statistical-risk";
 export * as marketIntelligence from "./market-intelligence";
 export * as visualization from "./visualization";
+export * as opportunityTypes from "./types/opportunity.types";
