@@ -5,8 +5,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist",
-    "vendor"
+    "dist"
   ],
   "directories": {
     "test": "__tests__"
@@ -22,11 +21,9 @@
   "license": "PROPRIETARY",
   "licenseText": "© 2026 Lighthouse Research Ltd. Proprietary software. See LICENSE file.",
   "type": "commonjs",
-  "dependencies": {
-    "@investscape/calc-engine": "file:vendor/investscape-calc-engine-1.0.0.tgz",
-    "@investscape/economic-engine": "file:vendor/investscape-economic-engine-0.1.0.tgz"
-  },
   "devDependencies": {
+    "@investscape/calc-engine": "file:vendor/investscape-calc-engine-1.0.0.tgz",
+    "@investscape/economic-engine": "file:vendor/investscape-economic-engine-0.1.0.tgz",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.1.2",
     "jest": "^30.4.2",
