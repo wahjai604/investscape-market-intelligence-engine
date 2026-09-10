@@ -6,7 +6,30 @@
  */
 import type { CREObservation, CREMetric, CRESource } from "./types";
 
-export interface NormalizedCapRate {
+/**
+ * Analytical dimensions that must survive normalization unchanged. Normalizing
+ * converts units; it must never quietly drop the class, location type or
+ * cap-rate concept that makes an observation comparable to another one.
+ */
+export interface CarriedDimensions {
+  propertySubtype?: CREObservation["propertySubtype"];
+  propertyClass?: CREObservation["propertyClass"];
+  locationType?: CREObservation["locationType"];
+  capRateType?: CREObservation["capRateType"];
+  citation?: CREObservation["citation"];
+}
+
+function carryDimensions(obs: CREObservation): CarriedDimensions {
+  return {
+    propertySubtype: obs.propertySubtype,
+    propertyClass: obs.propertyClass,
+    locationType: obs.locationType,
+    capRateType: obs.capRateType,
+    citation: obs.citation,
+  };
+}
+
+export interface NormalizedCapRate extends CarriedDimensions {
   metric: "cap_rate";
   value?: number;
   low?: number;
@@ -20,7 +43,7 @@ export interface NormalizedCapRate {
   tags?: Record<string, string>;
 }
 
-export interface NormalizedConstructionCost {
+export interface NormalizedConstructionCost extends CarriedDimensions {
   metric: "hard_cost" | "soft_cost";
   value?: number;
   low?: number;
@@ -35,7 +58,7 @@ export interface NormalizedConstructionCost {
   tags?: Record<string, string>;
 }
 
-export interface NormalizedConstructionIndex {
+export interface NormalizedConstructionIndex extends CarriedDimensions {
   metric: "construction_index";
   value: number;
   unit: "index";
@@ -92,6 +115,7 @@ export function normalizeCapRateObservation(obs: CREObservation): NormalizedCapR
   validateRange(normalizedLow, normalizedHigh);
 
   return {
+    ...carryDimensions(obs),
     metric: "cap_rate",
     value: normalizedValue,
     low: normalizedLow,
@@ -148,6 +172,7 @@ export function normalizeConstructionCostObservation(obs: CREObservation): Norma
   }
 
   return {
+    ...carryDimensions(obs),
     metric: obs.metric,
     value: normalizedValue,
     low: normalizedLow,
@@ -170,6 +195,7 @@ export function normalizeConstructionIndexObservation(obs: CREObservation): Norm
     throw new Error("Construction index requires a positive value");
   }
   return {
+    ...carryDimensions(obs),
     metric: "construction_index",
     value: obs.value,
     unit: "index",

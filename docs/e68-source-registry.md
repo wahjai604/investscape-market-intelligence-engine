@@ -73,3 +73,50 @@ Confidence should be expanded in later phases to include:
 - Turner & Townsend Market Intelligence: https://marketintelligence.turnerandtownsend.com/
 
 Source URLs are references for discovery and provenance. Automated retrieval and redistribution must follow the source's current terms.
+
+---
+
+## Phase 4 — sources actually used (2026-09-10)
+
+Registry entries describe sources E68 *may* draw on. This section records what
+was actually retrieved and populated.
+
+### Used
+
+| Source | Report | Published | Retrieved |
+| --- | --- | --- | --- |
+| `rlb-north-america` | RLB Quarterly Construction Cost Report — North America, Q2 2026 | 2026-06-24 | 2026-09-10 |
+
+One report. 53 observations. PDF:
+`https://www.rlb.com/wp-content/uploads/sites/4/2026/06/Q2-2026-QCR_7.7.2026.pdf`
+Cross-checked against RLB's Central and West regional summary pages.
+
+### Checked, yielded nothing usable
+
+| Source | Outcome |
+| --- | --- |
+| `cbre-us-cap-rates` | U.S. Cap Rate Survey H1 2026 (published 2026-08-12). Public page carries directional commentary only; all 3,600 estimates across 50+ markets are behind a download gate. No quotable market-level figure. |
+| `marcus-millichap-research` | Austin multifamily market-report endpoint returned "search service is currently unavailable". Nothing retrievable. |
+| Secondary aggregators | Figures circulate without report title, period or method. Rank below every primary source under the hierarchy; excluded. |
+
+### Source hierarchy
+
+When several sources cover the same observation, prefer in order:
+
+1. Transaction-derived evidence
+2. Market cap-rate survey
+3. Institutional brokerage valuation/research
+4. Specialized construction-cost consultancy
+5. Government index
+6. Secondary aggregation
+
+This ranking orders *preference*, not overwriting. E68 retains every underlying
+observation; consensus is computed later by `weightedConsensus()` /
+`capRateConsensus()`. One source never silently replaces another.
+
+### Redistribution
+
+`isRedistributable()` is deliberately narrow: government + `public_data` +
+`public_data_terms`. RLB is `public_report` — free to download, **not**
+redistributable. The figures in `data/` are stored as cited observations, not as
+a copy of the report.

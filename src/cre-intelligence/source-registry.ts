@@ -242,3 +242,20 @@ export function getCRESource(sourceId: string): CRESourceDefinition | undefined 
 export function listCRESources(metric?: CREMetric): CRESourceDefinition[] {
   return CRE_SOURCE_REGISTRY.filter((source) => !metric || source.metrics.includes(metric));
 }
+
+/**
+ * Redistribution is opt-in and narrow: only sources published under explicit
+ * public-data terms may be redistributed. `access: "public_report"` is NOT
+ * redistribution — a report being free to download says nothing about the right
+ * to republish its figures. Proprietary and paid sources can never qualify.
+ */
+export function isRedistributable(source: CRESourceDefinition): boolean {
+  if (source.redistribution !== "public_data_terms") return false;
+  if (source.sourceType !== "government") return false;
+  return source.access === "public_data";
+}
+
+/** Sources whose figures may be republished downstream. */
+export function listRedistributableSources(): CRESourceDefinition[] {
+  return CRE_SOURCE_REGISTRY.filter(isRedistributable);
+}

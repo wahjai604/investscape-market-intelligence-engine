@@ -47,3 +47,29 @@ export function escalateCost(baseCost: number, baseIndex: number, targetIndex: n
   if (!Number.isFinite(targetIndex) || targetIndex <= 0) throw new Error("targetIndex must be positive");
   return baseCost * (targetIndex / baseIndex);
 }
+
+/**
+ * Guard against averaging incompatible cap-rate concepts. A stabilized and a
+ * value-add cap rate describe different assets at different points in their
+ * life; blending them yields a number no publisher stands behind. Callers that
+ * genuinely want a blended figure must say so as an explicit business rule,
+ * not arrive at one by accident.
+ */
+export function assertComparableCapRates(observations: CREObservation[]): void {
+  const capRates = observations.filter((obs) => obs.metric === "cap_rate");
+  if (capRates.length === 0) return;
+
+  const missing = capRates.find((obs) => obs.capRateType === undefined);
+  if (missing) throw new Error("Cap-rate observations must declare capRateType before consensus");
+
+  const types = new Set(capRates.map((obs) => obs.capRateType));
+  if (types.size > 1) {
+    throw new Error(`Cannot mix cap-rate types in one consensus: ${[...types].sort().join(", ")}`);
+  }
+}
+
+/** weightedConsensus with the cap-rate concept guard applied first. */
+export function capRateConsensus(observations: CREObservation[]): ConsensusResult {
+  assertComparableCapRates(observations);
+  return weightedConsensus(observations);
+}

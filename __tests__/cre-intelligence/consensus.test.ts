@@ -40,6 +40,6 @@ describe("E68 CRE intelligence consensus", () => {
   });
 
   test("escalates construction cost by index ratio", () => {
-    expect(escalateCost(400, 200, 220)).toBe(440);
+    expect(escalateCost(400, 200, 220)).toBeCloseTo(440, 10);
   });
 });
