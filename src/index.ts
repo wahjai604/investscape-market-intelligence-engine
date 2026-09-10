@@ -16,18 +16,8 @@
  * Use at your own risk.
  */
 
-/**
- * Public entry point — Phase 1: descriptive/inferential statistics, trend
- * measures, comparability validation, benchmarking, and data-quality
- * assessment. Phase 2 (forecasting/regression/Monte Carlo/probability-of-
- * threshold/prediction intervals) exists only as documented interfaces —
- * see statistical-risk/phase2-contracts.ts and
- * market-intelligence/phase2-contracts.ts.
- *
- * See docs/README.md for module boundaries, formulas, and usage examples.
- */
-
 export * as statisticalRisk from "./statistical-risk";
 export * as marketIntelligence from "./market-intelligence";
+export * as creIntelligence from "./cre-intelligence";
 export * as visualization from "./visualization";
 export * as opportunityTypes from "./types/opportunity.types";
