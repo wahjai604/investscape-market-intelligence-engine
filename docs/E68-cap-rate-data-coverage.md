@@ -294,3 +294,265 @@ In priority order, if the gaps in §5 matter commercially:
 
 Before buying anything: **check JLL and Avison Young** (§1.1). They are free and
 were not individually verified.
+
+---
+
+# Phase 4B — Canada, Legacy Provenance Completion, JLL/Avison Young
+
+Research date **2026-09-11**. Adds `src/cre-intelligence/data/cap-rates-ca.ts`.
+Tests: `__tests__/cre-intelligence/canadian-cap-rates.test.ts`.
+
+## 12. United States — status unchanged, JLL/Avison Young now checked
+
+The 15 US observations from Phase 4A are unchanged (no transcription error was
+found). Phase 4B's mandate for the US was Parts 5–7: check JLL and Avison
+Young directly, keep searching for Miami, and confirm the legacy audit was
+exhaustive.
+
+**JLL** — checked directly (`jll.com/en-us/insights`). No city-level cap-rate
+report for any priority city; the current featured research is global-trends
+and AI-focused. Classification: `NOT_FOUND` (a real search was performed, not
+assumed).
+
+**Avison Young** — `avisonyoung.us` returned HTTP 403 to every direct fetch
+attempted (the market-overview page, the multifamily-overview page). This is
+the same Cloudflare-class bot barrier documented for CBRE Canada and Colliers
+Canada in §13, not a failed search. Their Q1/Q3 2025 US multifamily reports
+were located by search but the report pages themselves were equally
+inaccessible. Classification: `FOUND_BUT_INACCESSIBLE`.
+
+**Miami** — no new source found. Every additional search surfaced the same
+class of blog/calculator content already rejected in Phase 4A. Still zero
+observations.
+
+Updated coverage matrix cells (only changed rows shown; §1's table is otherwise
+unchanged):
+
+| Source | Austin | Houston | Miami | Seattle | Phoenix |
+| --- | --- | --- | --- | --- | --- |
+| JLL | NOT_FOUND | NOT_FOUND | NOT_FOUND | NOT_FOUND | NOT_FOUND |
+| Avison Young | FOUND_BUT_INACCESSIBLE | FOUND_BUT_INACCESSIBLE | FOUND_BUT_INACCESSIBLE | FOUND_BUT_INACCESSIBLE | FOUND_BUT_INACCESSIBLE |
+
+## 13. Canada — new verified observations
+
+**20 observations, 10 cities, 1 publisher, 1 document.**
+
+Source: **Cushman & Wakefield, Canadian Cap Rate & Capital Markets Report,
+Q2 2026**, published 2026-07-28 (from the PDF's own XMP metadata), retrieved
+2026-09-11.
+[Direct PDF](https://content.cushmanwakefield.com/api/public/content/cef23b874a284c1caa8547cf3132048d?v=d321917a)
+
+### Why this is the only usable free Canadian source
+
+| Source | Result |
+| --- | --- |
+| **Cushman & Wakefield Canada** | The PDF downloaded successfully. `pdftotext` could not extract the numeric cap-rate charts — the labels are vector graphics, not text. The report's Multifamily page (page 12) prints a numeric label on every data point; its Industrial, Retail and Office pages are unlabeled national historical trend lines. Rendered page 12 as a 150-DPI image (via PyMuPDF, installed this session) and transcribed the visible labels directly. |
+| **CBRE Canada** *Cap Rates & Investment Insights Q2 2026* | Confirmed to exist and to cover the right cities (search summaries describe local-market tables for Victoria, Vancouver, Calgary, Edmonton, Saskatoon, Winnipeg, Toronto, Ottawa, Montreal, Quebec City, Halifax). **Every retrieval attempt failed**: `cbre.ca` returns HTTP 403 with `Cf-Mitigated: challenge` (confirmed via direct `curl -I`, not just WebFetch) — a Cloudflare bot-challenge, not a paywall. Two PDF URLs surfaced by search resolved to **stale archived documents** (Q2 2023 and Q3 2023 editions of the same report), which were rejected outright rather than used. Classification: `FOUND_BUT_INACCESSIBLE`. |
+| **Colliers Canada** *Canada Cap Rate Report Q2 2026* | Same outcome: `collierscanada.com` returns HTTP 403 with the identical Cloudflare challenge header. `FOUND_BUT_INACCESSIBLE`. |
+| **Avison Young Canada** | `avisonyoung.ca` returns HTTP 403. `FOUND_BUT_INACCESSIBLE`. |
+
+This distinction matters: `FOUND_BUT_INACCESSIBLE` (confirmed to exist, blocked
+by bot-protection) is not the same finding as `NOT_FOUND` (searched, nothing
+exists) or `FOUND_PAID` (a real paywall). All three CBRE/Colliers/Avison Young
+Canada rows are the middle case — genuine data likely sits behind an automated
+scraping defense, not a subscription.
+
+### What was recorded
+
+Multifamily only, split High Rise / Low Rise, as printed:
+
+| City | High Rise (Min–Max) | Low Rise (Min–Max) |
+| --- | --- | --- |
+| Victoria | 4.50 – 5.25% | 4.25 – 5.50% |
+| Vancouver | 3.50 – 4.50% | 3.75 – 4.75% |
+| Calgary | 4.75 – 5.50% | 4.75 – 5.50% |
+| Edmonton | 4.25 – 5.25% | 5.00 – 6.00% |
+| Winnipeg | 4.75 – 5.50% | 5.00 – 5.75% |
+| Kitchener/Waterloo | 5.00 – 5.50% | 4.50 – 5.25% |
+| Toronto | 4.25 – 5.00% | 4.00 – 4.75% |
+| Ottawa | 5.00 – 6.00% | 5.00 – 6.00% |
+| Montreal | 4.25 – 5.25% | 4.75 – 5.75% |
+| Halifax | 4.50 – 5.50% | 5.00 – 6.00% |
+
+Filed as `survey_estimate`: the report's own methodology note reads
+*"quarterly estimates of capitalization rates... based on our market
+expertise. The cap rate ranges are based on transaction data where possible,
+as well as demand and supply dynamics in the region."* That is a synthesized
+estimate, not a stated average of closed transactions — the same distinction
+Phase 4A drew between Matthews and Kidder in the US.
+
+**St. John's is not covered** — absent from this report and from every other
+Canadian source checked. Recorded as a gap, same pattern as Yellowknife
+elsewhere in E30.
+
+**Office, industrial and retail are not covered** for any Canadian city. The
+report's charts for those sectors are national, unlabeled historical trend
+lines (see the rendered images captured this session) — reading a number off a
+curve with no printed value would be estimation, which this phase exists to
+prevent. Recorded as 30 gaps (10 cities × 3 asset classes).
+
+### `sourceQuality`: 88, and why
+
+Below the 90–95 range used for text-extracted brokerage figures, because these
+values were read from a rendered chart image rather than machine-extracted
+text. The labels themselves are unambiguous (each data point prints its exact
+percentage), but the read is manual-visual rather than programmatic, and that
+distinction is preserved in the score rather than smoothed over.
+
+## 14. Legacy E30 audit — now complete across the entire file
+
+**Every** city record in `investscape-economic-engine/src/E30-city-market-analysis.ts`
+has been checked. Combined with Phase 4A:
+
+| Phase | Records checked | Invalid found | Nulled |
+| --- | --- | --- | --- |
+| 4A (2026-09-10) | 19 (FRED/Zillow-tagged) | 12 | 12 |
+| 4B (2026-09-11) | 10 (CREA/CMHC-tagged) | 10 | 10 |
+| **Total** | **29 of 29 city records** | **22** | **22** |
+
+**Zero city records in E30 now carry a cap rate without either (a) legitimate
+provenance or (b) an explicit null with a documented reason.** No further
+FRED/Zillow/CREA/CMHC-tagged cap rate exists anywhere in the file.
+
+### Canadian audit method (Part 1)
+
+For each of the ten Canadian cities:
+
+1. **Git history.** `git log --follow` on `E30-city-market-analysis.ts` traces
+   every cap-rate value to a single origin: commit `5b62655`, *"[E30]
+   City-Level Market Analysis + 40 comprehensive tests"* (2026-08-05). No later
+   commit touched these ten values.
+2. **The file's own header**, unchanged since that commit, states: *"Mock data
+   store for E30... we use fixtures representing realistic Aug 4, 2026 market
+   conditions"* — and separately documents CREA as a source for *"Canada
+   comps"* and CMHC for *"Canada rental,"* never for cap rate.
+3. **CREA** publishes residential MLS statistics (HPI, sales, listings).
+   **CMHC** publishes housing starts, rental vacancy and rent data. Neither
+   organization publishes a commercial capitalization rate. Confirmed against
+   each organization's own published scope, the same check applied to
+   FRED/Zillow in Phase 4A.
+4. **No underlying report exists to verify** — steps 4–7 of the audit (locate
+   the report, verify period, verify methodology) are moot once step 2–3
+   establish there was never a cited report in the first place.
+5. **Checked against the real replacement**, not assumed fabricated: every
+   legacy value was compared against Cushman & Wakefield's genuine Q2 2026
+   ranges (§13). Two touch a range boundary by coincidence (Ottawa 5.0,
+   Victoria 4.5); **Calgary (5.8) and Winnipeg (6.2) fall entirely outside
+   both the High Rise and Low Rise ranges** — positive proof these were never
+   derived from real market data, consistent with the "Mock data store"
+   label.
+
+Classification for all ten: **`UNSUPPORTED`**. Set to null.
+
+### 14.1 Records removed (Phase 4B)
+
+| City | Removed p50 | vs. C&W High Rise | vs. C&W Low Rise |
+| --- | --- | --- | --- |
+| `halifax-ns` | 5.2 | in range | in range |
+| `st-johns-nl` | 5.5 | no C&W coverage | no C&W coverage |
+| `toronto-on` | 4.6 | in range | in range |
+| `montreal-qc` | 4.9 | in range | in range |
+| `ottawa-on` | 5.0 | touches min | touches min |
+| `calgary-ab` | 5.8 | **outside range** | **outside range** |
+| `edmonton-ab` | 5.9 | outside range | in range |
+| `winnipeg-mb` | 6.2 | **outside range** | **outside range** |
+| `vancouver-bc` | 4.3 | in range | in range |
+| `victoria-bc` | 4.5 | touches min | in range |
+
+Historical context preserved, not deleted: each record's in-file comment names
+the removed value, the provenance failure, the git-history trace, the
+comparison against the real replacement, and a pointer to this document. E68's
+real Toronto/Vancouver/etc. figures are **not** written back into E30 — see §9
+(lineage rule), unchanged from Phase 4A.
+
+### 14.2 Records retained (Canada)
+
+None. All ten were unsupported.
+
+## 15. Master coverage table
+
+Every asset-class/city cell E68 has touched, US and Canada, with status.
+`VERIFIED` = a real E68 observation exists; `GAP` = absence recorded with a
+reason; blank = not yet investigated for that specific cell (see §5/§13 for
+which sub-combinations were checked).
+
+| City | Asset Class | Source | Period | Cap Rate | Status | Quality |
+| --- | --- | --- | --- | --- | --- | --- |
+| Houston, TX | Multifamily — Class A Infill | Newmark | 2Q25 | 4.75–5.25% | VERIFIED | 75 |
+| Houston, TX | Multifamily — Class A Suburban | Newmark | 2Q25 | 4.75–5.50% | VERIFIED | 75 |
+| Houston, TX | Multifamily — Class B | Newmark | 2Q25 | 5.50–6.25% | VERIFIED | 75 |
+| Houston, TX | Multifamily — Class C | Newmark | 2Q25 | 6.50–7.00% | VERIFIED | 75 |
+| Phoenix, AZ | Multifamily (avg.) | Kidder Mathews | 2Q26 | 5.8% | VERIFIED | 90 |
+| Seattle, WA | Multifamily (avg.) | Kidder Mathews | 2Q26 | 5.7% | VERIFIED | 90 |
+| Austin, TX | Multifamily (avg.) | Matthews | Q1 2026 | 5.7% | VERIFIED | 85 |
+| Miami, FL | Multifamily | — | — | — | GAP | — |
+| Austin / Houston / Miami / Seattle / Phoenix | Office, Industrial, Retail | — | — | — | GAP | — |
+| Toronto, ON | Multifamily — High Rise | Cushman & Wakefield Canada | Q2 2026 | 4.25–5.00% | VERIFIED | 88 |
+| Toronto, ON | Multifamily — Low Rise | Cushman & Wakefield Canada | Q2 2026 | 4.00–4.75% | VERIFIED | 88 |
+| Vancouver, BC | Multifamily — High/Low Rise | Cushman & Wakefield Canada | Q2 2026 | 3.50–4.50% / 3.75–4.75% | VERIFIED | 88 |
+| Calgary, AB | Multifamily — High/Low Rise | Cushman & Wakefield Canada | Q2 2026 | 4.75–5.50% / 4.75–5.50% | VERIFIED | 88 |
+| Edmonton, AB | Multifamily — High/Low Rise | Cushman & Wakefield Canada | Q2 2026 | 4.25–5.25% / 5.00–6.00% | VERIFIED | 88 |
+| Winnipeg, MB | Multifamily — High/Low Rise | Cushman & Wakefield Canada | Q2 2026 | 4.75–5.50% / 5.00–5.75% | VERIFIED | 88 |
+| Kitchener/Waterloo, ON | Multifamily — High/Low Rise | Cushman & Wakefield Canada | Q2 2026 | 5.00–5.50% / 4.50–5.25% | VERIFIED | 88 |
+| Ottawa, ON | Multifamily — High/Low Rise | Cushman & Wakefield Canada | Q2 2026 | 5.00–6.00% / 5.00–6.00% | VERIFIED | 88 |
+| Montreal, QC | Multifamily — High/Low Rise | Cushman & Wakefield Canada | Q2 2026 | 4.25–5.25% / 4.75–5.75% | VERIFIED | 88 |
+| Halifax, NS | Multifamily — High/Low Rise | Cushman & Wakefield Canada | Q2 2026 | 4.50–5.50% / 5.00–6.00% | VERIFIED | 88 |
+| St. John's, NL | Multifamily | — | — | — | GAP | — |
+| Toronto / Vancouver / etc. (all 10) | Office, Industrial, Retail | — | — | — | GAP | — |
+
+**Absence in this table means E68 has not found a sufficiently documented
+public observation for that cell — not that the market has no cap-rate
+data.** CBRE (US and Canada), Colliers Canada and Avison Young all almost
+certainly have it; it was confirmed unreachable by this phase's tooling, not
+confirmed nonexistent.
+
+## 16. Source availability summary
+
+| Category | Sources |
+| --- | --- |
+| **Retrieved and used** | Newmark (US), Kidder Mathews (US), Matthews (US), Cushman & Wakefield (Canada) |
+| **Confirmed to exist, blocked by bot-protection** (`FOUND_BUT_INACCESSIBLE`) | CBRE Canada, Colliers Canada, Avison Young (US and Canada) |
+| **Confirmed to exist, paywalled** (`FOUND_PAID`) | CBRE US Cap Rate Survey, CoStar, MSCI/RCA, Altus, RealPage |
+| **Checked, no city-level cap rate found** (`NOT_FOUND`) | JLL (US), Marcus & Millichap (Austin), several C&W city pages |
+| **Not applicable** | Kidder Mathews outside the western US |
+
+## 17. Remaining gaps (complete list)
+
+- Miami — every asset class (US).
+- Office, industrial, retail — all five US priority cities.
+- Office, industrial, retail — all ten Canadian cities.
+- St. John's, NL — every asset class.
+- Class A/B/C splits — present only for Houston (US) and absent everywhere in
+  Canada; C&W's Canadian chart has no class dimension at all.
+- CBD/suburban splits — present only for Houston (US, via infill/suburban);
+  absent everywhere in Canada.
+- Derived transaction cap rates — none; no source discloses NOI (§6 of the
+  Phase 4A section).
+- CBRE Canada, Colliers Canada, Avison Young (both countries) — real data
+  believed to exist, blocked by automated bot-protection rather than absent.
+  The next practical step is manual retrieval by a human user, not further
+  automated searching.
+
+## 18. Paid-source research table (Part 13 — not purchased, not integrated)
+
+| Source | Coverage | Asset classes | Geographies | Historical depth | API | Access model | Licensing | Incremental value here |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **CBRE Cap Rate Survey** | 50+ US markets per survey (H1/H2); Canada separately via CBRE Canada | Office, industrial, retail, multifamily, hotel, seniors housing; stabilized vs. value-add | US and Canada | Survey published semiannually (US) / quarterly (Canada); historical archive not publicly documented | None documented publicly | Full report gated behind an account/download on cbre.com | Subscription/account-gated, terms not published | Closes office/industrial/retail everywhere, adds class + CBD/suburban splits, resolves the stabilized-vs-value-add distinction Phase 4A had to work around |
+| **CoStar** | US-wide, property- and market-level, the de-facto source under 3 of the 4 US brokerage figures already in this dataset | All commercial classes | Primarily US | Extensive (decades) | **No public API** — CoStar's Terms of Use explicitly prohibit automated extraction/scraping; no self-serve API exists (confirmed via search, 2026-09-11) | Enterprise subscription, sales-negotiated | Proprietary, redistribution prohibited | Would replace dependency on whichever brokerage happens to publish a free quarterly PDF; opens Miami directly |
+| **MSCI / Real Capital Analytics** | Global, transaction-level | All commercial classes | US, Canada, global | Long-running transaction database | Yes — MSCI documents API/data-delivery products including a Snowflake integration for direct data-warehouse ingestion | Subscription, enterprise-negotiated | Proprietary | Top of E68's own source hierarchy (transaction-derived evidence ranks first); the only realistic route to genuine `derived_transaction` observations, since RCA discloses transaction price and often NOI-adjacent data |
+| **Altus Group** (incl. Reonomy, acquired July 2026) | Canada-focused valuation/cost intelligence, expanding US property data via Reonomy | Cap rates, hard/soft cost, construction index | Canada primary, US via Reonomy | Not publicly documented | Reonomy offers API access for enterprise ingestion (per Altus product pages) | Subscription | Proprietary | Most valuable for closing the Canadian office/industrial/retail gap this phase left open, and for construction-cost depth in Canada |
+| **RealPage** | US multifamily-focused market analytics | Multifamily only | US | Not publicly documented | Not confirmed publicly documented for cap-rate data specifically | Subscription | Proprietary | Narrowest of the five; only adds value if multifamily depth (vs. breadth into other asset classes) becomes the priority |
+
+No prices are stated anywhere above — none were found publicly documented, and
+none were guessed.
+
+## 19. What this phase did not do
+
+- Did not implement any paid API integration.
+- Did not estimate a value for any city/asset-class combination lacking a
+  source.
+- Did not write E68's real figures back into E30's legacy records.
+- Did not attempt to defeat CBRE Canada's, Colliers Canada's, or Avison
+  Young's bot-protection (no headless browser, no proxy rotation, no
+  credential use) — `FOUND_BUT_INACCESSIBLE` is reported honestly rather than
+  circumvented.

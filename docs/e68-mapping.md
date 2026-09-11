@@ -115,25 +115,28 @@ This follows the convention already established in that file for
 `houston-tx` / `austin-tx` / `phoenix-az`, whose invented placeholders were
 removed on 2026-09-09.
 
-### Still outstanding
+### Resolved in Phase 4A
 
-**Ten further US city records carry the same invalid `FRED, Zillow` cap-rate
-provenance** and were left untouched because Phase 4 scoped the correction to
-Miami and Seattle. They warrant the same treatment:
+The ten records above were audited and nulled 2026-09-10, same convention as
+Miami/Seattle.
 
-| City | p25 / p50 / p75 |
-| --- | --- |
-| `boston-ma` | 4.2 / 4.8 / 5.5 |
-| `new-york-ny` | 3.9 / 4.5 / 5.2 |
-| `philadelphia-pa` | 5.1 / 5.8 / 6.5 |
-| `chicago-il` | 5.8 / 6.5 / 7.2 |
-| `minneapolis-mn` | 5.5 / 6.2 / 6.9 |
-| `atlanta-ga` | 5.9 / 6.6 / 7.4 |
-| `nashville-tn` | 6.1 / 6.8 / 7.5 |
-| `los-angeles-ca` | 4.1 / 4.8 / 5.5 |
-| `san-francisco-ca` | 3.2 / 3.9 / 4.6 |
-| `denver-co` | 5.2 / 5.9 / 6.6 |
+### Phase 4B — the Canadian records
 
-Note `denver-co` (5.2 / 5.9 / 6.6) is near-identical to Miami's removed figures
-— consistent with all twelve having come from one unsourced generation pass
-rather than from any market data.
+A parallel set of ten Canadian city records (`toronto-on`, `vancouver-bc`,
+`calgary-ab`, `edmonton-ab`, `winnipeg-mb`, `halifax-ns`, `victoria-bc`,
+`ottawa-on`, `montreal-qc`, `st-johns-nl`) carried the same structural failure
+under a different tag: `CREA, CMHC`. Neither publisher produces a commercial
+cap rate — CREA publishes residential MLS statistics, CMHC publishes housing
+starts and rental data. Git history traces every value to the original
+2026-08-05 "Mock data store" commit; none was ever backed by a cited report.
+
+Audited and nulled 2026-09-11 (E68 Phase 4B). Checked against real replacement
+data before removal, not assumed fabricated: Cushman & Wakefield's Q2 2026
+Canadian multifamily ranges. Calgary (5.8) and Winnipeg (6.2) fall entirely
+outside both the High Rise and Low Rise ranges for their cities — positive
+evidence the legacy values were never derived from real market data. Full
+trace: `docs/E68-cap-rate-data-coverage.md` §14.
+
+Every city record in `E30-city-market-analysis.ts` has now been audited —
+29 of 29, 22 invalid, 22 nulled. None remain with FRED/Zillow/CREA/CMHC
+provenance.

@@ -296,6 +296,20 @@ export const CRE_SOURCE_REGISTRY: readonly CRESourceDefinition[] = [
     defaultQuality: 85,
     notes: "Free per-metro market reports. Publishes a single all-classes 'market cap rate' credited to CoStar - a modelled figure, not a stated transaction average.",
   },
+  {
+    sourceId: "cushman-wakefield-canada",
+    sourceName: "Cushman & Wakefield Canada",
+    sourceType: "brokerage",
+    countries: ["CA"],
+    metrics: ["cap_rate"],
+    access: "public_report",
+    updateFrequency: "quarterly",
+    url: "https://www.cushmanwakefield.com/en/canada/insights/canadian-cap-rates-perspective-report",
+    redistribution: "not_assumed",
+    license: "public_report",
+    defaultQuality: 88,
+    notes: "Free quarterly 'Canadian Cap Rate & Capital Markets Report'. Its Multifamily Cap Rates page (High Rise / Low Rise, Min/Max Range) is the only chart in the report with numeric city-level labels; Industrial/Retail/Office pages are unlabeled national historical trend lines and cannot be read without estimating. Figures were read from the rendered chart image, not text-extracted (the PDF encodes the labels as vector graphics).",
+  },
 ];
 
 export function getCRESource(sourceId: string): CRESourceDefinition | undefined {
