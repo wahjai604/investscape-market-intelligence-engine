@@ -1,0 +1,14 @@
+[
+  {
+    "status": "SUCCESS",
+    "object": {
+      "vectorId": 1234567,
+      "productId": 1810013501,
+      "vectorDataPoint": [
+        { "refPer": "2025-10-01", "value": "142.3", "decimals": 1 },
+        { "refPer": "2026-01-01", "value": "144.1", "decimals": 1 },
+        { "refPer": "2026-04-01", "value": "145.8", "decimals": 1 }
+      ]
+    }
+  }
+]

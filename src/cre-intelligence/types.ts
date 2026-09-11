@@ -202,6 +202,8 @@ export interface CREObservation {
   derivedFrom?: CREDerivedTransaction;
   /** Genuinely source-specific extras only. Never core analytical dimensions. */
   tags?: Record<string, string>;
+  /** Phase 7 Part 9. Absent means "observed" — see `resolveDataStatus`. */
+  dataStatus?: CREDataStatus;
 }
 
 /**
@@ -230,6 +232,67 @@ export interface CREDataGap {
   /** Sources actually checked before declaring the gap. */
   sourcesChecked: string[];
   checkedAt: string;
+  /**
+   * Phase 7 Part 11: a structured reason code alongside the free-text `reason`
+   * above. Optional so every pre-Phase-7 gap remains valid without edits;
+   * new gaps recorded through the ingestion layer should set it. See
+   * `src/cre-intelligence/ingestion/gap-reasons.ts`.
+   */
+  reasonCode?: import("./ingestion/gap-reasons").CREDataGapReasonCode;
+}
+
+/**
+ * Phase 7 Part 9 — the honesty axis every observation must declare.
+ *
+ *   observed    — printed directly by the publisher; nothing computed.
+ *   derived     — E68 computed this from one or more OBSERVED inputs; the
+ *                 computation must be auditable (see `CREDerivedTransaction`
+ *                 for the cap-rate case).
+ *   inferred    — estimated from incomplete information (e.g. interpolating a
+ *                 missing period). E68 policy is to prefer a data gap over an
+ *                 inferred value; this value exists so an inference, if one is
+ *                 ever intentionally recorded, cannot be silently mistaken for
+ *                 `observed`.
+ *   unsupported — the source/data cannot legitimately establish this value at
+ *                 all (e.g. a residential index asked to stand in for a
+ *                 commercial cap rate). An `unsupported` value must never be
+ *                 stored as an observation; the code exists so validation can
+ *                 name the failure mode explicitly, matching the vocabulary of
+ *                 `CREDataGap.reasonCode`.
+ *
+ * Absent on a `CREObservation` means `observed` for all data recorded before
+ * Phase 7 (every existing citation is a verbatim publisher figure); Phase 7
+ * ingestion code must set this field explicitly rather than relying on the
+ * default. See `assertObservationStatus` below and
+ * `docs/E68-phase7-government-public-api-ingestion.md` Part 9.
+ */
+export type CREDataStatus = "observed" | "derived" | "inferred" | "unsupported";
+
+/** The default status for an observation that does not declare one. */
+export const DEFAULT_DATA_STATUS: CREDataStatus = "observed";
+
+export function resolveDataStatus(obs: Pick<CREObservation, "dataStatus">): CREDataStatus {
+  return obs.dataStatus ?? DEFAULT_DATA_STATUS;
+}
+
+/**
+ * Guards against exactly the Phase 4 fabrication failure mode: an
+ * "unsupported" value being written into an observation at all, and a
+ * "derived"/"inferred" value being silently promoted to "observed" without
+ * the required derivation provenance.
+ */
+export function assertObservationStatus(obs: CREObservation): void {
+  const status = resolveDataStatus(obs);
+  if (status === "unsupported") {
+    throw new Error(
+      "An observation with dataStatus \"unsupported\" must not exist — the source cannot legitimately establish this value. Record a CREDataGap instead.",
+    );
+  }
+  if (status === "derived" && obs.capRateType !== "derived_transaction" && !obs.derivedFrom) {
+    throw new Error(
+      "dataStatus \"derived\" requires auditable derivation provenance (derivedFrom, or capRateType \"derived_transaction\").",
+    );
+  }
 }
 
 export interface ConsensusResult {
