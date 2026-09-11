@@ -117,13 +117,30 @@ export interface RawSourceRecord<TRaw = unknown> {
   raw: TRaw;
 }
 
+/**
+ * Phase 8 Part 10 adds AUTHENTICATION_ERROR, AUTHORIZATION_ERROR,
+ * SOURCE_UNAVAILABLE, INVALID_RESPONSE, LICENSE_RESTRICTION,
+ * CONFIGURATION_ERROR, EMPTY_RESULT and UNKNOWN_ERROR to the Phase 7 codes.
+ * This is a purely additive change to the union: existing Phase 7 adapters
+ * and tests only ever produced/matched the original six values and continue
+ * to compile and pass unchanged. See ingestion/error-taxonomy.ts for the
+ * full Part 10 classification and the never-silently-drop-data guarantee.
+ */
 export type SourceAdapterErrorCode =
   | "NETWORK_ERROR"
   | "RATE_LIMITED"
   | "SCHEMA_CHANGED"
   | "VALIDATION_FAILED"
   | "GEOGRAPHY_NOT_COVERED"
-  | "NOT_FOUND";
+  | "NOT_FOUND"
+  | "AUTHENTICATION_ERROR"
+  | "AUTHORIZATION_ERROR"
+  | "SOURCE_UNAVAILABLE"
+  | "INVALID_RESPONSE"
+  | "LICENSE_RESTRICTION"
+  | "CONFIGURATION_ERROR"
+  | "EMPTY_RESULT"
+  | "UNKNOWN_ERROR";
 
 export class SourceAdapterError extends Error {
   constructor(
