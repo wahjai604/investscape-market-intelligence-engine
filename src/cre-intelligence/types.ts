@@ -56,7 +56,27 @@ export type CRECapRateType =
   | "going_in"
   | "exit"
   | "transaction"
-  | "net_lease";
+  | "net_lease"
+  /** A publisher's own market estimate (e.g. "Newmark's Current Estimate"). */
+  | "survey_estimate"
+  /** Computed by E68 as NOI / price from explicitly disclosed figures. */
+  | "derived_transaction";
+
+/**
+ * Concept families that must never be averaged together. Survey estimates and
+ * transaction-derived yields answer different questions; a derived transaction
+ * cap rate is E68's own arithmetic and is quarantined from both.
+ */
+export const CAP_RATE_FAMILY: Readonly<Record<CRECapRateType, string>> = {
+  stabilized: "survey",
+  value_add: "survey",
+  going_in: "survey",
+  exit: "survey",
+  net_lease: "survey",
+  survey_estimate: "survey",
+  transaction: "transaction",
+  derived_transaction: "derived",
+};
 
 /**
  * Source-native building quality grade. "unspecified" is a real, meaningful
@@ -106,6 +126,44 @@ export interface CRECitation {
   sourceUrl: string;
   /** ISO date this project actually retrieved the figure. */
   retrievedAt: string;
+  /**
+   * The party that actually produced the number, when the citing publisher is
+   * republishing someone else's data (e.g. a brokerage report whose cap-rate
+   * table is credited "Data Source: CoStar"). Keeps lineage auditable and stops
+   * a proprietary dataset from looking free because a free report quoted it.
+   */
+  underlyingDataProvider?: string;
+  /** Caveats a reader needs in order to use the figure correctly. */
+  methodologyNote?: string;
+}
+
+/**
+ * Licence classification (Phase 4A Part 9). A page being viewable says nothing
+ * about licensing, so "free to read" is never a value here.
+ */
+export type CRELicenseClass =
+  | "public"
+  | "public_report"
+  | "public_api"
+  | "paid"
+  | "subscription"
+  | "proprietary"
+  | "user_supplied";
+
+/**
+ * Provenance for a cap rate E68 computed itself. Every field is required:
+ * without the price, the NOI, and where each came from, the arithmetic is not
+ * auditable and the observation must not exist.
+ */
+export interface CREDerivedTransaction {
+  propertyName: string;
+  transactionDate: string;
+  purchasePrice: number;
+  priceSource: string;
+  noi: number;
+  noiSource: string;
+  /** How the cap rate was computed, e.g. "NOI / purchase price". */
+  methodology: string;
 }
 
 /**
@@ -140,6 +198,8 @@ export interface CREObservation {
   citation?: CRECitation;
   sourceQuality: number;
   sampleSize?: number;
+  /** Required when capRateType is "derived_transaction"; forbidden otherwise. */
+  derivedFrom?: CREDerivedTransaction;
   /** Genuinely source-specific extras only. Never core analytical dimensions. */
   tags?: Record<string, string>;
 }

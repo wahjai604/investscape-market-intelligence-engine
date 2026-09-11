@@ -63,7 +63,8 @@ describe("A. every observation has citation metadata", () => {
       const title = obs.citation.reportTitle;
       expect(title).not.toBe(obs.citation.sourceName);
       expect(title.length).toBeGreaterThan(obs.citation.sourceName.length);
-      expect(title).toMatch(/\d{4}/); // names a year/edition
+      // Names a specific edition: a 4-digit year, or a quarter-year like "2Q25".
+      expect(title).toMatch(/\d{4}|\dQ\d{2}/);
     }
   });
 
@@ -168,13 +169,19 @@ describe("E. unsupported city/category combinations remain absent", () => {
     expect(US_CONSTRUCTION_COST_GAPS.some((g) => g.assetClass === "industrial")).toBe(true);
   });
 
-  test("cap rates are absent for all five priority cities, with reasons", () => {
-    expect(US_CAP_RATE_OBSERVATIONS).toHaveLength(0);
+  test("Miami still has no cap rate, and every city has recorded gaps", () => {
+    // Phase 4A found multifamily cap rates for four cities; Miami remains unsourced.
+    expect(US_CAP_RATE_OBSERVATIONS.filter((o) => o.geography.city === "Miami")).toHaveLength(0);
     for (const city of ["Austin", "Houston", "Miami", "Seattle", "Phoenix"]) {
       const gaps = US_CAP_RATE_GAPS.filter((g) => g.geography.city === city);
       expect(gaps.length).toBeGreaterThan(0);
       for (const gap of gaps) expect(gap.sourcesChecked.length).toBeGreaterThan(0);
     }
+  });
+
+  test("office, industrial and retail remain unsourced in every priority city", () => {
+    const nonMultifamily = US_CAP_RATE_OBSERVATIONS.filter((o) => o.assetClass !== "multifamily");
+    expect(nonMultifamily).toHaveLength(0);
   });
 
   test("every gap gives a source fact, not a TODO", () => {
@@ -324,13 +331,28 @@ describe("I. legacy E30 cap-rate values cannot pass as validated E68 data", () =
     { city: "Seattle", p25: 4.3, p50: 4.9, p75: 5.6 },
   ];
 
-  test("no E68 observation reproduces the legacy figures", () => {
+  test("no city reproduces a discredited percentile triple", () => {
+    // A single number colliding is meaningless — Kidder's real Seattle figure is
+    // 5.6%, which happens to equal the discredited legacy p75. What must never
+    // reappear is the *set*, which is what an unsourced triple looks like.
     for (const { city, p25, p50, p75 } of suspect) {
-      const forCity = US_CAP_RATE_OBSERVATIONS.filter((o) => o.geography.city === city);
-      expect(forCity).toHaveLength(0);
-      for (const value of [p25, p50, p75]) {
-        expect(US_CAP_RATE_OBSERVATIONS.some((o) => o.value === value)).toBe(false);
-      }
+      const values = new Set(
+        US_CAP_RATE_OBSERVATIONS.filter((o) => o.geography.city === city).flatMap((o) =>
+          [o.value, o.low, o.high].filter((v): v is number => v !== undefined),
+        ),
+      );
+      const reproducesTriple = [p25, p50, p75].every((v) => values.has(v));
+      expect(reproducesTriple).toBe(false);
+    }
+  });
+
+  test("Seattle's figures now come from a real report, not FRED/Zillow", () => {
+    const seattle = US_CAP_RATE_OBSERVATIONS.filter((o) => o.geography.city === "Seattle");
+    expect(seattle.length).toBeGreaterThan(0);
+    for (const obs of seattle) {
+      expect(obs.citation.sourceName).toBe("Kidder Mathews");
+      expect(obs.citation.reportTitle).toMatch(/Kidder Mathews Seattle Multifamily Market Trends/);
+      expect(obs.citation.sourceUrl).toMatch(/^https:\/\/kidder\.com\//);
     }
   });
 
