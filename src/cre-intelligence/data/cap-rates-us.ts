@@ -291,13 +291,17 @@ export const US_CAP_RATE_OBSERVATIONS: readonly CRECitedObservation[] = [
 
 const MIAMI = { country: "US" as const, region: "FL", metro: "Miami, FL", city: "Miami" };
 
+// PHASE 4C AUDIT CORRECTION (2026-09-11): this list previously included
+// "colliers-ca-cap-rates" -- Colliers CANADA -- against a Florida gap. A
+// country-mismatch copy/paste error, caught by an automated registry
+// cross-check. Removed; no equivalent US Colliers source is registered, and
+// none was actually checked for Miami, so none is substituted.
 const MIAMI_SOURCES_CHECKED = [
   "cbre-us-cap-rates",
   "marcus-millichap-research",
   "newmark-research",
   "kidder-mathews-research",
   "cushman-cre-research",
-  "colliers-ca-cap-rates",
 ];
 
 /**

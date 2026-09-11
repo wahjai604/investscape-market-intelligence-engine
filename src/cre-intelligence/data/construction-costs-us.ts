@@ -4,7 +4,22 @@
  *
  * SINGLE SOURCE FOR THIS FILE
  *   RLB Quarterly Construction Cost Report, North America, Q2 2026
- *   Rider Levett Bucknall · published 2026-06-24 · retrieved 2026-09-10
+ *   Rider Levett Bucknall · published 2026-07-07 · retrieved 2026-09-10
+ *
+ * PHASE 4C AUDIT CORRECTION (2026-09-11)
+ *   publicationDate was wrongly set to 2026-06-24 -- that is RLB's separately
+ *   published "Central Q2 2026" REGIONAL page's date, mistakenly applied to
+ *   this citation. The actual North America report cited here (URL below) has
+ *   its own creation/modification date of 2026-07-07 in its PDF metadata,
+ *   confirmed on re-fetch, and its filename literally encodes it
+ *   ("Q2-2026-QCR_7.7.2026.pdf" = July 7, 2026). Corrected across all 53
+ *   observations that share this citation.
+ *
+ *   Also corrected: Seattle's construction_cost_change was 4.65%, taken from
+ *   RLB's separate "West Q2 2026" regional summary text rather than computed
+ *   from the actual table cited here. The North America report's own index
+ *   values (26,703 -> 27,943) compute to 4.64%, not 4.65% -- reconfirmed by
+ *   independent re-derivation on 2026-09-11. Corrected to 4.64%.
  *   https://www.rlb.com/wp-content/uploads/sites/4/2026/06/Q2-2026-QCR_7.7.2026.pdf
  *
  * WHY THE $/SF FIGURES ARE hard_cost AND NOTHING ELSE
@@ -55,7 +70,7 @@ function cite(locator: string, period: string): CRECitation {
   return {
     sourceName: "Rider Levett Bucknall",
     reportTitle: RLB_TITLE,
-    publicationDate: "2026-06-24",
+    publicationDate: "2026-07-07",
     period,
     locator,
     sourceUrl: RLB_URL,
@@ -210,7 +225,7 @@ export const US_HARD_COST_OBSERVATIONS: readonly CRECitedObservation[] = CITY_CO
 const CITY_INDEX: Array<{ city: string; region: string; metro: string; apr2025: number; apr2026: number; pctPublished: number }> = [
   { city: "Austin", region: "TX", metro: "Austin, TX", apr2025: 19_560, apr2026: 20_453, pctPublished: 4.57 },
   { city: "Miami", region: "FL", metro: "Miami, FL", apr2025: 20_121, apr2026: 21_126, pctPublished: 4.99 },
-  { city: "Seattle", region: "WA", metro: "Seattle, WA", apr2025: 26_703, apr2026: 27_943, pctPublished: 4.65 },
+  { city: "Seattle", region: "WA", metro: "Seattle, WA", apr2025: 26_703, apr2026: 27_943, pctPublished: 4.64 }, // corrected 2026-09-11, was 4.65 (see file header)
   { city: "Phoenix", region: "AZ", metro: "Phoenix, AZ", apr2025: 20_942, apr2026: 22_052, pctPublished: 5.30 },
 ];
 
