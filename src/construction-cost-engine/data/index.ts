@@ -14,6 +14,7 @@ import { RLB_BACKFILL_HARD_COST_OBSERVATIONS } from "./rlb-backfill-q2-2026";
 import type { ConstructionCostCandidateInput } from "../types";
 
 export * from "./rlb-backfill-q2-2026";
+export * from "./index-series";
 
 /**
  * All hard-cost-and-related observations E70 can see as of Phase 3: E68's
