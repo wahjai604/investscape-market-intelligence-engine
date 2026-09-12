@@ -15,3 +15,6 @@ export * from "./comparability-types";
 export * from "./normalize";
 export * from "./comparability";
 export * from "./pipeline";
+export * from "./source-research";
+export * from "./coverage-matrix";
+export * from "./data";

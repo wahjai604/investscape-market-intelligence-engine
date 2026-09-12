@@ -135,6 +135,24 @@ export const RLB_SUBTYPE_MAPPING: Readonly<Record<string, ConstructionSubtypeMap
  * rationale, so a future contributor sees the gap was checked rather than
  * assuming it was missed.
  */
+/**
+ * PHASE 3 NOTE (2026-09-11): a Phase 3 re-fetch of the same RLB Q2 2026
+ * North America report surfaced a SECOND cost table (Industrial Warehouse,
+ * Parking, Residential Multi-Family/Single-Family, Education) that was not
+ * present in the Phase 1 audit's understanding of the source. This
+ * potentially contradicts the "RLB publishes no multifamily/industrial line
+ * at all" premise below. It is deliberately NOT reflected in the mapping
+ * table below yet: the table's column headers extracted across multiple
+ * overlapping physical PDF lines with no independently-verified baseline to
+ * confirm the column-to-category assignment against (unlike the office/
+ * retail/hotel/hospital table, which was cross-validated exactly against
+ * E68's existing figures before being trusted for Phase 3's backfill — see
+ * src/construction-cost-engine/data/rlb-backfill-q2-2026.ts). Per Phase 3's
+ * own instruction ("document it and stop for review rather than silently
+ * changing semantics"), this is flagged here and in docs/E70-phase3-
+ * coverage-and-source-backfill.md Section 2 for manual verification before
+ * any future phase treats RLB multifamily/industrial as supported.
+ */
 export const KNOWN_UNSUPPORTED_CANONICAL_SUBTYPES: ReadonlyArray<{
   canonicalSubtype: CanonicalConstructionSubtype;
   rationale: string;
