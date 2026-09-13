@@ -23,8 +23,22 @@
  * `density-evaluation`, `dimensional-evaluation`,
  * `parking-amenity-evaluation`, `overlay-evaluation`), `envelope-assembly`,
  * and `result-status` (the one explicit result-status precedence function).
- * Still no source adapters, no network code, no GIS computation, no
- * database code. E85 has NO direct runtime dependency on
+ *
+ * Phase 5 adds the SOURCE ADAPTER & REGISTRY layer that feeds Phase 4: a
+ * generic source registry (`source-registry`), multi-axis source readiness
+ * (`source-readiness-assessment`), the structured source-fact input contract
+ * (`source-fact-types`), normalization findings, the normalized rule bundle,
+ * the generic adapter contract, an exact-match adapter resolver
+ * (`adapter-registry`), and one pilot adapter for the City of Vancouver R1-1
+ * District Schedule under `adapters/`. Phase 5 covers NORMALIZATION only —
+ * acquisition (fetching bytes) and extraction (turning a PDF/HTML/API payload
+ * into structured facts) are deliberately outside it, so there is still no
+ * network code, no filesystem read, no PDF/OCR parsing, and no GIS
+ * computation anywhere in this module. The Phase 4 evaluator is unchanged and
+ * remains jurisdiction-neutral: it consumes a bundle's `E85RuleRecord[]`
+ * without knowing which adapter produced them.
+ *
+ * E85 has NO direct runtime dependency on
  * E86/E87/E88/calc-engine/economic-engine/tax-engine — every export below is
  * defined fresh in this module.
  */
@@ -58,3 +72,16 @@ export * from "./envelope-assembly";
 export * from "./result-status";
 export * from "./evaluator-result-types";
 export * from "./evaluator";
+
+// Phase 5 — source adapters & registry. Generic contracts first; the
+// jurisdiction adapters are namespaced under `adapters` so no municipality's
+// vocabulary reaches this barrel's top level.
+export * from "./source-registry-types";
+export * from "./source-registry";
+export * from "./source-readiness-assessment";
+export * from "./source-fact-types";
+export * from "./normalization-finding-types";
+export * from "./normalized-bundle-types";
+export * from "./source-adapter-contract";
+export * from "./adapter-registry";
+export * as adapters from "./adapters";

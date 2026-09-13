@@ -29,6 +29,23 @@
  *    (rule-family-types.ts), not a gap in evidence. Only
  *    `SUPPORT_UNDETERMINED` combined with an actual failed lookup would
  *    produce a `RULE_NOT_STRUCTURED` or `BYLAW_NOT_FOUND` gap.
+ *  - PHASE 5A SCOPE CLARIFICATION (no code added or removed). Three codes
+ *    describe three genuinely different states that an earlier Phase 5 mapping
+ *    collapsed, and they are not interchangeable:
+ *      `ZONING_NOT_FOUND`   — the parcel's zoning could not be IDENTIFIED.
+ *                             A statement about the world. Established
+ *                             upstream of normalization, never by it: by the
+ *                             time an extract exists it names a zone, so no
+ *                             adapter or resolver path may emit this.
+ *      `RULE_NOT_STRUCTURED`— the zoning is known and the document exists;
+ *                             what is missing is structured rule content for
+ *                             it. A statement about E85's coverage. This is
+ *                             the honest answer for a real zone with no
+ *                             normalizer (Vancouver's CD-1, for instance).
+ *      `BYLAW_NOT_FOUND`    — no governing document is registered for this
+ *                             jurisdiction/zone at all.
+ *    Reporting coverage as non-existence sends a caller to re-establish a fact
+ *    they already hold, which is why these stay distinct.
  *  - Added `SOURCE_LICENSING_RESTRICTED`: a source-readiness axis
  *    (correction 13) may mark a source as legally inaccessible to E85 for a
  *    given request even though the source itself exists and is otherwise

@@ -59,6 +59,29 @@ export interface E85GisLocator {
 export interface E85Provenance {
   /** Identifier of the source (adapter/dataset/publisher) this provenance came from. Scoped to E85's own source registry (Phase 3 correction 13) — never a reuse of E86's `sourceId` space. */
   sourceId: string;
+  /**
+   * PHASE 5 CONTRACT ADDITION (E85 Phase 5 — Source Adapter & Registry
+   * Foundation, documented in the Phase 5 report): which VERSION/consolidation
+   * of `sourceId` this value was read from, e.g. "2026-06-consolidation".
+   * `sourceId` is deliberately stable across consolidations (see
+   * source-registry-types.ts), so without this field a provenance record
+   * cannot distinguish a value read from the June 2026 consolidation from the
+   * same field read from an earlier one. Optional and additive only — no
+   * Phase 3/4 fixture sets it.
+   */
+  sourceVersionId?: string;
+  /**
+   * PHASE 5 CONTRACT ADDITION: identity of the source adapter that normalized
+   * this value, and the adapter's own version. The same source version
+   * normalized by adapter v1 and v2 may legitimately yield different
+   * structured output as normalization logic improves, so "where exactly did
+   * this value come from?" is not fully answerable from the document locator
+   * alone. Carried per-evidence (not only on the enclosing bundle) because a
+   * normalized `E85RuleRecord` is routinely detached from its bundle and
+   * handed to the Phase 4 evaluator on its own. Optional and additive only.
+   */
+  adapterId?: string;
+  adapterVersion?: string;
   documentLocator?: E85DocumentLocator;
   gisLocator?: E85GisLocator;
   /** Raw zone designation string as found at the source, e.g. "RS-1", "CD-1 (245)". */
