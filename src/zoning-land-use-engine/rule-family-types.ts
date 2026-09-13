@@ -48,6 +48,31 @@ export interface E85DensityRule extends E85RuleRecordBase {
   maxFsr?: E85Evidence<number>;
   /** Maximum density expressed in units/hectare or units/acre, when the source states density that way instead of/in addition to FSR. */
   maxDensityUnitsPerArea?: E85Evidence<number>;
+  /**
+   * PHASE 4 CONTRACT CORRECTION (added by E85 Phase 4 — Rule Normalization &
+   * Deterministic Evaluation, documented in the Phase 4 report): an explicit
+   * maximum GFA stated DIRECTLY by the source, independent of any
+   * FSR-derived figure. Phase 3 had no field for this distinct case — a
+   * source can state a GFA cap outright (e.g. a CD-1-style negotiated
+   * maximum) without stating (or in addition to) an FSR. Optional and
+   * additive only; does not affect any Phase 3 fixture or test, since none
+   * set this field.
+   */
+  explicitMaxGfaSqm?: E85Evidence<number>;
+  /**
+   * PHASE 4 CONTRACT CORRECTION: a conditional density bonus stated by the
+   * source (e.g. "+0.2 FSR if affordable housing is provided"). The
+   * evaluator (density-evaluation.ts) NEVER folds this into `maxFsr` /
+   * `explicitMaxGfaSqm` unless `condition` appears verbatim in the caller's
+   * `E85CallerContext.satisfiedConditions` — see request-types.ts. Optional
+   * and additive only.
+   */
+  conditionalBonus?: {
+    /** Exact condition name/text as stated by the source; matched verbatim (no fuzzy matching) against caller-affirmed conditions. */
+    condition: string;
+    additionalFsr?: E85Evidence<number>;
+    additionalGfaSqm?: E85Evidence<number>;
+  };
 }
 
 /** Dimensional rule: height, storeys, setbacks/yards, site coverage — the classic "envelope" dimensions found in a district schedule. */
@@ -59,6 +84,15 @@ export interface E85DimensionalRule extends E85RuleRecordBase {
   setbacksMetres?: Readonly<Record<string, E85Evidence<number>>>;
   /** Maximum site coverage as a fraction (0-1) of site area, as stated by the source. */
   maxSiteCoverageFraction?: E85Evidence<number>;
+  /**
+   * PHASE 4 CONTRACT CORRECTION (E85 Phase 4, documented in the Phase 4
+   * report): minimum required lot frontage in metres, as stated by the
+   * source. Phase 3's dimensional rule had no frontage field even though
+   * frontage is one of the classic "envelope" dimensions named alongside
+   * height/storeys/setbacks/coverage in district schedules. Optional and
+   * additive only; does not affect any Phase 3 fixture or test.
+   */
+  minFrontageMetres?: E85Evidence<number>;
 }
 
 /** Parking rule: off-street parking/loading requirements. A jurisdiction with NO parking bylaw concept reports `E85RuleFamilySupport = "NOT_APPLICABLE_TO_JURISDICTION"` at the coverage level rather than an empty ParkingRule (Phase 2 correction 7). */
@@ -75,6 +109,17 @@ export interface E85AmenityRule extends E85RuleRecordBase {
   family: "AMENITY";
   /** Amenity requirements keyed by amenity type as named at the source (e.g. "indoor_amenity_sqm_per_unit", "public_art_contribution"). Values are free-form because amenity requirement units vary widely by jurisdiction and category. */
   requirements?: Readonly<Record<string, E85Evidence<string>>>;
+  /**
+   * PHASE 4 CONTRACT CORRECTION (E85 Phase 4, documented in the Phase 4
+   * report): names, per requirement key in `requirements`, the exact
+   * condition (matched verbatim against `E85CallerContext.satisfiedConditions`)
+   * that must be affirmed before that specific requirement is treated as
+   * resolved/applicable, for amenity requirements that are themselves
+   * conditional (e.g. "childcare requirement applies only for developments
+   * over N units"). A requirement key absent from this map is treated as
+   * unconditional. Optional and additive only.
+   */
+  requirementConditions?: Readonly<Record<string, string>>;
 }
 
 /** Overlay rule: an additional regulatory layer on top of base zoning (e.g. a Development Permit Area, heritage conservation area, or comprehensive-development-specific condition). Overlay precedence relative to base zoning is NOT resolved by this type — an unresolved precedence conflict is represented as a manual-review reason (`OVERLAY_PRECEDENCE_UNRESOLVED`) or a data gap (`OVERLAY_DATA_MISSING`), never silently decided by the type. */

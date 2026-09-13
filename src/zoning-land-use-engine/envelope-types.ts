@@ -34,6 +34,8 @@ export interface E85RegulatoryEnvelope {
   maxStoreys?: E85Evidence<number>;
   maxSiteCoverageFraction?: E85Evidence<number>;
   setbacksMetres?: Readonly<Record<string, E85Evidence<number>>>;
+  /** PHASE 4 CONTRACT CORRECTION (E85 Phase 4): minimum required lot frontage, mirroring the same addition on `E85DimensionalRule` (rule-family-types.ts). Optional and additive only. */
+  minFrontageMetres?: E85Evidence<number>;
 }
 
 /**
