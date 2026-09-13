@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 — CRE observation normalization.
+ * InvestScape™ E86 — CRE observation normalization.
  *
  * Normalization converts publisher-specific units into canonical internal
  * representations without changing the underlying published observation.

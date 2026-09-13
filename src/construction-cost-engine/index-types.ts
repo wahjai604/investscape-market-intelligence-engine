@@ -1,27 +1,27 @@
 /**
- * InvestScape™ E70 Phase 4 — Escalation / Index Integration: core types.
+ * InvestScape™ E88 Phase 4 — Escalation / Index Integration: core types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E70 is a read-only consumer of E68 (src/cre-intelligence/), frozen at v1.0,
- * and does not modify E69 (src/cap-rate-engine/) either. Every E68 import
- * below is a plain named type import from E68 source; nothing here requires
- * editing an E68 or E69 file.
+ * E88 is a read-only consumer of E86 (src/cre-intelligence/), frozen at v1.0,
+ * and does not modify E87 (src/cap-rate-engine/) either. Every E86 import
+ * below is a plain named type import from E86 source; nothing here requires
+ * editing an E86 or E87 file.
  *
- * Resolves E70 Phase 1 Open Design Decision 3 (docs/E70-phase1-technical-
- * specification.md Section 22): escalation is E70-owned, operating as a
- * read-only consumer of E68's existing construction_index observations
+ * Resolves E88 Phase 1 Open Design Decision 3 (docs/E88-phase1-technical-
+ * specification.md Section 22): escalation is E88-owned, operating as a
+ * read-only consumer of E86's existing construction_index observations
  * (US_CITY_CONSTRUCTION_INDEX_OBSERVATIONS, US_NATIONAL_CONSTRUCTION_INDEX_
  * OBSERVATIONS). No new index VALUE is invented anywhere in this file — it
  * defines the contracts other Phase 4 files (escalation-policy.ts,
  * applicability.ts, escalation.ts) implement against.
  *
- * These types are a superset of E68's own minimal `EscalationResult` shape
+ * These types are a superset of E86's own minimal `EscalationResult` shape
  * (types.ts line ~308: baseCost/basePeriod/targetPeriod/indexRatio/
- * escalatedCost) — that E68 type is a plain data shape with no provenance,
- * geography, or audit trail, and predates any implementation. E70 does not
- * import or extend it: doing so would not add anything E70 does not already
- * need to define itself, and would blur the frozen E68/E70 seam for no
- * benefit. E70's richer shape below is the actual Phase 4 contract.
+ * escalatedCost) — that E86 type is a plain data shape with no provenance,
+ * geography, or audit trail, and predates any implementation. E88 does not
+ * import or extend it: doing so would not add anything E88 does not already
+ * need to define itself, and would blur the frozen E86/E88 seam for no
+ * benefit. E88's richer shape below is the actual Phase 4 contract.
  */
 import type { CRECitedObservation, CREGeography } from "../cre-intelligence/types";
 import type { CCCurrency } from "./types";
@@ -29,7 +29,7 @@ import type { SourceDecision } from "./source-research";
 
 /**
  * The only index series this phase can actually evaluate, per the Phase 1/3
- * audit of what E68/E70 data actually contains (Phase 4 Implementation
+ * audit of what E86/E88 data actually contains (Phase 4 Implementation
  * Safety step 3/4/5). Adding a series id here does NOT imply observations
  * exist for it — see data/index-series.ts for what is actually populated.
  */
@@ -50,7 +50,7 @@ export type CCIndexPeriodGranularity = "annual" | "quarterly" | "monthly";
 
 /**
  * Series-level metadata: what an index IS, independent of any single
- * observation. `sourceStatus` is E70's own USE/REGISTER/REJECT verdict
+ * observation. `sourceStatus` is E88's own USE/REGISTER/REJECT verdict
  * (source-research.ts) — the escalation policy (escalation-policy.ts) gates
  * on this explicitly rather than assuming a registry entry means usable data
  * exists (Phase 4 Implementation Safety step 7).
@@ -58,7 +58,7 @@ export type CCIndexPeriodGranularity = "annual" | "quarterly" | "monthly";
 export interface CCIndexSeries {
   seriesId: CCIndexSeriesId;
   seriesName: string;
-  /** E68 CRESource.sourceId this series' observations are cited to. */
+  /** E86 CRESource.sourceId this series' observations are cited to. */
   sourceId: string;
   geographyType: CCIndexGeographyType;
   periodGranularity: CCIndexPeriodGranularity;
@@ -76,14 +76,14 @@ export interface CCIndexSeries {
 }
 
 /**
- * One index data point. Deliberately a thin wrapper around the actual E68
+ * One index data point. Deliberately a thin wrapper around the actual E86
  * `CRECitedObservation` (metric "construction_index") rather than a
  * reinvention — the citation, source, and period already live there and
  * must not be duplicated or restated by hand (duplication risks drift).
  */
 export interface CCIndexObservation {
   series: CCIndexSeries;
-  /** The underlying E68-cited construction_index observation, verbatim. */
+  /** The underlying E86-cited construction_index observation, verbatim. */
   observation: CRECitedObservation;
 }
 
@@ -136,7 +136,7 @@ export interface EscalationCalculationAudit {
   steps: readonly string[];
 }
 
-/** A cost figure at a point in time: low/high/value mirror E68's own optional-range convention (never a manufactured midpoint). */
+/** A cost figure at a point in time: low/high/value mirror E86's own optional-range convention (never a manufactured midpoint). */
 export interface CCCostFigure {
   low?: number;
   high?: number;
@@ -146,7 +146,7 @@ export interface CCCostFigure {
 }
 
 export interface EscalationResult {
-  /** The original E68 observation, carried through byte-for-byte, never mutated. */
+  /** The original E86 observation, carried through byte-for-byte, never mutated. */
   sourceObservation: CRECitedObservation;
   baseCost: CCCostFigure;
   basePeriod: CCPeriod;
@@ -213,5 +213,5 @@ export function formatEscalationGapMessage(gap: Pick<EscalationDataGap, "reasonC
   return `${label} ${gap.reason}${hint}`;
 }
 
-/** Re-exported for convenience; genuinely foundational (E68 geography shape). */
+/** Re-exported for convenience; genuinely foundational (E86 geography shape). */
 export type { CREGeography };

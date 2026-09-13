@@ -1,24 +1,24 @@
 /**
- * InvestScape™ E69 Phase 6 — Scenario / Sensitivity Framework: implementation.
+ * InvestScape™ E87 Phase 6 — Scenario / Sensitivity Framework: implementation.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Consumes Phase 5's `E69PipelineResult` verbatim (never re-derives
+ * Consumes Phase 5's `E87PipelineResult` verbatim (never re-derives
  * comparability, consensus, transaction derivation, or override resolution).
  * Produces cap-rate scenarios only — see scenario-types.ts and
- * docs/E69-phase6-scenario-sensitivity.md for the full scope boundary.
+ * docs/E87-phase6-scenario-sensitivity.md for the full scope boundary.
  */
-import type { E69BenchmarkOrigin, E69PipelineResult } from "./pipeline-types";
-import type { E69ComparabilityCandidate } from "./comparability-types";
+import type { E87BenchmarkOrigin, E87PipelineResult } from "./pipeline-types";
+import type { E87ComparabilityCandidate } from "./comparability-types";
 import type {
   DefaultSensitivityPolicy,
-  E69EvidenceSupportedRange,
-  E69HypotheticalScenarioSet,
-  E69Scenario,
-  E69ScenarioBasis,
-  E69ScenarioProvenance,
-  E69ScenarioResult,
-  E69ScenarioType,
-  E69SensitivityDeltaInput,
+  E87EvidenceSupportedRange,
+  E87HypotheticalScenarioSet,
+  E87Scenario,
+  E87ScenarioBasis,
+  E87ScenarioProvenance,
+  E87ScenarioResult,
+  E87ScenarioType,
+  E87SensitivityDeltaInput,
 } from "./scenario-types";
 
 // ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ interface NormalizedDelta {
  * bps collapse to one scenario), sorted ascending. Order and duplication in
  * the caller's input never affect the output.
  */
-function normalizeDeltas(deltas: readonly E69SensitivityDeltaInput[]): NormalizedDelta[] | { error: string } {
+function normalizeDeltas(deltas: readonly E87SensitivityDeltaInput[]): NormalizedDelta[] | { error: string } {
   const byBps = new Map<number, string | undefined>();
   for (const d of deltas) {
     const bps = typeof d === "number" ? d : d.bps;
@@ -97,7 +97,7 @@ function normalizeDeltas(deltas: readonly E69SensitivityDeltaInput[]): Normalize
 // Scenario construction
 // ---------------------------------------------------------------------------
 
-function classifyScenarioType(bps: number, label: string | undefined): E69ScenarioType {
+function classifyScenarioType(bps: number, label: string | undefined): E87ScenarioType {
   if (label !== undefined) return "custom";
   if (bps === 0) return "benchmark";
   return bps < 0 ? "downside" : "upside";
@@ -105,11 +105,11 @@ function classifyScenarioType(bps: number, label: string | undefined): E69Scenar
 
 function buildAnchorScenario(
   referenceValue: number,
-  provenance: E69ScenarioProvenance,
-  basis: E69ScenarioBasis,
+  provenance: E87ScenarioProvenance,
+  basis: E87ScenarioBasis,
   confidence: string | undefined,
   auditExplanation: string,
-): E69Scenario {
+): E87Scenario {
   return {
     scenarioType: "benchmark",
     capRateValue: referenceValue,
@@ -117,7 +117,7 @@ function buildAnchorScenario(
     referenceValue,
     provenance,
     basis,
-    confidence: confidence as E69Scenario["confidence"],
+    confidence: confidence as E87Scenario["confidence"],
     auditExplanation,
   };
 }
@@ -125,9 +125,9 @@ function buildAnchorScenario(
 function buildMechanicalScenario(
   referenceValue: number,
   delta: NormalizedDelta,
-  basis: E69ScenarioBasis,
-  scenarioType: E69ScenarioType,
-): E69Scenario {
+  basis: E87ScenarioBasis,
+  scenarioType: E87ScenarioType,
+): E87Scenario {
   const scaledValue = fromScaled(toScaled(referenceValue) + bpsToScaled(delta.bps));
   return {
     scenarioType,
@@ -156,7 +156,7 @@ function buildMechanicalScenario(
  * bases are recognized:
  *
  *  1. `publisher_explicit_range`: exactly one contributing observation, and
- *     that observation itself carries a published low/high (per E68's
+ *     that observation itself carries a published low/high (per E86's
  *     `CREObservation` contract: a range observation sets low/high and
  *     leaves `value` undefined).
  *  2. `multi_observation_empirical_range`: two or more contributing
@@ -168,7 +168,7 @@ function buildMechanicalScenario(
  * Anything else (a single point-value observation, zero contributors) has no
  * defensible range and is reported as unavailable with a reason code.
  */
-function computeEvidenceRange(contributing: readonly E69ComparabilityCandidate[]): E69EvidenceSupportedRange {
+function computeEvidenceRange(contributing: readonly E87ComparabilityCandidate[]): E87EvidenceSupportedRange {
   if (contributing.length === 0) {
     return {
       available: false,
@@ -235,23 +235,23 @@ function computeEvidenceRange(contributing: readonly E69ComparabilityCandidate[]
 // ---------------------------------------------------------------------------
 
 /**
- * Generate the scenario set for one E69 pipeline result. Deterministic: the
+ * Generate the scenario set for one E87 pipeline result. Deterministic: the
  * same `pipelineResult` and the same set of `deltas` (regardless of input
- * order or duplication) always produce an identical `E69ScenarioResult`.
+ * order or duplication) always produce an identical `E87ScenarioResult`.
  *
  * Never mutates `pipelineResult` or any observation reachable from it.
  */
 export function generateScenarios(
-  pipelineResult: E69PipelineResult,
-  deltas: readonly E69SensitivityDeltaInput[] = [],
-): E69ScenarioResult {
+  pipelineResult: E87PipelineResult,
+  deltas: readonly E87SensitivityDeltaInput[] = [],
+): E87ScenarioResult {
   if (pipelineResult.pipelineStatus === "data_gap") {
     return {
       scenarioStatus: "data_gap",
       underlyingGap: pipelineResult.result,
       requestedGeography: pipelineResult.requestedGeography,
       explanation:
-        "The underlying E69 benchmark is a DATA_GAP " +
+        "The underlying E87 benchmark is a DATA_GAP " +
         `(${pipelineResult.result.gap.reasonCode}: ${pipelineResult.result.gap.explanation}). ` +
         "No scenarios were mechanically generated from nothing; the original gap and audit trail are preserved verbatim.",
     };
@@ -271,13 +271,13 @@ export function generateScenarios(
       "user_override",
       "user_override",
       undefined,
-      `Active value ${referenceValue} came from an E68 user override ("${pipelineResult.override.overrideReason}"), ` +
+      `Active value ${referenceValue} came from an E86 user override ("${pipelineResult.override.overrideReason}"), ` +
         "not from publisher data. The underlying benchmark (if any) is preserved unmodified and remains separately retrievable.",
     );
     const scenarios = [anchor, ...normalized.map((d) => buildMechanicalScenario(referenceValue, d, "user_override", classifyScenarioType(d.bps, d.label)))];
     return {
       scenarioStatus: "success",
-      origin: pipelineResult.origin as E69BenchmarkOrigin | "n/a",
+      origin: pipelineResult.origin as E87BenchmarkOrigin | "n/a",
       isOverrideBased: true,
       requestedGeography: pipelineResult.requestedGeography,
       referenceValue,
@@ -288,7 +288,7 @@ export function generateScenarios(
 
   // pipelineStatus === "success"
   const referenceValue = pipelineResult.result.benchmark.value;
-  const provenance: E69ScenarioProvenance = pipelineResult.origin === "transaction_derived" ? "derived" : "observed";
+  const provenance: E87ScenarioProvenance = pipelineResult.origin === "transaction_derived" ? "derived" : "observed";
   const anchor = buildAnchorScenario(
     referenceValue,
     provenance,
@@ -316,31 +316,31 @@ export function generateScenarios(
  * market evidence.
  */
 export function generateScenariosWithDefaultPolicy(
-  pipelineResult: E69PipelineResult,
+  pipelineResult: E87PipelineResult,
   policy: DefaultSensitivityPolicy,
-): E69ScenarioResult {
+): E87ScenarioResult {
   return generateScenarios(pipelineResult, policy.deltasBps);
 }
 
 /**
- * Standalone hypothetical scenarios with NO E69 benchmark behind them at all.
+ * Standalone hypothetical scenarios with NO E87 benchmark behind them at all.
  * Deliberately minimal and unmistakably labeled — see
- * docs/E69-phase6-scenario-sensitivity.md "Hypothetical scenarios without a
+ * docs/E87-phase6-scenario-sensitivity.md "Hypothetical scenarios without a
  * benchmark" for the boundary decision. `acknowledgeHypothetical` must be
  * passed as `true`: this is a structural speed bump, not a UX nicety, against
  * a caller silently treating a bare number as a market benchmark.
  */
 export function generateHypotheticalScenarios(
   callerSuppliedBaseValue: number,
-  deltas: readonly E69SensitivityDeltaInput[],
+  deltas: readonly E87SensitivityDeltaInput[],
   acknowledgeHypothetical: true,
-): E69HypotheticalScenarioSet | { scenarioStatus: "error"; reasonCode: "INVALID_DELTA"; explanation: string } {
+): E87HypotheticalScenarioSet | { scenarioStatus: "error"; reasonCode: "INVALID_DELTA"; explanation: string } {
   void acknowledgeHypothetical; // type-level gate only; see doc rationale
   const normalized = normalizeDeltas(deltas);
   if ("error" in normalized) {
     return { scenarioStatus: "error", reasonCode: "INVALID_DELTA", explanation: normalized.error };
   }
-  const anchor: E69Scenario = {
+  const anchor: E87Scenario = {
     scenarioType: "benchmark",
     capRateValue: callerSuppliedBaseValue,
     deltaBps: 0,
@@ -348,7 +348,7 @@ export function generateHypotheticalScenarios(
     provenance: "mechanically_generated",
     basis: "hypothetical",
     auditExplanation:
-      `Caller-supplied hypothetical base value ${callerSuppliedBaseValue}. This is NOT derived from any E69 ` +
+      `Caller-supplied hypothetical base value ${callerSuppliedBaseValue}. This is NOT derived from any E87 ` +
       "benchmark, observation, or transaction — it is a standalone assumption supplied entirely by the caller.",
   };
   const scenarios = [anchor, ...normalized.map((d) => buildMechanicalScenario(callerSuppliedBaseValue, d, "hypothetical", classifyScenarioType(d.bps, d.label)))];
@@ -360,10 +360,10 @@ export function generateHypotheticalScenarios(
     evidenceRange: {
       available: false,
       reason: "NOT_APPLICABLE_HYPOTHETICAL",
-      explanation: "No E69 benchmark or observations are involved; an evidence-supported range is not applicable to a hypothetical value.",
+      explanation: "No E87 benchmark or observations are involved; an evidence-supported range is not applicable to a hypothetical value.",
     },
     disclaimer:
-      "These values are a standalone hypothetical, NOT derived from any market observation, transaction, or E69 benchmark. " +
-      "Do not present them as market evidence. E69 does not validate, forecast, or endorse the caller-supplied base value.",
+      "These values are a standalone hypothetical, NOT derived from any market observation, transaction, or E87 benchmark. " +
+      "Do not present them as market evidence. E87 does not validate, forecast, or endorse the caller-supplied base value.",
   };
 }

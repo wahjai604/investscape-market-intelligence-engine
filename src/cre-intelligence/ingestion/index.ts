@@ -1,4 +1,4 @@
-/** InvestScape™ E68 Phase 7 — government/public ingestion architecture. */
+/** InvestScape™ E86 Phase 7 — government/public ingestion architecture. */
 export * from "./types";
 export * from "./gap-reasons";
 export * from "./public-source-registry";

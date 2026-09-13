@@ -1,7 +1,7 @@
-# E69 Phase 2 — Cap-Rate Comparability Layer
+# E87 Phase 2 — Cap-Rate Comparability Layer
 
 Status: **IMPLEMENTED.** Scope is exactly Phase 2 of
-`docs/E69-phase1-technical-specification.md` Part 20: comparability
+`docs/E87-phase1-technical-specification.md` Part 20: comparability
 classification and per-observation inclusion/exclusion. No consensus,
 dispersion, transaction-derivation, scenario, or application-integration code
 is included — those remain future phases.
@@ -9,15 +9,15 @@ is included — those remain future phases.
 Code lives under `src/cap-rate-engine/` (a new top-level sibling to
 `src/cre-intelligence/`, not inside it), with tests under
 `__tests__/cap-rate-engine/`. **No file under `src/cre-intelligence/` was
-modified.** E69 imports E68 types and constants directly from their existing
+modified.** E87 imports E86 types and constants directly from their existing
 source files (`../cre-intelligence/types`,
 `../cre-intelligence/ingestion/observation-lifecycle`,
-`../cre-intelligence/mapping`) — no new export was added to E68's `index.ts`
-or any other E68 file.
+`../cre-intelligence/mapping`) — no new export was added to E86's `index.ts`
+or any other E86 file.
 
 ## 1. Purpose
 
-Given a requested cap-rate benchmark identity and a pool of E68
+Given a requested cap-rate benchmark identity and a pool of E86
 `CRECitedObservation`s, determine, per observation:
 
 - how closely it matches the request (EXACT / CLOSE / APPROXIMATE /
@@ -32,24 +32,24 @@ Phase 2's deliverable — nothing more.
 
 ## 2. Inputs
 
-- `E69ComparabilityRequest` (`src/cap-rate-engine/comparability-types.ts`):
-  `geography` (`CREGeography`, reused from E68), `locationType`, `assetClass`,
-  `propertySubtype`, `propertyClass`, `capRateType` (all reused E68 types),
-  plus E69-native `effectivePeriod`, `minFreshness`, `asOf`. Every field
+- `E87ComparabilityRequest` (`src/cap-rate-engine/comparability-types.ts`):
+  `geography` (`CREGeography`, reused from E86), `locationType`, `assetClass`,
+  `propertySubtype`, `propertyClass`, `capRateType` (all reused E86 types),
+  plus E87-native `effectivePeriod`, `minFreshness`, `asOf`. Every field
   except `geography.country` (via `CREGeography`) and `assetClass` is
   optional; an unspecified field widens the pool on that axis rather than
   narrowing or guessing.
-- `E69CandidateInput`: one `CRECitedObservation` (verbatim, unmodified) plus
-  an optional precomputed `freshness: CREPresentationFreshness`. E69 never
+- `E87CandidateInput`: one `CRECitedObservation` (verbatim, unmodified) plus
+  an optional precomputed `freshness: CREPresentationFreshness`. E87 never
   recomputes freshness — see Section 14.
 
 ## 3. Outputs
 
-- `evaluateCandidate(request, input)` → `E69ComparabilityCandidate`: the
+- `evaluateCandidate(request, input)` → `E87ComparabilityCandidate`: the
   observation (verbatim), overall `comparability`, all eight
   `dimensions`, `decision` (`INCLUDED`/`EXCLUDED`), `exclusionReasonCode`
   (when excluded), `explanation`, and `warnings`.
-- `evaluateComparability(request, pool)` → `E69ComparabilityResult`: every
+- `evaluateComparability(request, pool)` → `E87ComparabilityResult`: every
   candidate evaluated, plus `included`/`excluded` splits. Never throws on an
   empty pool; never silently drops a candidate from `candidates`.
 
@@ -80,14 +80,14 @@ is `exact` once country matches (that is as granular as was asked for).
 ## 6. Asset rules
 
 `evaluateAssetClass`: identical `CREAssetClass` is `exact`; anything else is
-`unsupported` — asset class has no valid narrowing in E68 today (per
+`unsupported` — asset class has no valid narrowing in E86 today (per
 `mapToLegacyCapRateKey`'s own `default` case), so there is no `close`/
 `approximate` tier for this dimension.
 
 `evaluateSubtype`: identical `propertySubtype` string is `exact`; the
 observation stating no subtype is `approximate` (plausible but undocumented);
 a different stated subtype is `unsupported`, because no subtype-family
-mapping exists anywhere in E68 today (the Phase 1 spec explicitly flags this
+mapping exists anywhere in E86 today (the Phase 1 spec explicitly flags this
 as new, unbuilt territory) — inventing one here would be exactly the
 fabricated-mapping failure mode this project exists to prevent.
 
@@ -106,10 +106,10 @@ whose end is within a trailing 12 months of the requested period's end is
 observation's period lying entirely after the requested period) is
 `unsupported`. These thresholds intentionally start identical to
 `qualification.ts`'s `periodConfidence` cliffs (≤12/12–24/>24 months) but are
-an **independently maintained E69 threshold set**, not a call into E68's
+an **independently maintained E87 threshold set**, not a call into E86's
 function — this resolves Open Design Question 1 of the Phase 1 spec in favor
-of independence, so a future E69-specific change to these cliffs cannot
-silently alter E68's own qualification behavior or vice versa.
+of independence, so a future E87-specific change to these cliffs cannot
+silently alter E86's own qualification behavior or vice versa.
 
 ## 9. Freshness rules
 
@@ -163,11 +163,11 @@ A candidate is `EXCLUDED` when any of:
    period → freshness), so the reason always names the actual disqualifying
    fact.
 
-Reason vocabulary (`E69ExclusionReasonCode`): `WRONG_ASSET_TYPE`,
+Reason vocabulary (`E87ExclusionReasonCode`): `WRONG_ASSET_TYPE`,
 `WRONG_ASSET_SUBTYPE`, `WRONG_GEOGRAPHY`, `WRONG_GEOGRAPHY_TYPE`,
 `WRONG_PROPERTY_CLASS`, `STALE`, `UNSUPPORTED_MAPPING`,
 `INCOMPATIBLE_REPRESENTATION`, `INSUFFICIENT_PROVENANCE`, `UNAVAILABLE`,
-`OTHER`. These are net-new to E69 — E68's `CREDataGapReasonCode` describes a
+`OTHER`. These are net-new to E87 — E86's `CREDataGapReasonCode` describes a
 *source's* inability to publish something at ingestion time, never "this
 observation doesn't fit this specific request," so reusing it here would
 misuse its vocabulary rather than extend it.
@@ -182,7 +182,7 @@ count toward a benchmark is Phase 3's (consensus) job, not this layer's.
 Comparability reuses `mapping.ts`'s `MappingConfidence` (`exact | close |
 approximate | unsupported`) verbatim rather than inventing a parallel
 four-tier vocabulary, per the Phase 1 spec's explicit finding that this is
-"the actual, only E68 qualification vocabulary." Dimensions combine strictly
+"the actual, only E86 qualification vocabulary." Dimensions combine strictly
 by floor (`combineDimensions` in `comparability.ts`), so one disqualifying
 axis cannot be outweighed by several strong ones — proven adversarially in
 tests (Section 15).
@@ -201,17 +201,17 @@ The same string is deterministic for the same inputs (no randomness, no
 wall-clock dependency beyond what the caller passes in via `asOf`/period
 fields), suitable as-is for a future UI or for a written audit log.
 
-## 14. E68 dependencies
+## 14. E86 dependencies
 
-Reused directly, read-only, with no E68 file modified:
+Reused directly, read-only, with no E86 file modified:
 
-| E68 source | What E69 Phase 2 reuses |
+| E86 source | What E87 Phase 2 reuses |
 |---|---|
 | `cre-intelligence/types.ts` | `CRECitedObservation`, `CREGeography`, `CREAssetClass`, `CREPropertyClass`, `CRELocationType`, `CRECapRateType`, `CAP_RATE_FAMILY` |
 | `cre-intelligence/mapping.ts` | `MappingConfidence` (the exact/close/approximate/unsupported vocabulary) |
-| `cre-intelligence/ingestion/observation-lifecycle.ts` | `CREPresentationFreshness` (type only; E69 never calls `assessFreshness` itself, it consumes an already-computed value) |
+| `cre-intelligence/ingestion/observation-lifecycle.ts` | `CREPresentationFreshness` (type only; E87 never calls `assessFreshness` itself, it consumes an already-computed value) |
 
-E69 does not import `qualification.ts`, `benchmark-selection.ts`,
+E87 does not import `qualification.ts`, `benchmark-selection.ts`,
 `consensus.ts`, `user-override.ts`, `benchmark-types.ts`,
 `legacy-migration.ts`, `soft-cost.ts`, or `source-registry.ts` in this phase —
 none of Phase 2's scope needs them, and importing them preemptively would
@@ -219,20 +219,20 @@ blur the boundary this phase is trying to hold.
 
 ## 15. Known limitations
 
-- **Freshness must be supplied, not derived.** E69 has no access to a
+- **Freshness must be supplied, not derived.** E87 has no access to a
   source's `CRERefreshCadence`/lifecycle record from a bare
-  `CRECitedObservation` alone (that metadata lives in E68's separate
+  `CRECitedObservation` alone (that metadata lives in E86's separate
   Phase 8 lifecycle records, keyed by fingerprint, not stored on the
   observation itself). A caller that does not pass `freshness` gets the
   honest, conservative `approximate` treatment rather than a fabricated
   recency claim — but this means Phase 2 cannot, on its own, tell "genuinely
   unassessed" apart from "assessed and happens to be `historical`" without
-  the caller doing that assessment first via E68's `assessFreshness`.
+  the caller doing that assessment first via E86's `assessFreshness`.
 - **Period thresholds (12/24 months) are illustrative,** carried over from
   `qualification.ts` starting values per the Phase 1 spec's own caveat (Part
   18) that no documented industry methodology backs this specific cliff in
   this codebase. They are independently versioned in this file specifically
-  so a future change here does not perturb E68.
+  so a future change here does not perturb E86.
 - **No subtype-family mapping exists.** Any non-identical, non-empty
   `propertySubtype` is `unsupported` today; a documented family table (the
   Phase 1 spec's proposed `close` tier for subtypes) is future work and must
@@ -244,7 +244,7 @@ blur the boundary this phase is trying to hold.
   deliverable) — today's `CREObservation` only actually carries point/range
   data in practice, so building the richer type now would be speculative.
 - **Geography rules treat `region` as informational only** (not compared);
-  no observation in the current E68 dataset needs region-level
+  no observation in the current E86 dataset needs region-level
   disambiguation, and adding an unused comparison would be untested,
   unexercised code.
 

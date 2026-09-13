@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 5 — deterministic benchmark selection.
+ * InvestScape™ E86 Phase 5 — deterministic benchmark selection.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Turns a `BenchmarkIdentity` request into a `CREBenchmarkResponse` by
@@ -159,7 +159,7 @@ export function selectCapRateBenchmark(
 /**
  * Explicitly derive a single number from a publisher range. Opt-in only —
  * nothing in `selectCapRateBenchmark` calls this on its own. The result is
- * always tagged `e68_derived` / `sourceSupplied: false` (Part 5's hard rule).
+ * always tagged `e86_derived` / `sourceSupplied: false` (Part 5's hard rule).
  */
 export function deriveMidpoint(range: PublisherRange, method: string = "arithmetic midpoint"): DerivedValue {
   const value = (range.low + range.high) / 2;
@@ -167,7 +167,7 @@ export function deriveMidpoint(range: PublisherRange, method: string = "arithmet
     value,
     unit: range.unit,
     derivationMethod: method,
-    provenance: "e68_derived",
+    provenance: "e86_derived",
     sourceSupplied: false,
   };
 }

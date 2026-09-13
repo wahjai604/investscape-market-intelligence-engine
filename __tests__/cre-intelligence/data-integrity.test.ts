@@ -1,7 +1,7 @@
 /**
- * InvestScape™ E68 Phase 4 — data integrity guarantees.
+ * InvestScape™ E86 Phase 4 — data integrity guarantees.
  *
- * These tests encode the rules that make E68 trustworthy. Each `describe` block
+ * These tests encode the rules that make E86 trustworthy. Each `describe` block
  * maps to a lettered requirement in the Phase 4 specification. They are written
  * to fail loudly if a future contributor backfills an estimate, launders a
  * proprietary figure, or lets an "approximate" mapping drift into "exact".
@@ -322,10 +322,10 @@ describe("H. construction subtype mappings cannot silently become exact", () => 
   });
 });
 
-describe("I. legacy E30 cap-rate values cannot pass as validated E68 data", () => {
+describe("I. legacy E30 cap-rate values cannot pass as validated E86 data", () => {
   // The economic-engine E30 records for Miami (5.2/5.9/6.7) and Seattle
   // (4.3/4.9/5.6) were tagged "FRED, Zillow" — neither publishes a commercial
-  // cap rate. These tests make it impossible to re-launder them through E68.
+  // cap rate. These tests make it impossible to re-launder them through E86.
   const suspect = [
     { city: "Miami", p25: 5.2, p50: 5.9, p75: 6.7 },
     { city: "Seattle", p25: 4.3, p50: 4.9, p75: 5.6 },

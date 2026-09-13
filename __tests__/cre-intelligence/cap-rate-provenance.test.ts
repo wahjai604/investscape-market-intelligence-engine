@@ -1,10 +1,10 @@
 /**
- * InvestScape™ E68 Phase 4A — cap-rate provenance guarantees.
+ * InvestScape™ E86 Phase 4A — cap-rate provenance guarantees.
  *
  * Phase 4A added the first real cap-rate observations. These tests exist so the
  * things that make them trustworthy — full citation, a licence classification
  * that cannot quietly turn permissive, and a hard wall between publisher
- * estimates, transaction averages and E68's own arithmetic — cannot be eroded
+ * estimates, transaction averages and E86's own arithmetic — cannot be eroded
  * by a later edit.
  */
 import { US_CAP_RATE_OBSERVATIONS, US_CAP_RATE_GAPS } from "../../src/cre-intelligence/data/cap-rates-us";
@@ -238,7 +238,7 @@ describe("FRED/Zillow can never become cap-rate provenance", () => {
     }
   });
 
-  test("the twelve discredited legacy figures appear nowhere in E68", () => {
+  test("the twelve discredited legacy figures appear nowhere in E86", () => {
     // Every p25/p50/p75 nulled out of E30 across Phase 4 and Phase 4A.
     const discredited: Array<[string, number[]]> = [
       ["Miami", [5.2, 5.9, 6.7]],

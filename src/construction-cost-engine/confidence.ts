@@ -1,18 +1,18 @@
 /**
- * InvestScape™ E70 Phase 5 — Confidence Model.
+ * InvestScape™ E88 Phase 5 — Confidence Model.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Three explicit components, combined ONLY by floor — never averaged, so a
  * high-quality source can never "rescue" an incompatible observation, and a
  * single strong dimension can never paper over a weak one. This mirrors
- * E69's own `floorConfidence`/`E69ConfidenceTier` philosophy (Phase 1 spec
- * Section 16), independently re-implemented here — E70 does not import
+ * E87's own `floorConfidence`/`E87ConfidenceTier` philosophy (Phase 1 spec
+ * Section 16), independently re-implemented here — E88 does not import
  * anything from src/cap-rate-engine/.
  *
- * PROVISIONAL, exactly like E69's own confidence thresholds: the specific
+ * PROVISIONAL, exactly like E87's own confidence thresholds: the specific
  * sourceQuality/freshness cut points below are a considered first pass, not
  * an empirically calibrated model. Documented here and in
- * docs/E70-phase5-unified-benchmark-output.md.
+ * docs/E88-phase5-unified-benchmark-output.md.
  */
 import type { CREPresentationFreshness } from "../cre-intelligence/ingestion/observation-lifecycle";
 import type { CCMatchLevel } from "./comparability-types";
@@ -37,9 +37,9 @@ export function floorConfidence(...tiers: readonly CCConfidenceTier[]): CCConfid
 
 /**
  * PROVISIONAL cut points, consistent with `sourceQuality`'s existing 0-100
- * scale (E68 `CREObservation.sourceQuality`, already populated e.g. RLB at
+ * scale (E86 `CREObservation.sourceQuality`, already populated e.g. RLB at
  * 94). Not empirically calibrated against outcome data — a documented first
- * pass, per the same honesty standard E69 applies to its own dispersion
+ * pass, per the same honesty standard E87 applies to its own dispersion
  * thresholds.
  */
 export function sourceQualityToTier(sourceQuality: number): CCConfidenceTier {

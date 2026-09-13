@@ -1,19 +1,19 @@
 /**
- * InvestScape™ E70 Phase 2 — Construction Cost Canonical Taxonomy.
+ * InvestScape™ E88 Phase 2 — Construction Cost Canonical Taxonomy.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E70 is a read-only consumer of E68 (src/cre-intelligence/), frozen at v1.0,
- * and does not modify E69 (src/cap-rate-engine/) either. Nothing in this
- * directory imports anything that would require editing an E68 or E69 file;
- * every E68 import below is a plain named type import from E68 source.
+ * E88 is a read-only consumer of E86 (src/cre-intelligence/), frozen at v1.0,
+ * and does not modify E87 (src/cap-rate-engine/) either. Nothing in this
+ * directory imports anything that would require editing an E86 or E87 file;
+ * every E86 import below is a plain named type import from E86 source.
  *
- * Resolves E70 Phase 1 Open Design Decision 2 (docs/E70-phase1-technical-
- * specification.md Section 22): the canonical taxonomy lives inside E70, not
- * inside E68 and not as a separate shared package. E68's `mapping.ts`
+ * Resolves E88 Phase 1 Open Design Decision 2 (docs/E88-phase1-technical-
+ * specification.md Section 22): the canonical taxonomy lives inside E88, not
+ * inside E86 and not as a separate shared package. E86's `mapping.ts`
  * (RLB_SUBTYPE_MAPPING) maps a source's native categories onto the LEGACY
  * front-end vocabulary (DEV_BUILDING_SUBTYPES, which does not exist anywhere
  * importable in this workspace). This file instead maps source-native
- * categories onto an E70-owned canonical taxonomy broad enough to receive
+ * categories onto an E88-owned canonical taxonomy broad enough to receive
  * more than one publisher's categories without distorting either.
  *
  * HARD RULE (Phase 1 Section 6.3/8, carried forward verbatim): multifamily and
@@ -55,13 +55,13 @@ export type CanonicalConstructionSubtype =
   | "industrial_light_manufacturing";
 
 /**
- * The four-tier vocabulary this file reuses verbatim from E68's `mapping.ts`
- * (`MappingConfidence`), exactly as E69 already does (comparability-types.ts,
- * `E69MatchLevel`). This is the one genuinely foundational cross-engine
+ * The four-tier vocabulary this file reuses verbatim from E86's `mapping.ts`
+ * (`MappingConfidence`), exactly as E87 already does (comparability-types.ts,
+ * `E87MatchLevel`). This is the one genuinely foundational cross-engine
  * concept; redefining it locally with the same four values would only invite
- * drift, so it is imported, not duplicated. E70's own analytical judgment —
+ * drift, so it is imported, not duplicated. E88's own analytical judgment —
  * which source subtype maps to which canonical subtype, and at what
- * confidence — remains entirely E70-owned below.
+ * confidence — remains entirely E88-owned below.
  */
 export type { MappingConfidence } from "../cre-intelligence/mapping";
 import type { MappingConfidence } from "../cre-intelligence/mapping";
@@ -73,16 +73,16 @@ export interface ConstructionSubtypeMapping {
 }
 
 /**
- * Per-publisher source-subtype -> canonical-subtype tables. Keyed by E68
+ * Per-publisher source-subtype -> canonical-subtype tables. Keyed by E86
  * `CRESource.sourceId` (e.g. "rlb-north-america") so a second publisher (per
  * Phase 1 Decision 4, Turner & Townsend evaluation is Phase 3 work) adds a
  * sibling table here without touching this one.
  *
- * RLB_SUBTYPE_MAPPING is the direct construction-cost analogue of E68's
- * mapping.ts RLB_SUBTYPE_MAPPING, but mapped onto E70's own canonical
+ * RLB_SUBTYPE_MAPPING is the direct construction-cost analogue of E86's
+ * mapping.ts RLB_SUBTYPE_MAPPING, but mapped onto E88's own canonical
  * taxonomy above rather than the legacy DEV_BUILDING_SUBTYPES vocabulary.
  * Confidence tiers and rationale are re-derived independently for this
- * mapping target (they happen to agree with E68's own tiers in every case
+ * mapping target (they happen to agree with E86's own tiers in every case
  * here, which is expected — the underlying source facts have not changed —
  * but this table is not a copy; it is evaluated against a different target
  * taxonomy).
@@ -146,10 +146,10 @@ export const RLB_SUBTYPE_MAPPING: Readonly<Record<string, ConstructionSubtypeMap
  * overlapping physical PDF lines with no independently-verified baseline to
  * confirm the column-to-category assignment against (unlike the office/
  * retail/hotel/hospital table, which was cross-validated exactly against
- * E68's existing figures before being trusted for Phase 3's backfill — see
+ * E86's existing figures before being trusted for Phase 3's backfill — see
  * src/construction-cost-engine/data/rlb-backfill-q2-2026.ts). Per Phase 3's
  * own instruction ("document it and stop for review rather than silently
- * changing semantics"), this is flagged here and in docs/E70-phase3-
+ * changing semantics"), this is flagged here and in docs/E88-phase3-
  * coverage-and-source-backfill.md Section 2 for manual verification before
  * any future phase treats RLB multifamily/industrial as supported.
  */
@@ -192,11 +192,11 @@ const SOURCE_MAPPINGS: Readonly<Record<string, Readonly<Record<string, Construct
 };
 
 /**
- * Map a source-native subtype string to E70's canonical taxonomy.
+ * Map a source-native subtype string to E88's canonical taxonomy.
  *
- * `sourceId` must match an E68 `CRESource.sourceId` (e.g. "rlb-north-america").
+ * `sourceId` must match an E86 `CRESource.sourceId` (e.g. "rlb-north-america").
  * An unknown source, or a subtype unknown to that source's table, is always
- * `unsupported` — never approximated or guessed at. This mirrors E68's own
+ * `unsupported` — never approximated or guessed at. This mirrors E86's own
  * `mapRlbSubtype` fallback rule verbatim: "unknown means unsupported, never
  * approximate."
  */
@@ -211,7 +211,7 @@ export function mapSourceSubtype(sourceId: string, sourceSubtype: string | undef
   if (table === undefined) {
     return {
       confidence: "unsupported",
-      rationale: `No E70 subtype-mapping table exists yet for source "${sourceId}". Unknown source means unsupported, never approximate.`,
+      rationale: `No E88 subtype-mapping table exists yet for source "${sourceId}". Unknown source means unsupported, never approximate.`,
     };
   }
   return (

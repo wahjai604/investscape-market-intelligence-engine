@@ -1,11 +1,11 @@
 /**
- * InvestScape™ E70 Phase 4 — Escalation Policy.
+ * InvestScape™ E88 Phase 4 — Escalation Policy.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * A single, versioned, explicit policy object governing every escalation
  * decision. Nothing in escalation.ts or applicability.ts embeds a magic
  * constant that belongs here instead. Any provisional rule is marked
- * PROVISIONAL in both this file and docs/E70-phase4-escalation-and-index.md
+ * PROVISIONAL in both this file and docs/E88-phase4-escalation-and-index.md
  * — per the task's explicit instruction, a provisional policy must never be
  * silently treated as settled.
  */
@@ -17,7 +17,7 @@ export interface CCEscalationPolicy {
   version: string;
 
   /**
-   * Which E70 source-research verdicts (source-research.ts) may back an
+   * Which E88 source-research verdicts (source-research.ts) may back an
    * active escalation input. Only "USE" qualifies today — a "REGISTER"
    * source (e.g. statcan-bcpi, which has zero ingested observations) or a
    * "REJECT" source is acknowledged as existing but never used to compute a
@@ -132,7 +132,7 @@ export const CC_DEFAULT_ESCALATION_POLICY: CCEscalationPolicy = {
 /**
  * A strict variant with every provisional/permissive flag disabled, provided
  * so a caller can exercise conservative-only behavior explicitly (task
- * adversarial test: "explicit policy controls behavior") without E70 having
+ * adversarial test: "explicit policy controls behavior") without E88 having
  * to silently pick one policy as the only one that ever runs.
  */
 export const CC_STRICT_ESCALATION_POLICY: CCEscalationPolicy = {

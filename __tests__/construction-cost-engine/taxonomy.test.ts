@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 2 — Taxonomy tests.
+ * InvestScape™ E88 Phase 2 — Taxonomy tests.
  */
 import { mapSourceSubtype, mappedCanonicalSubtypes, RLB_SUBTYPE_MAPPING, KNOWN_UNSUPPORTED_CANONICAL_SUBTYPES } from "../../src/construction-cost-engine/taxonomy";
 

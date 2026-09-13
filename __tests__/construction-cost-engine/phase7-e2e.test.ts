@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 7 — Production Integration & End-to-End Validation.
+ * InvestScape™ E88 Phase 7 — Production Integration & End-to-End Validation.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Exercises the REAL public API composing the actual Phase 2-6 components
@@ -10,7 +10,7 @@
  * Phase 7 task's own lettered/numbered test matrix.
  */
 import { evaluateConstructionCostBenchmark, applyUserOverride } from "../../src/construction-cost-engine/benchmark";
-import { e70ConstructionCostPool } from "../../src/construction-cost-engine/data";
+import { e88ConstructionCostPool } from "../../src/construction-cost-engine/data";
 import { CC_KNOWN_INDEX_OBSERVATIONS } from "../../src/construction-cost-engine/data/index-series";
 import { RLB_ADAPTER } from "../../src/construction-cost-engine/adapters/rlb-adapter";
 import {
@@ -20,7 +20,7 @@ import {
   ALTUS_SOURCE_DEFINITION,
   STATCAN_BCPI_SOURCE_DEFINITION,
   CMHC_SOURCE_DEFINITION,
-} from "../../src/construction-cost-engine/source-registry-e70";
+} from "../../src/construction-cost-engine/source-registry-e88";
 import { computeAnalyticalReadiness } from "../../src/construction-cost-engine/source-adapter-types";
 import { RLB_SECOND_TABLE_VERIFICATION } from "../../src/construction-cost-engine/second-table-verification";
 import { CC_STRICT_ESCALATION_POLICY } from "../../src/construction-cost-engine/escalation-policy";
@@ -70,7 +70,7 @@ function baseRequest(overrides: Partial<ConstructionCostBenchmarkRequest> = {}):
 }
 
 function fullPool(): ConstructionCostCandidateInput[] {
-  return e70ConstructionCostPool();
+  return e88ConstructionCostPool();
 }
 
 // ============================================================================
@@ -661,10 +661,10 @@ describe("17. Large-pool hardening", () => {
 });
 
 // ============================================================================
-// 21. E68/E69 boundary (static regression check)
+// 21. E86/E87 boundary (static regression check)
 // ============================================================================
-describe("21. E68/E69 boundary", () => {
-  test("no E70 Phase 7 file imports from src/cap-rate-engine (E69) — verified by successful, isolated module resolution", () => {
+describe("21. E86/E87 boundary", () => {
+  test("no E88 Phase 7 file imports from src/cap-rate-engine (E87) — verified by successful, isolated module resolution", () => {
     // If any Phase 7 test file (or anything it imports) required src/cap-rate-engine, this
     // suite's own module graph would already have pulled it in; this is a structural,
     // not merely assertional, guarantee for THIS test file's dependency closure.

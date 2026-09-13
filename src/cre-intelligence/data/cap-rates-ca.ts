@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 — Canadian cap-rate observations.
+ * InvestScape™ E86 — Canadian cap-rate observations.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * SINGLE SOURCE FOR THIS FILE
@@ -44,7 +44,7 @@
  *
  * THESE ARE NOT THE ORIGIN OF THE REMOVED E30 LEGACY VALUES
  *   E30's legacy Toronto/Vancouver/Calgary/etc. figures were checked against
- *   these ranges before removal (see docs/E68-cap-rate-data-coverage.md §Canada).
+ *   these ranges before removal (see docs/E86-cap-rate-data-coverage.md §Canada).
  *   Two touch a range boundary by coincidence (Ottawa 5.0, Victoria 4.5);
  *   Calgary (5.8) and Winnipeg (6.2) fall entirely outside both ranges. The
  *   legacy values were not derived from this report.

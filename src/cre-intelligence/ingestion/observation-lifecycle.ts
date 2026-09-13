@@ -1,17 +1,17 @@
 /**
- * InvestScape™ E68 Phase 8 — Observation Lifecycle, Fingerprinting & Freshness.
+ * InvestScape™ E86 Phase 8 — Observation Lifecycle, Fingerprinting & Freshness.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Parts 4, 5, 6, 7, 12, 13, 14, 16 of the Phase 8 specification.
  *
- * E68's existing `CREObservation` (types.ts) and `EconomicIndicatorObservation`
+ * E86's existing `CREObservation` (types.ts) and `EconomicIndicatorObservation`
  * (ingestion/types.ts) are left untouched by this file: Phase 8 tracks
  * lifecycle/fingerprint/freshness metadata in a separate wrapper record keyed
  * to an observation, rather than mutating the observation shape that Phases
  * 1-7 and their tests already depend on. This is the "minimum necessary
  * metadata" approach flagged as acceptable in Part 13 of the spec, with the
  * remaining architectural requirement documented in
- * docs/E68-phase8-production-monitoring-refresh.md ("Known limitations").
+ * docs/E86-phase8-production-monitoring-refresh.md ("Known limitations").
  */
 import type { CRECitation, CREGeography, CREObservation } from "../types";
 import type { EconomicIndicatorObservation } from "./types";
@@ -20,7 +20,7 @@ import type { EconomicIndicatorObservation } from "./types";
  * Part 4 — explicit observation lifecycle states.
  *
  *   retrieved  — fetched from the source, not yet validated.
- *   validated  — passed E68 validation/qualification; eligible to become current.
+ *   validated  — passed E86 validation/qualification; eligible to become current.
  *   active     — validated AND currently the best-known value for its period
  *                (no newer observation of the same identity has arrived).
  *   superseded — a newer observation for the SAME identity (see
@@ -40,7 +40,7 @@ export type CREObservationLifecycleStatus = "retrieved" | "validated" | "active"
 export type CREPresentationFreshness = "live_current" | "recent" | "historical" | "stale" | "unavailable";
 
 /**
- * Part 4/13/14 — the record E68 keeps alongside a stored observation. This is
+ * Part 4/13/14 — the record E86 keeps alongside a stored observation. This is
  * the identity + timeline metadata; the observation's own fields
  * (`CRECitation.publicationDate`, `periodStart`/`periodEnd`,
  * `CRECitation.retrievedAt`) remain the source of truth for the three dates —
@@ -164,7 +164,7 @@ export function assertDateRoleIntegrity(input: {
         "check whether periodStart/publicationDate were swapped or confused.",
     );
   }
-  // Retrieval can never precede publication: E68 cannot retrieve a figure before it exists.
+  // Retrieval can never precede publication: E86 cannot retrieve a figure before it exists.
   if (retrieved < pub) {
     throw new Error(
       `Retrieval date (${input.retrievedAt}) precedes publication date (${input.publicationDate}) — ` +

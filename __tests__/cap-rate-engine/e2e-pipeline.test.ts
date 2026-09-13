@@ -1,18 +1,18 @@
 /**
- * InvestScape™ E69 Phase 7 — Production Hardening: End-to-End Contract Tests.
+ * InvestScape™ E87 Phase 7 — Production Hardening: End-to-End Contract Tests.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Unlike the Phase 2-6 unit/integration suites, every test here wires
  * MULTIPLE phases together in a single continuous flow the way a real caller
- * would: cited E68-shaped observations -> Phase 2 comparability -> Phase 3
+ * would: cited E86-shaped observations -> Phase 2 comparability -> Phase 3
  * consensus -> (Phase 4 transaction derivation where relevant) -> Phase 5
  * unified pipeline (incl. user override) -> Phase 6 scenario/sensitivity
  * generation. No phase is re-tested in isolation here; see the existing
  * per-phase suites for that.
  */
 import { resolveCapRateBenchmark } from "../../src/cap-rate-engine/pipeline";
-import type { E69PipelineRequest } from "../../src/cap-rate-engine/pipeline-types";
-import type { E69CandidateInput, E69ComparabilityRequest } from "../../src/cap-rate-engine/comparability-types";
+import type { E87PipelineRequest } from "../../src/cap-rate-engine/pipeline-types";
+import type { E87CandidateInput, E87ComparabilityRequest } from "../../src/cap-rate-engine/comparability-types";
 import { deriveTransactionCapRate } from "../../src/cap-rate-engine/transaction-derivation";
 import type { CRETransactionInput } from "../../src/cap-rate-engine/transaction-types";
 import { known, unknown } from "../../src/cap-rate-engine/transaction-types";
@@ -54,7 +54,7 @@ function source(sourceId: string, sourceName: string, sourceType: CRESourceType)
   return { sourceId, sourceName, sourceType };
 }
 
-function baseRequest(overrides: Partial<E69ComparabilityRequest> = {}): E69ComparabilityRequest {
+function baseRequest(overrides: Partial<E87ComparabilityRequest> = {}): E87ComparabilityRequest {
   return {
     geography: { country: "US", city: "Houston" },
     assetClass: "multifamily",
@@ -63,7 +63,7 @@ function baseRequest(overrides: Partial<E69ComparabilityRequest> = {}): E69Compa
   };
 }
 
-function candidate(o: CRECitedObservation, freshness?: E69CandidateInput["freshness"]): E69CandidateInput {
+function candidate(o: CRECitedObservation, freshness?: E87CandidateInput["freshness"]): E87CandidateInput {
   return { observation: o, freshness };
 }
 
@@ -587,8 +587,8 @@ describe("E2E 8: further adversarial pipeline cases", () => {
 // ===========================================================================
 
 describe("E2E 9: large candidate pool (150 synthetic candidates) is order-independent", () => {
-  function buildLargePool(): E69CandidateInput[] {
-    const pool: E69CandidateInput[] = [];
+  function buildLargePool(): E87CandidateInput[] {
+    const pool: E87CandidateInput[] = [];
     const freshnessOptions = ["live_current", "recent", "historical"] as const;
     const sourceTypes: CRESourceType[] = ["valuation", "brokerage", "other"];
     for (let i = 0; i < 150; i++) {
@@ -617,7 +617,7 @@ describe("E2E 9: large candidate pool (150 synthetic candidates) is order-indepe
 
   test("shuffled orderings of the same 150-candidate pool produce byte-identical results", () => {
     const pool = buildLargePool();
-    const request: E69ComparabilityRequest = baseRequest();
+    const request: E87ComparabilityRequest = baseRequest();
 
     const r1 = resolveCapRateBenchmark({ comparability: request, candidatePool: pool });
     const shuffled1 = seededShuffle(pool, 12345);

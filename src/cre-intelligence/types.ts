@@ -1,8 +1,8 @@
 /**
- * InvestScape™ E68 — Commercial Real Estate Intelligence
+ * InvestScape™ E86 — Commercial Real Estate Intelligence
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Data contracts only. E68 deliberately stores normalized observations and
+ * Data contracts only. E86 deliberately stores normalized observations and
  * provenance; it does not embed or redistribute proprietary brokerage,
  * transaction, or construction-cost databases.
  */
@@ -59,13 +59,13 @@ export type CRECapRateType =
   | "net_lease"
   /** A publisher's own market estimate (e.g. "Newmark's Current Estimate"). */
   | "survey_estimate"
-  /** Computed by E68 as NOI / price from explicitly disclosed figures. */
+  /** Computed by E86 as NOI / price from explicitly disclosed figures. */
   | "derived_transaction";
 
 /**
  * Concept families that must never be averaged together. Survey estimates and
  * transaction-derived yields answer different questions; a derived transaction
- * cap rate is E68's own arithmetic and is quarantined from both.
+ * cap rate is E86's own arithmetic and is quarantined from both.
  */
 export const CAP_RATE_FAMILY: Readonly<Record<CRECapRateType, string>> = {
   stabilized: "survey",
@@ -151,7 +151,7 @@ export type CRELicenseClass =
   | "user_supplied";
 
 /**
- * Provenance for a cap rate E68 computed itself. Every field is required:
+ * Provenance for a cap rate E86 computed itself. Every field is required:
  * without the price, the NOI, and where each came from, the arithmetic is not
  * auditable and the observation must not exist.
  */
@@ -170,7 +170,7 @@ export interface CREDerivedTransaction {
  * A normalized market observation. low/high are optional because some sources
  * publish point estimates while others publish ranges. For a point estimate,
  * set value and omit low/high. For a range, set low/high and leave value
- * undefined — E68 never manufactures a midpoint the publisher did not print.
+ * undefined — E86 never manufactures a midpoint the publisher did not print.
  * Use `rangeMidpoint()` at read time when a single number is genuinely needed.
  */
 export interface CREObservation {
@@ -217,7 +217,7 @@ export interface CRECitedObservation extends CREObservation {
 }
 
 /**
- * A city/category combination E68 deliberately does NOT carry, and why.
+ * A city/category combination E86 deliberately does NOT carry, and why.
  * Recording the absence is what keeps "we have no data" distinguishable from
  * "nobody looked" — and stops a future contributor from quietly backfilling an
  * estimate.
@@ -245,11 +245,11 @@ export interface CREDataGap {
  * Phase 7 Part 9 — the honesty axis every observation must declare.
  *
  *   observed    — printed directly by the publisher; nothing computed.
- *   derived     — E68 computed this from one or more OBSERVED inputs; the
+ *   derived     — E86 computed this from one or more OBSERVED inputs; the
  *                 computation must be auditable (see `CREDerivedTransaction`
  *                 for the cap-rate case).
  *   inferred    — estimated from incomplete information (e.g. interpolating a
- *                 missing period). E68 policy is to prefer a data gap over an
+ *                 missing period). E86 policy is to prefer a data gap over an
  *                 inferred value; this value exists so an inference, if one is
  *                 ever intentionally recorded, cannot be silently mistaken for
  *                 `observed`.
@@ -264,7 +264,7 @@ export interface CREDataGap {
  * Phase 7 (every existing citation is a verbatim publisher figure); Phase 7
  * ingestion code must set this field explicitly rather than relying on the
  * default. See `assertObservationStatus` below and
- * `docs/E68-phase7-government-public-api-ingestion.md` Part 9.
+ * `docs/E86-phase7-government-public-api-ingestion.md` Part 9.
  */
 export type CREDataStatus = "observed" | "derived" | "inferred" | "unsupported";
 

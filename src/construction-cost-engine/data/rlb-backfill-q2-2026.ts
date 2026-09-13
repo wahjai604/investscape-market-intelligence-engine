@@ -1,16 +1,16 @@
 /**
- * InvestScape™ E70 Phase 3 — RLB backfill (additional cities, same report).
+ * InvestScape™ E88 Phase 3 — RLB backfill (additional cities, same report).
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E70's own data layer — NOT a modification of E68's
+ * E88's own data layer — NOT a modification of E86's
  * `src/cre-intelligence/data/construction-costs-us.ts`. That file remains
  * frozen and unchanged. This file adds NEW observations from the SAME
- * already-cited, already-licensed-reviewed RLB report, using E68's
+ * already-cited, already-licensed-reviewed RLB report, using E86's
  * `CRECitedObservation` type (read-only import) but constructing new data
- * objects owned entirely by E70, per Phase 3 Part 2's instruction: "add them
- * through E70's source/data layer."
+ * objects owned entirely by E88, per Phase 3 Part 2's instruction: "add them
+ * through E88's source/data layer."
  *
- * SOURCE (same report E68 already cites; re-fetched and re-verified for this
+ * SOURCE (same report E86 already cites; re-fetched and re-verified for this
  * phase, not a new source):
  *   RLB Quarterly Construction Cost Report, North America, Q2 2026
  *   Rider Levett Bucknall · published 2026-07-07 · re-retrieved 2026-09-11
@@ -20,7 +20,7 @@
  *   The report was re-fetched and run through `pdftotext -layout` (not a
  *   heuristic AI summary of the PDF — a byte-accurate text layer extraction).
  *   The "INDICATIVE CONSTRUCTION COSTS" table's rows for Austin, Miami,
- *   Seattle, and Phoenix were compared against E68's already-audited
+ *   Seattle, and Phoenix were compared against E86's already-audited
  *   `US_HARD_COST_OBSERVATIONS` figures and matched EXACTLY, digit for digit,
  *   across all 7 building-type columns for all 4 cities. This is the basis
  *   for trusting this table's extraction for the 14 additional US cities and
@@ -29,17 +29,17 @@
  *
  * WHAT IS DELIBERATELY NOT INCLUDED HERE (see Phase 3 doc Section 2/9 for why)
  *   - The report's "COMPARATIVE COST INDEX" table (city index levels /
- *     annual % change) is NOT backfilled for these cities. E68's own file
+ *     annual % change) is NOT backfilled for these cities. E86's own file
  *     header documents that THIS SAME table's extraction misaligned columns
  *     for the original 4 cities and required manual cross-referencing
  *     against RLB's separate regional summary pages before being trusted.
  *     That same cross-referencing has not been performed for the other 16
  *     cities in this phase, so backfilling their index figures now would
- *     repeat the exact failure mode E68's own audit correction exists to
+ *     repeat the exact failure mode E86's own audit correction exists to
  *     warn against. Left as an explicit gap, not backfilled speculatively.
  *   - The report's second building-cost table (Industrial Warehouse,
  *     Parking, Residential Multi-Family/Single-Family, Education) is NOT
- *     ingested at all in this phase. See docs/E70-phase3-coverage-and-
+ *     ingested at all in this phase. See docs/E88-phase3-coverage-and-
  *     source-backfill.md Section 2 ("Major discovery pending verification")
  *     for the full explanation: this table's own column-header text
  *     extracted mis-ordered/overlapping across multiple physical lines, so
@@ -48,7 +48,7 @@
  *     ("document it and stop for review rather than silently changing
  *     semantics"), this is flagged for manual review, not guessed at.
  *   - Houston remains absent. It is genuinely not in RLB's U.S. city list in
- *     this report (confirmed again on this re-fetch) — matches E68's
+ *     this report (confirmed again on this re-fetch) — matches E86's
  *     existing `US_CONSTRUCTION_COST_GAPS` entry exactly; no change needed.
  *
  * CURRENCY: the report's own footnote states Canadian-location values are in
@@ -64,7 +64,7 @@ const RLB_SOURCE: CRESource = {
   methodologyUrl: "https://www.rlb.com/americas/insight/rlb-construction-cost-report-north-america-q2-2026/",
   retrievedAt: "2026-09-11",
   licenseNotes:
-    "Publicly downloadable report. Redistribution not assumed — figures are stored as cited observations, not as a copy of the report. Same source/report E68 already cites; re-fetched and re-verified for E70 Phase 3.",
+    "Publicly downloadable report. Redistribution not assumed — figures are stored as cited observations, not as a copy of the report. Same source/report E86 already cites; re-fetched and re-verified for E88 Phase 3.",
 };
 
 const RLB_URL = "https://www.rlb.com/wp-content/uploads/sites/4/2026/06/Q2-2026-QCR_7.7.2026.pdf";
@@ -80,11 +80,11 @@ function cite(locator: string): CRECitation {
     sourceUrl: RLB_URL,
     retrievedAt: "2026-09-11",
     methodologyNote:
-      "Re-extracted via pdftotext -layout on 2026-09-11 and cross-validated against E68's existing Austin/Miami/Seattle/Phoenix hard-cost figures (exact match) before being trusted for these additional cities.",
+      "Re-extracted via pdftotext -layout on 2026-09-11 and cross-validated against E86's existing Austin/Miami/Seattle/Phoenix hard-cost figures (exact match) before being trusted for these additional cities.",
   };
 }
 
-/** Identical to E68's RlbSubtype union — same 7 columns, same report table. */
+/** Identical to E86's RlbSubtype union — same 7 columns, same report table. */
 type RlbSubtype =
   | "office_prime"
   | "office_secondary"
@@ -146,7 +146,7 @@ function hardCost(
 /**
  * 14 additional U.S. cities from the same "Indicative Construction Costs"
  * table, verbatim from the report (see cross-validation note above). Austin,
- * Miami, Seattle, Phoenix are deliberately excluded — already in E68.
+ * Miami, Seattle, Phoenix are deliberately excluded — already in E86.
  * Houston is deliberately excluded — genuinely absent from the source.
  */
 const US_CITY_COSTS: Array<{ city: string; region: string; metro: string; costs: Record<RlbSubtype, [number, number]> }> = [

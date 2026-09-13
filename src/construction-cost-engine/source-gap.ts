@@ -1,8 +1,8 @@
 /**
- * InvestScape™ E70 Phase 6 — Source-Level DATA_GAP.
+ * InvestScape™ E88 Phase 6 — Source-Level DATA_GAP.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * A distinct, E70-owned gap shape answering a different question than
+ * A distinct, E88-owned gap shape answering a different question than
  * Phase 2's `ConstructionCostDataGap` (gap-types.ts — "why doesn't any
  * evidence in the POOL satisfy this request") or Phase 5's
  * `ConstructionCostBenchmarkDataGap` (benchmark-types.ts — the unified
@@ -11,17 +11,17 @@
  * Useful for a caller asking "why is RSMeans not helping here" without
  * needing to run a full benchmark evaluation first.
  *
- * Does NOT modify E68's `CREDataGap` and is not wired automatically into
+ * Does NOT modify E86's `CREDataGap` and is not wired automatically into
  * Phase 5's `benchmark.ts` (per the task's explicit instruction not to
  * modify Phase 1-5 logic to accommodate Phase 6) — it is a standalone,
  * additive explanation utility.
  */
 import type { CREAssetClass, CREGeography } from "../cre-intelligence/types";
-import { computeAnalyticalReadiness, type E70SourceDefinition, type E70SourceMetricScope } from "./source-adapter-types";
+import { computeAnalyticalReadiness, type E88SourceDefinition, type E88SourceMetricScope } from "./source-adapter-types";
 import type { CanonicalConstructionSubtype } from "./taxonomy";
 
 export interface SourceGapRequest {
-  metric: E70SourceMetricScope;
+  metric: E88SourceMetricScope;
   geography: CREGeography;
   assetClass: CREAssetClass;
   canonicalSubtype?: CanonicalConstructionSubtype;
@@ -31,8 +31,8 @@ export interface SourceAdapterDataGap {
   sourceId: string;
   publisher: string;
   request: SourceGapRequest;
-  accessStatus: E70SourceDefinition["accessStatus"];
-  licenseStatus: E70SourceDefinition["licenseStatus"];
+  accessStatus: E88SourceDefinition["accessStatus"];
+  licenseStatus: E88SourceDefinition["licenseStatus"];
   reason: string;
   resolutionHint?: string;
   checkedAt: string;
@@ -46,7 +46,7 @@ export interface SourceAdapterDataGap {
  * remains Phase 2/5's job). Never fabricates a value; only ever explains an
  * absence.
  */
-export function explainSourceUnavailability(definition: E70SourceDefinition, request: SourceGapRequest, checkedAt: string): SourceAdapterDataGap | undefined {
+export function explainSourceUnavailability(definition: E88SourceDefinition, request: SourceGapRequest, checkedAt: string): SourceAdapterDataGap | undefined {
   const readiness = computeAnalyticalReadiness(definition);
 
   if (!definition.metricScope.includes(request.metric)) {
@@ -57,7 +57,7 @@ export function explainSourceUnavailability(definition: E70SourceDefinition, req
     return buildGap(
       definition,
       request,
-      `"${definition.publisher}" is registered in E70's source registry but no observation has been ingested from it yet — this is an ingestion-layer task (Phase 7+), not necessarily a licensing block.`,
+      `"${definition.publisher}" is registered in E88's source registry but no observation has been ingested from it yet — this is an ingestion-layer task (Phase 7+), not necessarily a licensing block.`,
       checkedAt,
       readiness === "NOT_READY" ? "Resolving the underlying access/licensing status would be required before any ingestion could begin." : "Building an ingestion adapter for this already-ready source would resolve this gap.",
     );
@@ -76,7 +76,7 @@ export function explainSourceUnavailability(definition: E70SourceDefinition, req
   return undefined;
 }
 
-function buildGap(definition: E70SourceDefinition, request: SourceGapRequest, reason: string, checkedAt: string, resolutionHint?: string): SourceAdapterDataGap {
+function buildGap(definition: E88SourceDefinition, request: SourceGapRequest, reason: string, checkedAt: string, resolutionHint?: string): SourceAdapterDataGap {
   return {
     sourceId: definition.sourceId,
     publisher: definition.publisher,

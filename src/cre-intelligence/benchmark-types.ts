@@ -1,12 +1,12 @@
 /**
- * InvestScape™ E68 Phase 5 — application-facing benchmark types.
+ * InvestScape™ E86 Phase 5 — application-facing benchmark types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Everything downstream of an E68 observation, on the way to something an
+ * Everything downstream of an E86 observation, on the way to something an
  * application can render. Deliberately keeps the chain visible:
  *
- *   RAW SOURCE -> E68 OBSERVATION -> VALIDATION -> QUALIFICATION
- *     -> E68 BENCHMARK -> APPLICATION MAPPING -> INVESTSCAPE APPLICATION
+ *   RAW SOURCE -> E86 OBSERVATION -> VALIDATION -> QUALIFICATION
+ *     -> E86 BENCHMARK -> APPLICATION MAPPING -> INVESTSCAPE APPLICATION
  *
  * A `CREBenchmark` is not a raw observation and not a single number: it is a
  * benchmark identity (geography/asset class/subtype/class/period) plus the
@@ -25,14 +25,14 @@ export type BenchmarkMetric = "cap_rate" | "hard_cost" | "soft_cost";
 
 /**
  * Whether the number a caller is looking at is exactly what the publisher
- * printed, or something E68 computed from what the publisher printed. Must
+ * printed, or something E86 computed from what the publisher printed. Must
  * survive every transformation — see `deriveMidpoint` below and Part 5 of the
  * Phase 5 spec. Never collapse this distinction to save a field.
  */
-export type ValueProvenance = "publisher_supplied" | "e68_derived" | "user_override" | "application_default";
+export type ValueProvenance = "publisher_supplied" | "e86_derived" | "user_override" | "application_default";
 
 /**
- * A publisher range, kept verbatim. E68 never replaces this with a single
+ * A publisher range, kept verbatim. E86 never replaces this with a single
  * number in place — see `DerivedValue`.
  */
 export interface PublisherRange {
@@ -42,9 +42,9 @@ export interface PublisherRange {
 }
 
 /**
- * A single number E68 (or a user, or the application) computed FROM a
+ * A single number E86 (or a user, or the application) computed FROM a
  * publisher range or another value. `sourceSupplied: false` always accompanies
- * `e68_derived`/`application_default`/`user_override` — this field exists so a
+ * `e86_derived`/`application_default`/`user_override` — this field exists so a
  * consumer can never accidentally treat a derived value as if the publisher
  * printed it.
  */
@@ -56,7 +56,7 @@ export interface DerivedValue {
   sourceSupplied: boolean;
 }
 
-/** One underlying E68 observation, as much as an application needs to show "why". */
+/** One underlying E86 observation, as much as an application needs to show "why". */
 export interface BenchmarkProvenanceEntry {
   observationId: string;
   sourceId: string;
@@ -90,7 +90,7 @@ export interface BenchmarkIdentity {
 
 /**
  * The full application-facing response for one benchmark request. Shape
- * mirrors the Phase 5 spec's Part 15 example, adapted to E68's actual
+ * mirrors the Phase 5 spec's Part 15 example, adapted to E86's actual
  * publisher-range-vs-derived-value distinction rather than a flat
  * value/low/high.
  */
@@ -120,33 +120,33 @@ export interface CREBenchmarkResponse {
 }
 
 /**
- * A user-entered value standing in for an E68 benchmark. Never mutates the
+ * A user-entered value standing in for an E86 benchmark. Never mutates the
  * underlying observation — see Part 11. `source: "USER"` is what a consumer
- * checks to know this did NOT come from E68 research.
+ * checks to know this did NOT come from E86 research.
  */
 export interface UserOverride {
   source: "USER";
   overrideValue: number;
   overrideReason: string;
   overrideTimestamp: string;
-  originalE68Value?: number;
-  originalE68Identity?: BenchmarkIdentity;
+  originalE86Value?: number;
+  originalE86Identity?: BenchmarkIdentity;
 }
 
 /**
  * Result of resolving a benchmark slot when a user override may be in play.
- * `active` says which value an application should actually use; `e68` and
+ * `active` says which value an application should actually use; `e86` and
  * `override` are both retained so a UI can show "using your override of X,
- * E68 benchmark was Y" without losing either number.
+ * E86 benchmark was Y" without losing either number.
  */
 export interface ResolvedBenchmark {
-  active: "e68" | "override" | "application_default";
-  e68?: CREBenchmarkResponse;
+  active: "e86" | "override" | "application_default";
+  e86?: CREBenchmarkResponse;
   override?: UserOverride;
   applicationDefaultReason?: string;
 }
 
-/** Soft costs: E68 currently has no verified dataset. Never fabricate a percentage. */
+/** Soft costs: E86 currently has no verified dataset. Never fabricate a percentage. */
 export interface SoftCostResponse {
   status: "SOFT_COST_DATA_NOT_AVAILABLE";
   identity: Pick<BenchmarkIdentity, "country" | "city" | "assetClass" | "propertySubtype">;
@@ -154,8 +154,8 @@ export interface SoftCostResponse {
 }
 
 /**
- * A legacy (pre-E68) benchmark value found in an application without
- * traceable provenance. Per Part 10, this must never masquerade as an E68
+ * A legacy (pre-E86) benchmark value found in an application without
+ * traceable provenance. Per Part 10, this must never masquerade as an E86
  * value. `NULL` when the application architecture wants the field cleared,
  * `LEGACY_UNVERIFIED` when it wants the old value retained but flagged.
  */

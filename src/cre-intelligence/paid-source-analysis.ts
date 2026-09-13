@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 6 — Paid/Commercial CRE Data Source Analysis.
+ * InvestScape™ E86 Phase 6 — Paid/Commercial CRE Data Source Analysis.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Classification metadata ONLY. This module intentionally carries no cap-rate
@@ -8,7 +8,7 @@
  * here is an enum, boolean, string label, URL, or date describing what a
  * source publishes and under what terms — never the value it publishes.
  *
- * See docs/E68-phase6-paid-source-analysis.md for the full research report,
+ * See docs/E86-phase6-paid-source-analysis.md for the full research report,
  * including source URLs and the date each claim was checked. This phase did
  * not purchase, license, or integrate any paid source; nothing here should be
  * read as confirmation that InvestScape has access to any paid dataset.
@@ -90,7 +90,7 @@ export interface CREPaidSourceProfile {
   notes: string;
 }
 
-/** Every paid/commercial CRE source investigated in Phase 6, plus the free brokerage sources already in E68's registry for cross-reference. Not exhaustive of every provider in the market — see the report's Part 1 for scope. */
+/** Every paid/commercial CRE source investigated in Phase 6, plus the free brokerage sources already in E86's registry for cross-reference. Not exhaustive of every provider in the market — see the report's Part 1 for scope. */
 export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
   {
     sourceId: "cbre-cap-rate-survey",
@@ -162,7 +162,7 @@ export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
     costTier: "PRICING_NOT_PUBLIC",
     evidenceUrls: ["https://www.costar.com/products/market-analytics"],
     dateVerified: "2026-09-11",
-    notes: "Terms of Use prohibit automated extraction/scraping; no public self-serve API found. De-facto source behind several free brokerage cap-rate charts E68 already stores.",
+    notes: "Terms of Use prohibit automated extraction/scraping; no public self-serve API found. De-facto source behind several free brokerage cap-rate charts E86 already stores.",
   },
   {
     sourceId: "msci-rca",
@@ -198,7 +198,7 @@ export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
     costTier: "PRICING_NOT_PUBLIC",
     evidenceUrls: ["https://www.msci.com/data-and-analytics/real-estate/real-capital-analytics"],
     dateVerified: "2026-09-11",
-    notes: "Top of E68's existing source hierarchy (transaction-derived evidence). Documents an API / Snowflake data-delivery integration.",
+    notes: "Top of E86's existing source hierarchy (transaction-derived evidence). Documents an API / Snowflake data-delivery integration.",
   },
   {
     sourceId: "altus-group",
@@ -418,7 +418,7 @@ export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
     publicPriceNote: "Base platform starts ~$250/month (third-party review aggregator); API pricing not separately published",
     evidenceUrls: ["https://www.selecthub.com/p/real-estate-asset-management-software/commercialedge/"],
     dateVerified: "2026-09-11",
-    notes: "Not a cap-rate or construction-cost source; a listing/property platform. TIER_4 — out of E68 scope.",
+    notes: "Not a cap-rate or construction-cost source; a listing/property platform. TIER_4 — out of E86 scope.",
   },
   {
     sourceId: "propertyshark",
@@ -455,7 +455,7 @@ export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
     publicPriceNote: "Pro $59.95/mo, Elite $79.95/mo, Platinum $169.95/mo, custom group pricing",
     evidenceUrls: ["https://www.credaily.com/reviews/propertyshark-review/"],
     dateVerified: "2026-09-11",
-    notes: "No official API of its own; third-party scraping services exist but are not PropertyShark's product and were not used. TIER_4 — out of E68 scope.",
+    notes: "No official API of its own; third-party scraping services exist but are not PropertyShark's product and were not used. TIER_4 — out of E86 scope.",
   },
   {
     sourceId: "placer-ai",
@@ -492,7 +492,7 @@ export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
     publicPriceNote: "Third-party benchmarks estimate $5,000-$30,000/yr; not Placer's own published rate card",
     evidenceUrls: ["https://plumlending.com/insights/placer-ai-review-location-intelligence-foot-traffic-2026"],
     dateVerified: "2026-09-11",
-    notes: "Foot-traffic/location-intelligence product, not a cap-rate or construction-cost source. TIER_4 — out of E68 scope, included only per task instruction to survey 'any other material sources'.",
+    notes: "Foot-traffic/location-intelligence product, not a cap-rate or construction-cost source. TIER_4 — out of E86 scope, included only per task instruction to survey 'any other material sources'.",
   },
   {
     sourceId: "lightbox",
@@ -528,7 +528,7 @@ export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
     costTier: "PRICING_NOT_PUBLIC",
     evidenceUrls: ["https://www.lightboxre.com/data/lightbox-apis/"],
     dateVerified: "2026-09-11",
-    notes: "Parcel/zoning/property-record data, not a cap-rate or construction-cost source. Strongest documented API among the non-cap-rate sources reviewed. TIER_4 — out of E68 scope.",
+    notes: "Parcel/zoning/property-record data, not a cap-rate or construction-cost source. Strongest documented API among the non-cap-rate sources reviewed. TIER_4 — out of E86 scope.",
   },
   {
     sourceId: "moodys-analytics-cre",
@@ -607,7 +607,7 @@ export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
       "https://www.capterra.com/p/151681/RSMeans/",
     ],
     dateVerified: "2026-09-11",
-    notes: "Only source in the entire matrix with a confirmed public price under $500/year. Most granular building-type/assembly-level construction-cost database reviewed (92,000+ line items). Best candidate to fill E68's Houston construction-cost gap and soft-cost gap, unverified for Houston specifically.",
+    notes: "Only source in the entire matrix with a confirmed public price under $500/year. Most granular building-type/assembly-level construction-cost database reviewed (92,000+ line items). Best candidate to fill E86's Houston construction-cost gap and soft-cost gap, unverified for Houston specifically.",
   },
   {
     sourceId: "marshall-swift-corelogic",
@@ -680,11 +680,11 @@ export const CRE_PAID_SOURCE_PROFILES: readonly CREPaidSourceProfile[] = [
     publicPriceNote: "Dodge itself confirms sales-led, configuration-dependent pricing with no published list; one third-party estimate cites 'starting at $300/user/month' but this is not Dodge's own rate card",
     evidenceUrls: ["https://www.construction.com/apis/"],
     dateVerified: "2026-09-11",
-    notes: "Core product is project/bid tracking, not a unit-cost database like RSMeans. TIER_4 — not a fit for E68's construction-cost gaps.",
+    notes: "Core product is project/bid tracking, not a unit-cost database like RSMeans. TIER_4 — not a fit for E86's construction-cost gaps.",
   },
 ] as const;
 
-/** Sources already free and in E68's existing registry, kept here only for the tier/recommendation cross-reference — no new figures are added. */
+/** Sources already free and in E86's existing registry, kept here only for the tier/recommendation cross-reference — no new figures are added. */
 export const CRE_FREE_SOURCE_IDS: readonly string[] = [
   "cbre-ca-cap-rates",
   "cbre-us-cap-rates",
@@ -707,12 +707,12 @@ export interface CRERecommendationEntry {
 /** Part 14 final decision matrix — tier assignment only, no pricing figures. */
 export const CRE_RECOMMENDATION_TIERS: readonly CRERecommendationEntry[] = [
   { sourceId: "cbre-cap-rate-survey", tier: "TIER_1", primaryValue: "Broadest documented cap-rate segmentation (sector x class x stabilized/value-add)" },
-  { sourceId: "msci-rca", tier: "TIER_1", primaryValue: "Transaction-derived cap rates, top of E68's own source hierarchy" },
+  { sourceId: "msci-rca", tier: "TIER_1", primaryValue: "Transaction-derived cap rates, top of E86's own source hierarchy" },
   { sourceId: "altus-group", tier: "TIER_1", primaryValue: "Best Canadian coverage, cap rate + construction cost combined" },
   { sourceId: "rsmeans-gordian", tier: "TIER_1", primaryValue: "Only granular, partly-priced construction-cost database reviewed" },
   { sourceId: "green-street", tier: "TIER_2", primaryValue: "Documented cap-rate + sales-comps time series, broad US coverage" },
   { sourceId: "moodys-analytics-cre", tier: "TIER_2", primaryValue: "Best-documented API among cap-rate sources" },
-  { sourceId: "costar-market-analytics", tier: "TIER_2", primaryValue: "De-facto source behind existing free E68 figures; would open Miami" },
+  { sourceId: "costar-market-analytics", tier: "TIER_2", primaryValue: "De-facto source behind existing free E86 figures; would open Miami" },
   { sourceId: "trepp", tier: "TIER_3", primaryValue: "Only source with documented property-level NOI-adjacent data" },
   { sourceId: "marshall-swift-corelogic", tier: "TIER_3", primaryValue: "Replacement-cost specialist, complements RSMeans" },
   { sourceId: "realpage-analytics", tier: "TIER_3", primaryValue: "Multifamily-only, narrowest scope of reviewed subscription sources" },
@@ -739,7 +739,7 @@ export interface CREScenarioSummary {
 export const CRE_SCENARIO_SUMMARIES: readonly CREScenarioSummary[] = [
   {
     scenarioId: "SCENARIO_A_ZERO_BUDGET",
-    label: "Free/public sources only (current E68 state)",
+    label: "Free/public sources only (current E86 state)",
     costTier: "FREE",
     costNote: "No paid source licensed; $0",
     sourceIds: CRE_FREE_SOURCE_IDS,

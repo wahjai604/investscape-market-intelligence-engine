@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 4 — Escalation Engine.
+ * InvestScape™ E88 Phase 4 — Escalation Engine.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * `escalateCost()` is the Phase 4 primitive: given a historical/base-period
@@ -14,7 +14,7 @@
  * result — no hidden state, no randomness, no wall-clock dependency.
  *
  * THIS FILE DOES NOT compute a confidence score, a benchmark consensus, or
- * any total/hard/soft aggregation — that remains Phase 5 (docs/E70-phase1-
+ * any total/hard/soft aggregation — that remains Phase 5 (docs/E88-phase1-
  * technical-specification.md Section 24). It preserves enough information
  * (`relationship`, `indexSeries`) for Phase 5 to build a confidence model on
  * top, per this phase's explicit boundary instruction.
@@ -109,7 +109,7 @@ function scaleCostFigure(figure: Pick<CCCostFigure, "low" | "high" | "value">, r
 
 /**
  * Escalate one source cost observation to a target period. `indexPool`
- * defaults to every index observation E70 actually knows about
+ * defaults to every index observation E88 actually knows about
  * (data/index-series.ts) but is overridable so tests can exercise synthetic
  * evidence (duplicate/conflicting observations, unsupported series, etc.)
  * without mutating the real dataset.

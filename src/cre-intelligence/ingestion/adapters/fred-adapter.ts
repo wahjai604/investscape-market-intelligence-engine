@@ -1,10 +1,10 @@
 /**
- * InvestScape™ E68 Phase 7 — FRED (Federal Reserve Economic Data) adapter.
+ * InvestScape™ E86 Phase 7 — FRED (Federal Reserve Economic Data) adapter.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * FRED (fred.stlouisfed.org, operated by the Federal Reserve Bank of St.
  * Louis) has a documented public REST API requiring a free API key
- * (see docs/E68-phase7-government-public-api-ingestion.md and
+ * (see docs/E86-phase7-government-public-api-ingestion.md and
  * ../public-source-registry.ts, sourceId "fred-api").
  *
  * HARD BOUNDARY (Phase 6/7 non-negotiable, see types.ts SourceAdapter docs):

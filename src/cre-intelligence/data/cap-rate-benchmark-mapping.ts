@@ -1,9 +1,9 @@
 /**
- * InvestScape™ E68 Phase 4C — application benchmark mapping output.
+ * InvestScape™ E86 Phase 4C — application benchmark mapping output.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Runs every one of the 35 verified cap-rate observations (15 US + 20 Canada)
- * through `qualifyCapRateObservation`. This is the E68 -> InvestScape
+ * through `qualifyCapRateObservation`. This is the E86 -> InvestScape
  * translation layer requested for Phase 4C, built entirely within this repo:
  * `CAP_RATE_BENCHMARKS` does not exist here (confirmed absent from this
  * workspace in Phase 4) and is not touched — that is Phase 5's job, against

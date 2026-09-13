@@ -1,15 +1,15 @@
 /**
- * InvestScape™ E68 Phase 7 — government/public-source ingestion architecture.
+ * InvestScape™ E86 Phase 7 — government/public-source ingestion architecture.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Generic pipeline contracts so a future public source can plug in without
- * rewriting E68:
+ * rewriting E86:
  *
  *   Government/Public Source -> Source Adapter -> Raw Source Record
  *     -> Normalization -> Validation -> Qualification -> CREObservation
  *     -> Historical Data Store -> Benchmark/Downstream Consumers
  *
- * E68's existing `CREObservation` (types.ts) models a CRE market benchmark
+ * E86's existing `CREObservation` (types.ts) models a CRE market benchmark
  * (cap rate, hard/soft cost, construction index). Most public/government
  * sources do NOT publish CRE benchmarks directly — they publish CRE-ADJACENT
  * economic, demographic, or property data (population, employment, permits,
@@ -22,7 +22,7 @@
  *
  * A source adapter MAY still produce genuine `CREObservation`s when a
  * government source really does publish one (e.g. Statistics Canada's
- * Building Construction Price Index, already registered in E68's source
+ * Building Construction Price Index, already registered in E86's source
  * registry as `statcan-bcpi` with metric `construction_index`).
  */
 import type { CREGeography, CRECitation, CREDataStatus, CREObservation, CREDataGap } from "../types";

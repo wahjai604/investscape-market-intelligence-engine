@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 2 — Construction Cost Pipeline.
+ * InvestScape™ E88 Phase 2 — Construction Cost Pipeline.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Orchestrates comparability.ts into the single Phase 2 output contract:
@@ -9,7 +9,7 @@
  * THIS FILE DOES NOT compute a benchmark value, consensus, or escalated cost.
  * Phase 2 stops at "here are the candidates that legitimately inform this
  * request, or here is exactly why none do" — aggregation is Phase 5+
- * (docs/E70-phase1-technical-specification.md Section 24).
+ * (docs/E88-phase1-technical-specification.md Section 24).
  *
  * HARD-COST-ONLY RULE (Phase 1 Decision 5, Phase 2 objective 6): resolved at
  * THIS layer, before comparability scoring runs on the full pool. A request
@@ -78,7 +78,7 @@ export function evaluateConstructionCostRequest(
         gap: buildGap(
           request,
           "NO_SOFT_COST_OBSERVATIONS_EXIST",
-          "No soft-cost observation exists in the supplied candidate pool for any geography or category. E68 has zero verified soft-cost observations as of Phase 1 (soft-cost.ts always returns SOFT_COST_DATA_NOT_AVAILABLE) — this is a source fact, not an omission.",
+          "No soft-cost observation exists in the supplied candidate pool for any geography or category. E86 has zero verified soft-cost observations as of Phase 1 (soft-cost.ts always returns SOFT_COST_DATA_NOT_AVAILABLE) — this is a source fact, not an omission.",
           [],
           sourcesChecked,
           checkedAt,

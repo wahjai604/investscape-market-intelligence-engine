@@ -1,8 +1,8 @@
 /**
- * InvestScape™ E68 — compatibility mapping to the application-facing layer.
+ * InvestScape™ E86 — compatibility mapping to the application-facing layer.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E68 is the authoritative normalized source layer. The application's existing
+ * E86 is the authoritative normalized source layer. The application's existing
  * CAP_RATE_BENCHMARKS and DEV_BUILDING_SUBTYPES are a *compatibility* layer with
  * a coarser vocabulary. This file is the explicit, tested seam between them, so
  * neither one distorts the other.
@@ -10,7 +10,7 @@
  * NOTE FOR REVIEWERS: neither `CAP_RATE_BENCHMARKS` nor `DEV_BUILDING_SUBTYPES`
  * exists anywhere in this workspace (all seven sibling repos were searched on
  * 2026-09-10) — they live in the WeWeb front end. The legacy key vocabulary
- * below is therefore transcribed from the E68 Phase 4 specification rather than
+ * below is therefore transcribed from the E86 Phase 4 specification rather than
  * imported. If the front-end enum ever moves into a shared package, import it
  * here and delete the local literal union so drift becomes a compile error.
  */
@@ -34,7 +34,7 @@ export const LEGACY_CLASS_SPLIT: Readonly<Record<LegacyCapRateKey, boolean>> = {
 };
 
 /**
- * How faithfully an E68 dimension survives the trip to a legacy key.
+ * How faithfully an E86 dimension survives the trip to a legacy key.
  *
  *   exact       — the source's own classification is the legacy category
  *   close       — a documented, defensible narrowing; safe to auto-surface
@@ -60,7 +60,7 @@ export interface CapRateMappingResult {
 }
 
 /**
- * Map an E68 asset class + location type onto a legacy cap-rate key.
+ * Map an E86 asset class + location type onto a legacy cap-rate key.
  *
  * The hard rule: an unspecified locationType does NOT become downtown or
  * suburban. Office without a stated geography type has no legacy key at all,

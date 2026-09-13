@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 4C — cap-rate benchmark qualification.
+ * InvestScape™ E86 Phase 4C — cap-rate benchmark qualification.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Extends `mapping.ts`'s exact/close/approximate/unsupported framework from
@@ -67,7 +67,7 @@ export interface ObservationQualification {
 }
 
 /**
- * Currency axis. "CURRENT" sits deliberately last in E68's stated priority
+ * Currency axis. "CURRENT" sits deliberately last in E86's stated priority
  * order (REAL > TRACEABLE > GRANULAR > CURRENT > COMPLETE), so staleness never
  * disqualifies an observation outright — it can only pull it down to
  * `approximate`, never to `unsupported`.
@@ -143,7 +143,7 @@ export function qualifyCapRateObservation(
   const family = methodologyFamily(obs.capRateType);
   if (family !== "transaction") {
     warnings.push(
-      `Methodology is "${obs.capRateType}" (${family}), not a transaction-derived average — transaction evidence ranks highest in E68's source hierarchy (docs/e68-source-registry.md).`,
+      `Methodology is "${obs.capRateType}" (${family}), not a transaction-derived average — transaction evidence ranks highest in E86's source hierarchy (docs/e86-source-registry.md).`,
     );
   }
 

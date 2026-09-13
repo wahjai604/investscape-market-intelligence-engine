@@ -1,16 +1,16 @@
 /**
- * InvestScape™ E69 Phase 2 — Cap-Rate Comparability Layer: types.
+ * InvestScape™ E87 Phase 2 — Cap-Rate Comparability Layer: types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E69 is a read-only consumer of E68 (src/cre-intelligence/), frozen at v1.0.
+ * E87 is a read-only consumer of E86 (src/cre-intelligence/), frozen at v1.0.
  * Nothing in this directory imports anything that would require editing an
- * E68 file; every E68 import below is a plain named import from E68 source.
+ * E86 file; every E86 import below is a plain named import from E86 source.
  *
  * This file defines ONLY the Phase 2 scope: a request describing the desired
  * cap-rate benchmark identity, and the per-candidate comparability/inclusion
  * output. It deliberately does NOT define consensus, dispersion, scenario, or
  * transaction-derivation types — those are future phases (see
- * docs/E69-phase1-technical-specification.md Part 20).
+ * docs/E87-phase1-technical-specification.md Part 20).
  */
 import type {
   CRECapRateType,
@@ -30,11 +30,11 @@ import type { CREPresentationFreshness } from "../cre-intelligence/ingestion/obs
  * `benchmark-selection.ts`'s `matchesIdentity` principle: "only filter on a
  * dimension the request actually specifies."
  *
- * Reuses E68 types verbatim wherever the concept already exists there
+ * Reuses E86 types verbatim wherever the concept already exists there
  * (`CREGeography`, `CRELocationType`, `CREAssetClass`, `CREPropertyClass`,
  * `CRECapRateType`) rather than duplicating enums.
  */
-export interface E69ComparabilityRequest {
+export interface E87ComparabilityRequest {
   /** country is required (CREGeography.country); region/metro/city/submarket are optional narrowings. */
   geography: CREGeography;
   /** Downtown/CBD/suburban/urban/source-defined geography type. */
@@ -68,21 +68,21 @@ export interface E69ComparabilityRequest {
 }
 
 /**
- * Per-observation input to the comparability engine. E69 never recomputes
+ * Per-observation input to the comparability engine. E87 never recomputes
  * freshness itself — Part 14 of this phase's documentation records this as a
- * hard E68 dependency. `freshness` should be the `CREPresentationFreshness`
- * an E68-Phase-8 caller already computed via `assessFreshness` for this
+ * hard E86 dependency. `freshness` should be the `CREPresentationFreshness`
+ * an E86-Phase-8 caller already computed via `assessFreshness` for this
  * observation's backing source. When a caller has not computed it, leave it
  * undefined; the engine treats that honestly as "not assessed" rather than
  * guessing a tier.
  */
-export interface E69CandidateInput {
+export interface E87CandidateInput {
   observation: CRECitedObservation;
   freshness?: CREPresentationFreshness;
 }
 
-/** The four-tier vocabulary this file reuses verbatim from E68's `mapping.ts`. */
-export type E69MatchLevel = MappingConfidence;
+/** The four-tier vocabulary this file reuses verbatim from E86's `mapping.ts`. */
+export type E87MatchLevel = MappingConfidence;
 
 /**
  * A single comparability dimension's result. `"not_constrained"` means the
@@ -90,8 +90,8 @@ export type E69MatchLevel = MappingConfidence;
  * all, and dimensions in this state never participate in the overall floor
  * (see `combineDimensions` in comparability.ts).
  */
-export interface E69DimensionResult {
-  level: E69MatchLevel | "not_constrained";
+export interface E87DimensionResult {
+  level: E87MatchLevel | "not_constrained";
   reason: string;
 }
 
@@ -101,28 +101,28 @@ export interface E69DimensionResult {
  * whether or not the request constrains it, so a future consensus phase can
  * weight/filter on any axis without recomputing comparability.
  */
-export interface E69ComparabilityDimensions {
-  geographyMatch: E69DimensionResult;
-  geographyTypeMatch: E69DimensionResult;
-  assetMatch: E69DimensionResult;
-  subtypeMatch: E69DimensionResult;
-  classMatch: E69DimensionResult;
-  periodMatch: E69DimensionResult;
-  freshnessMatch: E69DimensionResult;
-  representationMatch: E69DimensionResult;
+export interface E87ComparabilityDimensions {
+  geographyMatch: E87DimensionResult;
+  geographyTypeMatch: E87DimensionResult;
+  assetMatch: E87DimensionResult;
+  subtypeMatch: E87DimensionResult;
+  classMatch: E87DimensionResult;
+  periodMatch: E87DimensionResult;
+  freshnessMatch: E87DimensionResult;
+  representationMatch: E87DimensionResult;
 }
 
-export type E69InclusionDecision = "INCLUDED" | "EXCLUDED";
+export type E87InclusionDecision = "INCLUDED" | "EXCLUDED";
 
 /**
- * Machine-readable exclusion reasons. Reuses E68's `CREDataGapReasonCode`
+ * Machine-readable exclusion reasons. Reuses E86's `CREDataGapReasonCode`
  * vocabulary is deliberately NOT done here: those eight codes describe a
  * SOURCE's inability to publish something at ingestion time; none of them
  * answer "this specific observation doesn't fit THIS request," which is an
- * E69-Phase-2 concern (Part 13 of the Phase 1 spec proposes exactly this kind
+ * E87-Phase-2 concern (Part 13 of the Phase 1 spec proposes exactly this kind
  * of extension). These codes are net-new and scoped to comparability only.
  */
-export type E69ExclusionReasonCode =
+export type E87ExclusionReasonCode =
   | "WRONG_ASSET_TYPE"
   | "WRONG_ASSET_SUBTYPE"
   | "WRONG_GEOGRAPHY"
@@ -138,17 +138,17 @@ export type E69ExclusionReasonCode =
 /**
  * The full, auditable verdict for one candidate observation against one
  * request. `observation` is carried through verbatim (never mutated, never
- * copied-and-changed) so a consumer can always trace back to the exact E68
+ * copied-and-changed) so a consumer can always trace back to the exact E86
  * record this verdict describes.
  */
-export interface E69ComparabilityCandidate {
+export interface E87ComparabilityCandidate {
   observation: CRECitedObservation;
   /** Floor across every dimension the request actually constrains. */
-  comparability: E69MatchLevel;
-  dimensions: E69ComparabilityDimensions;
-  decision: E69InclusionDecision;
+  comparability: E87MatchLevel;
+  dimensions: E87ComparabilityDimensions;
+  decision: E87InclusionDecision;
   /** Present only when decision === "EXCLUDED". */
-  exclusionReasonCode?: E69ExclusionReasonCode;
+  exclusionReasonCode?: E87ExclusionReasonCode;
   /**
    * Deterministic, machine-readable, human-presentable audit text. For an
    * INCLUDED candidate: names which dimensions matched and at what tier. For
@@ -159,10 +159,10 @@ export interface E69ComparabilityCandidate {
   warnings: string[];
 }
 
-export interface E69ComparabilityResult {
-  request: E69ComparabilityRequest;
+export interface E87ComparabilityResult {
+  request: E87ComparabilityRequest;
   /** Every candidate evaluated, included and excluded alike — nothing is silently dropped. */
-  candidates: E69ComparabilityCandidate[];
-  included: E69ComparabilityCandidate[];
-  excluded: E69ComparabilityCandidate[];
+  candidates: E87ComparabilityCandidate[];
+  included: E87ComparabilityCandidate[];
+  excluded: E87ComparabilityCandidate[];
 }

@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 5 — application-integration tests (Part 14, A-Q).
+ * InvestScape™ E86 Phase 5 — application-integration tests (Part 14, A-Q).
  */
 import {
   selectCapRateBenchmark,
@@ -99,11 +99,11 @@ describe("E/F. publisher range remains a range; derived midpoint is explicitly m
     expect(result.derivedBenchmark).toBeUndefined();
   });
 
-  test("deriveMidpoint is opt-in and tagged e68_derived / sourceSupplied:false", () => {
+  test("deriveMidpoint is opt-in and tagged e86_derived / sourceSupplied:false", () => {
     const range: PublisherRange = { low: 5.5, high: 6.0, unit: "percent" };
     const derived = deriveMidpoint(range);
     expect(derived.value).toBeCloseTo(5.75);
-    expect(derived.provenance).toBe("e68_derived");
+    expect(derived.provenance).toBe("e86_derived");
     expect(derived.sourceSupplied).toBe(false);
     expect(derived.derivationMethod).toMatch(/midpoint/);
   });
@@ -215,7 +215,7 @@ describe("K/L. Class A cannot silently become B/C; CBD cannot silently become su
 describe("M. residential data cannot silently become commercial multifamily", () => {
   test("no data-layer function accepts a residential observation and returns a multifamily key", () => {
     // Structural: `matchesIdentity`/`qualifyCapRateObservation` both key off the
-    // observation's own assetClass, which E68's type system restricts to
+    // observation's own assetClass, which E86's type system restricts to
     // CREAssetClass (commercial categories only) — there is no "residential"
     // member, so no residential observation can exist in this pool at all.
     const identity: BenchmarkIdentity = { metric: "cap_rate", country: "US", city: "Houston", assetClass: "multifamily" };
@@ -226,10 +226,10 @@ describe("M. residential data cannot silently become commercial multifamily", ()
   });
 });
 
-describe("N. user override cannot mutate E68 source data", () => {
+describe("N. user override cannot mutate E86 source data", () => {
   test("creating and resolving an override leaves the observation array untouched", () => {
     const before = JSON.stringify(US_CAP_RATE_OBSERVATIONS);
-    const e68 = selectCapRateBenchmark(
+    const e86 = selectCapRateBenchmark(
       { metric: "cap_rate", country: "US", city: "Houston", assetClass: "multifamily", propertySubtype: "class_a_infill" },
       US_CAP_RATE_OBSERVATIONS,
       AS_OF,
@@ -237,24 +237,24 @@ describe("N. user override cannot mutate E68 source data", () => {
     const override = createUserOverride({
       overrideValue: 6.25,
       overrideReason: "Local broker opinion differs from published range.",
-      originalE68Value: 5.0,
+      originalE86Value: 5.0,
       now: AS_OF,
     });
-    const resolved = resolveBenchmark(e68, override);
+    const resolved = resolveBenchmark(e86, override);
     expect(resolved.active).toBe("override");
     expect(resolved.override?.source).toBe("USER");
-    expect(resolved.e68).toBe(e68); // retained, not discarded
+    expect(resolved.e86).toBe(e86); // retained, not discarded
     expect(JSON.stringify(US_CAP_RATE_OBSERVATIONS)).toBe(before);
   });
 
-  test("no override falls back to the E68 benchmark when available", () => {
-    const e68 = selectCapRateBenchmark(
+  test("no override falls back to the E86 benchmark when available", () => {
+    const e86 = selectCapRateBenchmark(
       { metric: "cap_rate", country: "US", city: "Houston", assetClass: "multifamily", propertySubtype: "class_a_infill" },
       US_CAP_RATE_OBSERVATIONS,
       AS_OF,
     );
-    const resolved = resolveBenchmark(e68, undefined);
-    expect(resolved.active).toBe("e68");
+    const resolved = resolveBenchmark(e86, undefined);
+    expect(resolved.active).toBe("e86");
   });
 
   test("no override and a DATA_GAP falls back to application_default, never fabricates a value", () => {
@@ -265,22 +265,22 @@ describe("N. user override cannot mutate E68 source data", () => {
   });
 });
 
-describe("O. invalid legacy values cannot masquerade as E68 values", () => {
-  test("a legacy value with no source and no E68 mapping is flagged unverified", () => {
-    const audit = auditLegacyBenchmark({ key: "office_downtown", value: 6.5, hasE68Mapping: false });
+describe("O. invalid legacy values cannot masquerade as E86 values", () => {
+  test("a legacy value with no source and no E86 mapping is flagged unverified", () => {
+    const audit = auditLegacyBenchmark({ key: "office_downtown", value: 6.5, hasE86Mapping: false });
     expect(audit.classification).toBe("LEGACY_UNVERIFIED");
     expect(audit.hasSource).toBe(false);
-    expect(audit.reason).toMatch(/must not be presented as E68-sourced/);
+    expect(audit.reason).toMatch(/must not be presented as E86-sourced/);
   });
 
   test("nullify option clears the value instead of retaining it", () => {
-    const audit = auditLegacyBenchmark({ key: "office_downtown", value: 6.5, hasE68Mapping: false }, { nullify: true });
+    const audit = auditLegacyBenchmark({ key: "office_downtown", value: 6.5, hasE86Mapping: false }, { nullify: true });
     expect(audit.classification).toBe("NULL");
     expect(audit.legacyValue).toBeNull();
   });
 
-  test("a legacy value with a source and a matched E68 observation is still not auto-promoted to E68-sourced", () => {
-    const audit = auditLegacyBenchmark({ key: "multifamily", value: 5.0, source: "internal analyst estimate", hasE68Mapping: true });
+  test("a legacy value with a source and a matched E86 observation is still not auto-promoted to E86-sourced", () => {
+    const audit = auditLegacyBenchmark({ key: "multifamily", value: 5.0, source: "internal analyst estimate", hasE86Mapping: true });
     expect(audit.classification).toBe("LEGACY_UNVERIFIED");
   });
 });
@@ -331,11 +331,11 @@ describe("P. construction-cost mappings preserve their qualification", () => {
   });
 });
 
-describe("Q. soft costs cannot be represented as E68 sourced unless an actual source exists", () => {
+describe("Q. soft costs cannot be represented as E86 sourced unless an actual source exists", () => {
   test("soft-cost lookup always returns SOFT_COST_DATA_NOT_AVAILABLE today", () => {
     const result = getSoftCostBenchmark({ country: "US", city: "Houston", assetClass: "multifamily" });
     expect(result.status).toBe("SOFT_COST_DATA_NOT_AVAILABLE");
-    expect(result.reason).toMatch(/never labeled E68-sourced/);
+    expect(result.reason).toMatch(/never labeled E86-sourced/);
   });
 });
 

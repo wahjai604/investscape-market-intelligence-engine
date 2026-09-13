@@ -1,13 +1,13 @@
 /**
- * InvestScape™ E69 Phase 4 — Transaction-Derived Cap Rate Calculation: types.
+ * InvestScape™ E87 Phase 4 — Transaction-Derived Cap Rate Calculation: types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E69 Phase 4 is a read-only consumer of E68 (`src/cre-intelligence/`, frozen
+ * E87 Phase 4 is a read-only consumer of E86 (`src/cre-intelligence/`, frozen
  * at v1.0) and of Phase 2 (`comparability-types.ts`/`comparability.ts`). It
  * calculates a cap rate ONLY from an explicit transaction's disclosed
  * purchase price and NOI — never estimated, interpolated, or inferred from
  * rent/asking price/assessed value. See
- * docs/E69-phase4-transaction-derived.md for the full design rationale.
+ * docs/E87-phase4-transaction-derived.md for the full design rationale.
  *
  * THIS FILE DOES NOT: run consensus/aggregation across transactions (Phase
  * 3's job, only after a derived observation flows back through Phase 2/3's
@@ -97,7 +97,7 @@ export type CRENoiDefinition =
 
 /**
  * Explicit NOI quality classification, kept separate from the general source
- * hierarchy tier (Phase 3's `E69SourceHierarchyTier`) — a high-quality source
+ * hierarchy tier (Phase 3's `E87SourceHierarchyTier`) — a high-quality source
  * publishing an ESTIMATED NOI does not become ACTUAL NOI by association.
  */
 export type CRENoiQuality = "ACTUAL" | "REPORTED" | "ESTIMATED" | "STABILIZED" | "UNKNOWN";
@@ -158,7 +158,7 @@ export interface CREFxConversion {
 // Transaction cap-rate type (Part 8/9 of the spec)
 // ---------------------------------------------------------------------------
 
-/** Publisher-stated cap-rate concept, when explicitly stated. Reuses E68's CRECapRateType. */
+/** Publisher-stated cap-rate concept, when explicitly stated. Reuses E86's CRECapRateType. */
 export type CRETransactionCapRateType = CRECapRateType;
 
 // ---------------------------------------------------------------------------
@@ -173,7 +173,7 @@ export interface CRETransactionProvenance {
   locator?: string;
   sourceUrl?: string;
   transactionId: string;
-  /** ISO retrieval timestamp, mirrors E68's CRECitation.retrievedAt. */
+  /** ISO retrieval timestamp, mirrors E86's CRECitation.retrievedAt. */
   retrievedAt?: string;
 }
 
@@ -289,10 +289,10 @@ export interface CRETransactionAudit {
 
 /**
  * The canonical Phase 4 output for a single transaction. `status` is always
- * `"DERIVED"`, never `"OBSERVED"` — this is E69's own arithmetic, not a
- * publisher-printed figure. `asCandidateInput` reuses E68's
+ * `"DERIVED"`, never `"OBSERVED"` — this is E87's own arithmetic, not a
+ * publisher-printed figure. `asCandidateInput` reuses E86's
  * `CREDerivedTransaction` shape verbatim (via `toDerivedTransaction` in
- * transaction-derivation.ts) and produces an `E69CandidateInput` so the
+ * transaction-derivation.ts) and produces an `E87CandidateInput` so the
  * result can flow into Phase 2's `evaluateCandidate`/`evaluateComparability`
  * and, from there, Phase 3's `buildCapRateBenchmark` — through the existing
  * contracts, with no parallel benchmark engine.
@@ -307,7 +307,7 @@ export interface CRETransactionDerivedObservation {
   audit: CRETransactionAudit;
   /**
    * Property/geography identity carried through from the originating
-   * `CRETransactionInput`, verbatim, so `toE69CandidateInput` can build a
+   * `CRETransactionInput`, verbatim, so `toE87CandidateInput` can build a
    * complete, valid `CRECitedObservation` without inventing or omitting any
    * Phase 2 comparability dimension.
    */

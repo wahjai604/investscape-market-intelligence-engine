@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 4C — benchmark qualification and application mapping.
+ * InvestScape™ E86 Phase 4C — benchmark qualification and application mapping.
  *
  * Covers the Phase 4C spec's "never" rules adversarially (with synthetic
  * observations, since the real 35 are all multifamily and can't exercise the

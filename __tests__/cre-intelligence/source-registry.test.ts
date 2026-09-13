@@ -1,6 +1,6 @@
 import { CRE_SOURCE_REGISTRY, getCRESource, listCRESources } from "../../src/cre-intelligence/source-registry";
 
-describe("E68 CRE source registry", () => {
+describe("E86 CRE source registry", () => {
   test("contains Canada and US benchmark sources", () => {
     expect(getCRESource("cbre-ca-cap-rates")?.countries).toContain("CA");
     expect(getCRESource("cbre-us-cap-rates")?.countries).toContain("US");

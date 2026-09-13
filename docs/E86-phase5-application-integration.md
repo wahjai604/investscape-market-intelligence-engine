@@ -1,6 +1,6 @@
-# E68 Phase 5 — Application Integration
+# E86 Phase 5 — Application Integration
 
-Status: **READY FOR FRONTEND INTEGRATION.** The E68-side contract is complete and tested. No application repository was modified — see Part 1.
+Status: **READY FOR FRONTEND INTEGRATION.** The E86-side contract is complete and tested. No application repository was modified — see Part 1.
 
 ## Part 1 — Application repository inspection
 
@@ -11,23 +11,23 @@ Findings:
 - **No WeWeb frontend repository exists in this workspace.** `weweb-integration-tests` is a small test harness that validates a `<script>` snippet (`weweb-custom-code-snippet.html`) which WeWeb's Custom Code element loads to attach the three engine UMD bundles (`calc-engine`, `economic-engine`, `tax-engine`) to `window.*`. It contains no application pages, no bindings, and no benchmark constants.
 - **`CAP_RATE_BENCHMARKS` and `DEV_BUILDING_SUBTYPES` do not exist anywhere in this workspace.** Confirmed by a fresh grep across every repo, re-running Phase 4's search rather than trusting its cached conclusion.
 - **`investscape-api` is a real, substantial server-side application layer** — 60+ route modules (`E1`...`E82`), including a `market-intelligence/` route group (`E60`–`E66`) that already imports `@investscape/market-intelligence-engine` as an npm dependency and exposes `POST /calculate/market-intelligence/benchmark-subject` and related endpoints.
-- That dependency is **vendored as a frozen tarball, `vendor/investscape-market-intelligence-engine-0.1.1.tgz`**, predating E68 entirely — its `dist/` has no `cre-intelligence` directory. `E60`–`E66` exercise a different, earlier surface of this package (generic statistical `marketIntelligence.benchmarkSubject`), not cap rates or construction costs.
+- That dependency is **vendored as a frozen tarball, `vendor/investscape-market-intelligence-engine-0.1.1.tgz`**, predating E86 entirely — its `dist/` has no `cre-intelligence` directory. `E60`–`E66` exercise a different, earlier surface of this package (generic statistical `marketIntelligence.benchmarkSubject`), not cap rates or construction costs.
 - No other repo (`calc-engine`, `tax-engine`, `economic-engine` outside E30, `docs`) contains a cap-rate or construction-cost constants table beyond `calc-engine`'s `CAP_RATE_STRONG_THRESHOLD`/`SOLID`/`WEAK` — deal-grading cutoffs, not a benchmark-by-city table, and out of scope here.
 
-**Conclusion:** the actual InvestScape "frontend" for engine consumption is a WeWeb project that is not checked into this workspace and cannot be inspected or modified from here. `investscape-api` is a real, available adapter boundary, but wiring this phase's work into its vendored tarball is a packaging/release action (rebuild the tarball, bump the dependency, redeploy the API) that is outside E68's own repository and was not requested — doing it unprompted would be exactly the kind of cross-repo side effect Phase 4C's "do not integrate into the live application yet" was guarding against, one phase early. Per the Phase 5 spec's Part 8, this phase therefore builds the complete integration contract inside `investscape-market-intelligence-engine` and stops there.
+**Conclusion:** the actual InvestScape "frontend" for engine consumption is a WeWeb project that is not checked into this workspace and cannot be inspected or modified from here. `investscape-api` is a real, available adapter boundary, but wiring this phase's work into its vendored tarball is a packaging/release action (rebuild the tarball, bump the dependency, redeploy the API) that is outside E86's own repository and was not requested — doing it unprompted would be exactly the kind of cross-repo side effect Phase 4C's "do not integrate into the live application yet" was guarding against, one phase early. Per the Phase 5 spec's Part 8, this phase therefore builds the complete integration contract inside `investscape-market-intelligence-engine` and stops there.
 
 ## Architecture
 
 ```
 RAW SOURCE
     v
-E68 OBSERVATION        (data/*.ts — CRECitedObservation, immutable, cited)
+E86 OBSERVATION        (data/*.ts — CRECitedObservation, immutable, cited)
     v
 VALIDATION              (existing: mandatory CRECitation, CREDataGap for absence)
     v
 QUALIFICATION           (qualification.ts, Phase 4C — exact/close/approximate/unsupported floor)
     v
-E68 BENCHMARK           (benchmark-selection.ts, Phase 5 — deterministic selection -> CREBenchmarkResponse)
+E86 BENCHMARK           (benchmark-selection.ts, Phase 5 — deterministic selection -> CREBenchmarkResponse)
     v
 APPLICATION MAPPING     (mapping.ts, Phase 4 — legacy key/subtype translation, embedded in qualification)
     v
@@ -56,7 +56,7 @@ Explicitly not done, per spec: no cross-asset-class averaging, no cross-property
 
 ## Range handling (Part 5)
 
-`CREBenchmarkResponse.publisherRange` holds the publisher's own low/high verbatim; `publisherValue` holds a publisher's own point estimate. Neither is ever synthesized. A single number is only ever produced by the separate, opt-in `deriveMidpoint()` function, which returns a `DerivedValue` explicitly tagged `provenance: "e68_derived"` and `sourceSupplied: false`. Nothing in the selection path calls `deriveMidpoint` on its own — an application must ask for it.
+`CREBenchmarkResponse.publisherRange` holds the publisher's own low/high verbatim; `publisherValue` holds a publisher's own point estimate. Neither is ever synthesized. A single number is only ever produced by the separate, opt-in `deriveMidpoint()` function, which returns a `DerivedValue` explicitly tagged `provenance: "e86_derived"` and `sourceSupplied: false`. Nothing in the selection path calls `deriveMidpoint` on its own — an application must ask for it.
 
 ## Construction-cost integration (Part 6)
 
@@ -64,15 +64,15 @@ Explicitly not done, per spec: no cross-asset-class averaging, no cross-property
 
 ## Soft costs (Part 7)
 
-`soft-cost.ts` returns a fixed `SOFT_COST_DATA_NOT_AVAILABLE` response for every request. E68 has no verified soft-cost source; this is a placeholder contract, not a computed answer, and its `reason` field says so explicitly so a consumer cannot mistake it for E68 research.
+`soft-cost.ts` returns a fixed `SOFT_COST_DATA_NOT_AVAILABLE` response for every request. E86 has no verified soft-cost source; this is a placeholder contract, not a computed answer, and its `reason` field says so explicitly so a consumer cannot mistake it for E86 research.
 
 ## Legacy protection (Part 10)
 
-`legacy-migration.ts`'s `auditLegacyBenchmark` classifies a legacy value as `LEGACY_UNVERIFIED` (default) or `NULL` (if `nullify: true`) whenever it lacks either a recorded source or a matched E68 observation — **and even when it has both**, because having a source and a matched observation is not the same as having been re-derived through E68's own qualification pipeline. No legacy value is ever reclassified as E68-sourced by this function. Since no legacy benchmark table exists in this workspace (Part 1), this is a design/contract for the WeWeb repository to run once E68 is wired in there — not a completed migration.
+`legacy-migration.ts`'s `auditLegacyBenchmark` classifies a legacy value as `LEGACY_UNVERIFIED` (default) or `NULL` (if `nullify: true`) whenever it lacks either a recorded source or a matched E86 observation — **and even when it has both**, because having a source and a matched observation is not the same as having been re-derived through E86's own qualification pipeline. No legacy value is ever reclassified as E86-sourced by this function. Since no legacy benchmark table exists in this workspace (Part 1), this is a design/contract for the WeWeb repository to run once E86 is wired in there — not a completed migration.
 
 ## User override (Part 11)
 
-`user-override.ts` separates `createUserOverride` (records `overrideValue`/`overrideReason`/`overrideTimestamp`/`originalE68Value`, `source: "USER"`) from `resolveBenchmark` (decides `active: "e68" | "override" | "application_default"`). An override is a returned record, never a write path into the E68 data layer — there is no function in this package that accepts an override and mutates `data/*.ts`. Tested explicitly (Part N).
+`user-override.ts` separates `createUserOverride` (records `overrideValue`/`overrideReason`/`overrideTimestamp`/`originalE86Value`, `source: "USER"`) from `resolveBenchmark` (decides `active: "e86" | "override" | "application_default"`). An override is a returned record, never a write path into the E86 data layer — there is no function in this package that accepts an override and mutates `data/*.ts`. Tested explicitly (Part N).
 
 ## Provenance (Part 12)
 
@@ -94,7 +94,7 @@ Every `DATA_GAP` response includes `dataGap: { reason, sourcesInvestigated, last
 - Did not silently convert any range to a point (`deriveMidpoint` is opt-in and tagged).
 - Did not let any `approximate` observation populate a benchmark without a warning.
 - Did not modify any of the 88 source observations from Phase 4/4A/4B/4C.
-- Did not copy E68 data into another repository.
+- Did not copy E86 data into another repository.
 - Did not touch `investscape-api`'s vendored tarball or any other sibling repo.
 - Did not treat a data gap as zero, or an inaccessible source as nonexistent.
 - Did not implement or purchase any paid data source.
@@ -124,7 +124,7 @@ const response = selectCapRateBenchmark(
 );
 ```
 
-A real HTTP endpoint (e.g. `GET /calculate/market-intelligence/e68/cap-rate-benchmark`) is a straightforward thin wrapper around `selectCapRateBenchmark`/`selectHardCostBenchmark` plus the identity from the request body — but adding that route to `investscape-api`, rebuilding its vendored dependency, and redeploying it is a separate, cross-repo action for a future session with explicit instruction to touch that repository.
+A real HTTP endpoint (e.g. `GET /calculate/market-intelligence/e86/cap-rate-benchmark`) is a straightforward thin wrapper around `selectCapRateBenchmark`/`selectHardCostBenchmark` plus the identity from the request body — but adding that route to `investscape-api`, rebuilding its vendored dependency, and redeploying it is a separate, cross-repo action for a future session with explicit instruction to touch that repository.
 
 ## Test coverage
 
@@ -132,6 +132,6 @@ A real HTTP endpoint (e.g. `GET /calculate/market-intelligence/e68/cap-rate-benc
 
 ## Remaining gaps (unchanged from Phase 4B/4C — Phase 5 did no new research)
 
-Miami has zero cap-rate observations of any kind; office/industrial/retail remain unsourced for most cities in both countries; no `derived_transaction` cap rate exists anywhere; CBRE Canada/Colliers Canada/Avison Young remain `FOUND_BUT_INACCESSIBLE`; E68 has no soft-cost data at all.
+Miami has zero cap-rate observations of any kind; office/industrial/retail remain unsourced for most cities in both countries; no `derived_transaction` cap rate exists anywhere; CBRE Canada/Colliers Canada/Avison Young remain `FOUND_BUT_INACCESSIBLE`; E86 has no soft-cost data at all.
 
 REAL > TRACEABLE > GRANULAR > CURRENT > COMPLETE.

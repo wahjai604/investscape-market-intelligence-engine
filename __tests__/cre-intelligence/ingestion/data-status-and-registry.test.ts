@@ -85,7 +85,7 @@ describe("Phase 7 Part 11 — data gap messaging", () => {
       licensedAlternativeHint: "Licensed CRE market source required.",
     });
     expect(message).toBe(
-      "Commercial cap rate unavailable from public government sources for Miami, FL. This metric is not published by any public/government source E68 has checked. Licensed CRE market source required.",
+      "Commercial cap rate unavailable from public government sources for Miami, FL. This metric is not published by any public/government source E86 has checked. Licensed CRE market source required.",
     );
     expect(message).not.toMatch(/^No data available\.?$/);
   });

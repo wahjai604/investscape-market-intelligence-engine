@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E69 Phase 5 — Unified Cap-Rate Benchmark Output tests.
+ * InvestScape™ E87 Phase 5 — Unified Cap-Rate Benchmark Output tests.
  *
  * Adversarial, end-to-end style: every scenario runs the real
  * `resolveCapRateBenchmark` orchestration function against realistic
@@ -8,8 +8,8 @@
  * proven to compose.
  */
 import { resolveCapRateBenchmark } from "../../src/cap-rate-engine/pipeline";
-import type { E69PipelineRequest } from "../../src/cap-rate-engine/pipeline-types";
-import type { E69CandidateInput, E69ComparabilityRequest } from "../../src/cap-rate-engine/comparability-types";
+import type { E87PipelineRequest } from "../../src/cap-rate-engine/pipeline-types";
+import type { E87CandidateInput, E87ComparabilityRequest } from "../../src/cap-rate-engine/comparability-types";
 import { deriveTransactionCapRate } from "../../src/cap-rate-engine/transaction-derivation";
 import type { CRETransactionInput } from "../../src/cap-rate-engine/transaction-types";
 import { known, unknown } from "../../src/cap-rate-engine/transaction-types";
@@ -44,7 +44,7 @@ function source(sourceId: string, sourceName: string, sourceType: CRESourceType)
   return { sourceId, sourceName, sourceType };
 }
 
-function baseRequest(overrides: Partial<E69ComparabilityRequest> = {}): E69ComparabilityRequest {
+function baseRequest(overrides: Partial<E87ComparabilityRequest> = {}): E87ComparabilityRequest {
   return {
     geography: { country: "US", city: "Houston" },
     assetClass: "multifamily",
@@ -53,7 +53,7 @@ function baseRequest(overrides: Partial<E69ComparabilityRequest> = {}): E69Compa
   };
 }
 
-function candidate(o: CRECitedObservation, freshness?: E69CandidateInput["freshness"]): E69CandidateInput {
+function candidate(o: CRECitedObservation, freshness?: E87CandidateInput["freshness"]): E87CandidateInput {
   return { observation: o, freshness };
 }
 
@@ -204,7 +204,7 @@ describe("9. Tied best sources under severe dispersion -> DATA_GAP", () => {
 });
 
 describe("10. Transaction-derived -> valid pipeline end to end", () => {
-  test("a valid transaction flows through toE69CandidateInput -> comparability -> consensus", () => {
+  test("a valid transaction flows through toE87CandidateInput -> comparability -> consensus", () => {
     const derived = deriveTransactionCapRate(baseTransaction());
     expect(derived.status).toBe("success");
     if (derived.status !== "success") return;
@@ -367,7 +367,7 @@ describe("17. User override preserves original benchmark alongside the overridde
 
 describe("18. DATA_GAP remains deterministic", () => {
   test("identical input twice -> identical gap reason and explanation", () => {
-    const req: E69PipelineRequest = { comparability: baseRequest(), candidatePool: [] };
+    const req: E87PipelineRequest = { comparability: baseRequest(), candidatePool: [] };
     const r1 = resolveCapRateBenchmark(req);
     const r2 = resolveCapRateBenchmark(req);
     expect(r1).toEqual(r2);
@@ -376,7 +376,7 @@ describe("18. DATA_GAP remains deterministic", () => {
 
 describe("19. Identical input produces byte-identical output", () => {
   test("JSON.stringify equality for a success case", () => {
-    const req: E69PipelineRequest = {
+    const req: E87PipelineRequest = {
       comparability: baseRequest(),
       candidatePool: [candidate(obs({ source: source("cushman-valuation", "Cushman Valuation", "valuation") }), "live_current")],
     };
@@ -420,7 +420,7 @@ describe("21. Provenance survives every pipeline stage", () => {
   });
 });
 
-describe("22. No E68 source observation is mutated", () => {
+describe("22. No E86 source observation is mutated", () => {
   test("input observations are deep-equal before and after the pipeline runs", () => {
     const original = obs({ source: source("cushman-valuation", "Cushman Valuation", "valuation") });
     const snapshot = JSON.parse(JSON.stringify(original));

@@ -1,6 +1,6 @@
-# E68 — CRE Data Dictionary (Phase 4)
+# E86 — CRE Data Dictionary (Phase 4)
 
-Status as of 2026-09-10. This document describes the fields E68 stores, the
+Status as of 2026-09-10. This document describes the fields E86 stores, the
 rules that govern them, and exactly what data is and is not present.
 
 ## Governing rule
@@ -58,7 +58,7 @@ source fact ("Houston does not appear in RLB's city list"), never an intention
 
 ### Ranges and midpoints
 
-When a publisher prints `$X–$Y/SF`, E68 stores `low` and `high` and leaves
+When a publisher prints `$X–$Y/SF`, E86 stores `low` and `high` and leaves
 `value` undefined. `rangeMidpoint(obs)` computes a midpoint on demand as an
 explicitly derived value; it never writes back into the observation.
 
@@ -140,7 +140,7 @@ FRED and Zillow are **not** cap-rate sources and are not registered as such.
 They may supply interest rates, construction indexes, permits, spending, and
 housing/rental statistics — never a relabelled commercial cap rate. This rule
 exists because E30 previously carried `FRED, Zillow`-tagged cap rates; see
-`docs/e68-mapping.md` for the correction record.
+`docs/e86-mapping.md` for the correction record.
 
 ## Redistribution
 

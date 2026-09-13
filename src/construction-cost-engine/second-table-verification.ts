@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 6 — RLB Second-Table Verification Record.
+ * InvestScape™ E88 Phase 6 — RLB Second-Table Verification Record.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Formalizes, as a typed, machine-readable record, the unresolved finding
@@ -9,10 +9,10 @@
  * "Indicative Construction Costs" table — apparently covering Industrial
  * Warehouse, Parking (Ground/Basement), Residential (Multi-Family/Single-
  * Family), and Education (Elementary/High School/University) — that was
- * never transcribed into E68 and whose column-to-category assignment could
+ * never transcribed into E86 and whose column-to-category assignment could
  * not be independently cross-validated against any known-good baseline
  * (unlike the first table, whose Austin/Miami/Seattle/Phoenix rows matched
- * E68's existing figures digit-for-digit before the other 16 cities were
+ * E86's existing figures digit-for-digit before the other 16 cities were
  * trusted — Phase 3 Section 2.1).
  *
  * PHASE 6 RE-INVESTIGATION SCOPE: this phase re-reviewed the existing
@@ -67,19 +67,19 @@ export const RLB_SECOND_TABLE_VERIFICATION: SecondTableVerificationRecord = {
   ],
   suspectedGeography: "The same 20 cities as the first table (18 US cities + Calgary + Toronto), unconfirmed for this second table specifically.",
   ambiguity:
-    'The table\'s column headers extracted across multiple overlapping physical PDF lines in a linear text-layer extraction ("INDUSTRIAL WAREHOUSE", "PARKING GROUND BASEMENT", "RESIDENTIAL MULTI-FAMILY SINGLE-FAMILY", "EDUCATION ELEMENTARY HIGH SCHOOL UNIVERSITY" span five garbled header lines) — there is no independently-verified baseline (no prior E68 figure for any of these categories) to cross-check the column-to-category assignment against, unlike the first table\'s office/retail/hotel/hospital columns.',
+    'The table\'s column headers extracted across multiple overlapping physical PDF lines in a linear text-layer extraction ("INDUSTRIAL WAREHOUSE", "PARKING GROUND BASEMENT", "RESIDENTIAL MULTI-FAMILY SINGLE-FAMILY", "EDUCATION ELEMENTARY HIGH SCHOOL UNIVERSITY" span five garbled header lines) — there is no independently-verified baseline (no prior E86 figure for any of these categories) to cross-check the column-to-category assignment against, unlike the first table\'s office/retail/hotel/hospital columns.',
   evidenceAlreadyGathered: [
     "Phase 3: re-fetched the report and ran `pdftotext -layout`, confirming the second table's existence and its garbled header layout.",
-    "Phase 3: cross-validated the FIRST table's extraction (not this second one) against E68's existing Austin/Miami/Seattle/Phoenix figures, all matching exactly — establishing the extraction METHOD's reliability in general, but not this specific table's column assignment.",
+    "Phase 3: cross-validated the FIRST table's extraction (not this second one) against E86's existing Austin/Miami/Seattle/Phoenix figures, all matching exactly — establishing the extraction METHOD's reliability in general, but not this specific table's column assignment.",
     "Phase 6: re-reviewed all existing project documentation (Phase 3 doc Section 2.4, taxonomy.ts inline note, source-research.ts) for any new evidence; found none beyond what Phase 3 already recorded.",
   ],
   evidenceNeededToResolve: [
     "Direct visual review of the actual PDF page layout (not a linear text-layer dump) to confirm which column header corresponds to which data column.",
     "A second independent extraction pass (e.g. table-region-aware OCR or a structured PDF-table parser) that agrees with a manual reading of the page.",
-    "Ideally, a cross-reference against a DIFFERENT RLB regional summary page (as Phase 1/E68 already did for the city cost-index table) that independently states at least one of these category's figures for at least one city, to serve as the missing known-good baseline.",
+    "Ideally, a cross-reference against a DIFFERENT RLB regional summary page (as Phase 1/E86 already did for the city cost-index table) that independently states at least one of these category's figures for at least one city, to serve as the missing known-good baseline.",
   ],
   reasonIngestionIsBlocked:
-    "Per the governing principle carried through every E70 phase (REAL > TRACEABLE > GRANULAR > CURRENT > COMPLETE): a plausible-looking number is not evidence. Ingesting this table without independent verification would mean trusting a column assignment across five garbled header lines with zero cross-check — exactly the failure mode E68's own Phase 4C audit correction (a wrong Seattle percentage, a wrong publication date) already demonstrated is possible with this exact report and extraction method. Multifamily and industrial remain classified UNSUPPORTED in taxonomy.ts, unchanged.",
+    "Per the governing principle carried through every E88 phase (REAL > TRACEABLE > GRANULAR > CURRENT > COMPLETE): a plausible-looking number is not evidence. Ingesting this table without independent verification would mean trusting a column assignment across five garbled header lines with zero cross-check — exactly the failure mode E86's own Phase 4C audit correction (a wrong Seattle percentage, a wrong publication date) already demonstrated is possible with this exact report and extraction method. Multifamily and industrial remain classified UNSUPPORTED in taxonomy.ts, unchanged.",
   history: [
     { phase: "Phase 3", date: "2026-09-11", note: "Second table discovered on re-fetch; flagged, not ingested; documented in Phase 3 doc Section 2.4 and taxonomy.ts." },
     { phase: "Phase 6", date: "2026-09-12", note: "Re-reviewed existing project evidence for new information; none found. Formalized as this typed record. Status unchanged: UNVERIFIED." },

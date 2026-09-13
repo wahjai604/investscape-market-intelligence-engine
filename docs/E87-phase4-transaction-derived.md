@@ -1,4 +1,4 @@
-# E69 Phase 4 — Transaction-Derived Cap Rate Calculation
+# E87 Phase 4 — Transaction-Derived Cap Rate Calculation
 
 © 2026 Lighthouse Research Ltd. All rights reserved.
 
@@ -19,7 +19,7 @@ or belong to earlier/later phases (Phase 2 comparability, Phase 3 consensus).
 ## 2. Transaction input model
 
 `CRETransactionInput` (transaction-types.ts) carries: `transactionId`,
-`propertyName`, `geography` (E68's `CREGeography`), `assetClass`,
+`propertyName`, `geography` (E86's `CREGeography`), `assetClass`,
 `propertySubtype`, `propertyClass`, `locationType`, `transactionDate`, a
 `Disclosed<{amount, currency, priceType}>` price, a
 `Disclosed<{amount, currency, definition, period}>` NOI, an optional
@@ -101,8 +101,8 @@ never silently "corrected" (e.g. via `Math.abs`).
 ## 9. Publisher cap-rate reconciliation
 
 When `CRETransactionInput.publisherCapRate` is present, the publisher's
-figure and E69's own `capRate` are both retained (`observation.capRateType`
-carries the publisher's stated type; `capRate`/`displayValue` carry E69's
+figure and E87's own `capRate` are both retained (`observation.capRateType`
+carries the publisher's stated type; `capRate`/`displayValue` carry E87's
 math) and `audit.reconciliation` records: `publisherCapRate`,
 `publisherCapRateType`, `derivedCapRate`, `differenceBps`
 (`capRateDifferenceBps`, deterministic), a `tier`
@@ -121,17 +121,17 @@ Every successful derivation carries, via `CRETransactionAudit`/
 pre-transformation figures visible in `transformations`), `noi.definition`,
 `currency`, `calculation` (the exact formula string), and `calculatedAt`
 (injectable via `options.now` for deterministic tests; documentation-only,
-never affects `capRate`). `CREDerivedTransaction` (E68's own type) is reused
+never affects `capRate`). `CREDerivedTransaction` (E86's own type) is reused
 verbatim, not reimplemented.
 
 ## 11. Comparability
 
-`toE69CandidateInput()` converts a successful `CRETransactionDerivedObservation`
-into exactly the `E69CandidateInput` shape Phase 2's `evaluateCandidate`/
+`toE87CandidateInput()` converts a successful `CRETransactionDerivedObservation`
+into exactly the `E87CandidateInput` shape Phase 2's `evaluateCandidate`/
 `evaluateComparability` already consume, wrapping a full, valid
-`CRECitedObservation` with `capRateType: "derived_transaction"` (E68's own
-"computed by E68 as NOI/price" vocabulary — see `CAP_RATE_FAMILY`) and
-`dataStatus: "derived"` (satisfying E68's `assertObservationStatus` contract,
+`CRECitedObservation` with `capRateType: "derived_transaction"` (E86's own
+"computed by E86 as NOI/price" vocabulary — see `CAP_RATE_FAMILY`) and
+`dataStatus: "derived"` (satisfying E86's `assertObservationStatus` contract,
 since `derivedFrom` is always populated). Geography, assetClass, subtype,
 class, and locationType are carried through from the original
 `CRETransactionInput` verbatim — no dimension is fabricated to make the
@@ -150,7 +150,7 @@ Reason codes (`CRETransactionGapReasonCode`): `TRANSACTION_PRICE_MISSING`,
 `CRENoiDefinition`'s closed vocabulary — the type system currently makes this
 unreachable, which is itself the intended guard), `OTHER`. Every gap includes
 `transactionId` and a human-readable `explanation`. These codes are
-deliberately distinct from E68's `CREDataGapReasonCode` (source-publication
+deliberately distinct from E86's `CREDataGapReasonCode` (source-publication
 gaps) and Phase 2/3's own gap vocabularies (comparability/benchmark gaps) —
 Phase 4's codes describe why ONE transaction's calculation itself could not
 be performed.
@@ -172,13 +172,13 @@ FX, or explicitly "No annualization required").
 array; each transaction's `SUCCESS`/`DATA_GAP` is fully independent (proved
 by the "one valid + one invalid" test) and no aggregation, averaging, or
 consensus happens across the batch — that remains Phase 3's job, reachable
-only by feeding individual `toE69CandidateInput()` outputs through Phase
+only by feeding individual `toE87CandidateInput()` outputs through Phase
 2/3's own contracts.
 
 ## 15. Phase 3 integration
 
 A transaction-derived observation integrates through the EXISTING contracts:
-`toE69CandidateInput()` → `evaluateComparability()` (Phase 2, unmodified) →
+`toE87CandidateInput()` → `evaluateComparability()` (Phase 2, unmodified) →
 `buildCapRateBenchmark()` (Phase 3, unmodified). No parallel benchmark engine
 was written. This was verified end-to-end in the test suite (§13 above) and
 required zero changes to `comparability.ts`/`benchmark-consensus.ts` — `git
@@ -186,7 +186,7 @@ diff --stat` against both is empty.
 
 One integration limitation, documented rather than silently patched: Phase 3
 groups strictly by exact `capRateType`
-(`byType.get(request.capRateType)`), and `toE69CandidateInput` always emits
+(`byType.get(request.capRateType)`), and `toE87CandidateInput` always emits
 `capRateType: "derived_transaction"`. This means a transaction-derived
 observation will only be pooled by Phase 3 alongside OTHER
 `derived_transaction` observations (or alone, in a `single_observation`
@@ -234,6 +234,6 @@ Explicitly out of scope for Phase 4 and left for a clearly-labeled future
 phase: constructing NOI from gross income minus a documented (not assumed)
 operating-expense schedule, when a source publishes both line items
 separately; occupancy-adjusted stabilization models; and a documented,
-opt-in "modeled NOI" data status distinct from `observed`/`derived` (E68's
+opt-in "modeled NOI" data status distinct from `observed`/`derived` (E86's
 `inferred`/`unsupported` statuses already reserve room for this, but no
 modeled-NOI construction code exists anywhere in this phase).

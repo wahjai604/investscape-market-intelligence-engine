@@ -1,10 +1,10 @@
 /**
- * InvestScape™ E68 Phase 7 — U.S. Census Bureau (ACS) adapter.
+ * InvestScape™ E86 Phase 7 — U.S. Census Bureau (ACS) adapter.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * The Census Data API (American Community Survey 5-Year Estimates) has a
  * documented, key-authenticated public API (see
- * docs/E68-phase7-government-public-api-ingestion.md and
+ * docs/E86-phase7-government-public-api-ingestion.md and
  * ../public-source-registry.ts, sourceId "us-census-api"). It publishes
  * demographic data (population, households, income) — category (5)/(6)/(2)
  * per Part 2 of the Phase 7 spec, never a CRE benchmark.

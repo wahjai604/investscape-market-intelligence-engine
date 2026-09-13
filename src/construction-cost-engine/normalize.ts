@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 2 — Construction Cost Normalization.
+ * InvestScape™ E88 Phase 2 — Construction Cost Normalization.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Deterministic normalization for the dimensions that can be normalized from
@@ -66,7 +66,7 @@ function convertAreaValue(value: number, from: "per_sf" | "per_sm", to: "per_sf"
 }
 
 /**
- * Normalize one E68 `CRECitedObservation` into E70's shape, optionally
+ * Normalize one E86 `CRECitedObservation` into E88's shape, optionally
  * converting to a target currency/unit basis. Passing no `target` performs
  * identification-only normalization (currency/basis/representation/subtype
  * mapping recorded, no conversion attempted).
@@ -123,7 +123,7 @@ export function normalizeObservation(
   let measurementSystem: CCMeasurementSystem | undefined =
     sourceAreaBasis === "per_sm" ? "metric" : sourceAreaBasis === "per_sf" ? "imperial" : undefined;
 
-  // Currency conversion: never performed. E68/E70 have no FX-conversion function
+  // Currency conversion: never performed. E86/E88 have no FX-conversion function
   // anywhere (Phase 1 Section 13) — a mismatched target currency is always a gap.
   if (target?.currency !== undefined && sourceCurrency !== undefined && target.currency !== sourceCurrency) {
     transformations.push({
@@ -190,7 +190,7 @@ export function normalizeObservation(
 
   transformations.push({
     dimension: "geography",
-    description: "Geography carried through unchanged (E68's CREGeography shape already fits E70's needs — Phase 1 Section 12).",
+    description: "Geography carried through unchanged (E86's CREGeography shape already fits E88's needs — Phase 1 Section 12).",
     method: "passthrough",
     applied: false,
   });

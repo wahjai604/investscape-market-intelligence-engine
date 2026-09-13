@@ -1,4 +1,4 @@
-# E69 Phase 3 — Consensus & Benchmark Selection
+# E87 Phase 3 — Consensus & Benchmark Selection
 
 © 2026 Lighthouse Research Ltd. All rights reserved.
 
@@ -14,7 +14,7 @@ conflicting, stale, or incompatible evidence returns a structured
 ## 2. Phase 2 dependency
 
 Phase 3's sole entry point, `buildCapRateBenchmark(comparability, options?)`,
-takes Phase 2's own `E69ComparabilityResult` — the output of
+takes Phase 2's own `E87ComparabilityResult` — the output of
 `evaluateComparability()` — as its only input. Phase 3 never re-evaluates a
 geography/asset/class/period/freshness/representation dimension itself, never
 overrides an `EXCLUDED` verdict, and never widens an `INCLUDED` candidate's
@@ -23,10 +23,10 @@ Phase 3's audit trail verbatim (`audit.excludedByComparability`).
 
 ## 3. Cap-rate representations
 
-`E69Representation` = `point | range | median | average | percentile |
+`E87Representation` = `point | range | median | average | percentile |
 transaction_derived | survey_estimate | unsupported`.
 
-E68's `CREObservation` has no explicit "representation" field, so
+E86's `CREObservation` has no explicit "representation" field, so
 `classifyRepresentation()` derives one:
 
 1. A source-declared `tags.representation` wins when it names one of the
@@ -37,7 +37,7 @@ E68's `CREObservation` has no explicit "representation" field, so
    `point`; `low`+`high` present → `range`; otherwise → `unsupported`.
 
 Only ONE scalar transformation is performed, and it is fully documented:
-`range` → E68's own `rangeMidpoint()` (a pure, already-reviewed function).
+`range` → E86's own `rangeMidpoint()` (a pure, already-reviewed function).
 Every other representation already carries a publisher-printed scalar
 (`value`), used verbatim — Phase 3 never computes a median, average, or
 percentile itself. An observation whose representation cannot yield a
@@ -49,7 +49,7 @@ UNSUPPORTED_REPRESENTATION`.
 
 Compatibility is enforced at the **exact `CRECapRateType`** level, not merely
 at the coarser `CAP_RATE_FAMILY` (`survey`/`transaction`/`derived`) level —
-this mirrors E68's own `assertComparableCapRates` guard in `consensus.ts`
+this mirrors E86's own `assertComparableCapRates` guard in `consensus.ts`
 ("cannot mix cap-rate types in one consensus"). Two "survey"-family
 observations (e.g. `stabilized` and `going_in`) are never pooled together
 just because they share a family.
@@ -69,8 +69,8 @@ Grouping policy:
 
 ## 5. Source hierarchy
 
-Five deterministic tiers (`E69SourceHierarchyTier`), derived only from
-existing E68 fields (`CRESource.sourceType`, `CAP_RATE_FAMILY`,
+Five deterministic tiers (`E87SourceHierarchyTier`), derived only from
+existing E86 fields (`CRESource.sourceType`, `CAP_RATE_FAMILY`,
 `CREDerivedTransaction`):
 
 1. `primary_specialist_research` — `sourceType === "valuation"`.
@@ -145,7 +145,7 @@ combined **only by floor** — `floorConfidence()`, never an average.
   candidate's own floor of {source-hierarchy tier, freshness, Phase-2
   comparability tier}. One weak contributing observation legitimately caps
   overall data confidence, consistent with the floor-not-average principle
-  used throughout E68 (`qualifyCapRateObservation`) and Phase 2
+  used throughout E86 (`qualifyCapRateObservation`) and Phase 2
   (`combineDimensions`).
 - `benchmarkConfidence` = the floor of {sample-size tier, dispersion tier,
   source-independence tier (≥2 distinct `sourceId`s → `high`, else
@@ -221,15 +221,15 @@ Every `DATA_GAP` (`status: "data_gap"`) provides, on `gap`:
 `NO_COMPARABLE_OBSERVATIONS`, `INSUFFICIENT_PROVENANCE`,
 `INCOMPATIBLE_CAP_RATE_FAMILY`, `MATERIAL_SOURCE_DISAGREEMENT`,
 `INSUFFICIENT_FRESHNESS`, `UNSUPPORTED_REPRESENTATION`,
-`INSUFFICIENT_EVIDENCE`, `OTHER`. These are deliberately distinct from E68's
+`INSUFFICIENT_EVIDENCE`, `OTHER`. These are deliberately distinct from E86's
 `CREDataGapReasonCode` (a source's inability to publish at ingestion time)
-and from Phase 2's `E69ExclusionReasonCode` (one candidate's mismatch) —
+and from Phase 2's `E87ExclusionReasonCode` (one candidate's mismatch) —
 they describe why the *pool as a whole* cannot defend a benchmark.
 `buildCapRateBenchmark` never throws for an ordinary evidence gap.
 
 ## 15. Audit trail
 
-Every result (`success` or `data_gap`) carries `audit: E69BenchmarkAudit`
+Every result (`success` or `data_gap`) carries `audit: E87BenchmarkAudit`
 with: `requestedBenchmark`, `observationsConsideredCount`,
 `excludedByComparability` (Phase 2's exclusions, with reason + explanation),
 `excludedByPhase3` (representation/family exclusions Phase 3 itself made),

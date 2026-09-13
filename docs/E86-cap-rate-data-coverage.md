@@ -1,4 +1,4 @@
-# E68 — Cap Rate Data Coverage (Phase 4A)
+# E86 — Cap Rate Data Coverage (Phase 4A)
 
 Research date **2026-09-10**. Implementation: `src/cre-intelligence/data/cap-rates-us.ts`.
 Tests: `__tests__/cre-intelligence/cap-rate-provenance.test.ts`.
@@ -70,7 +70,7 @@ Two things recorded rather than resolved:
 
 - **Date contradiction.** The chart footnote reads *"SOURCE: Newmark, updated
   December 2024"*, yet the block is labelled *2Q25* and the PDF was created
-  2025-08-05. A December 2024 update cannot contain April–June 2025 data. E68
+  2025-08-05. A December 2024 update cannot contain April–June 2025 data. E86
   stores the period exactly as the publisher labels it and carries the
   contradiction in `methodologyNote`. `sourceQuality` is set to 75, below the
   other cap-rate sources, for this reason.
@@ -111,8 +111,8 @@ choosing a family. A test enforces it.
 
 | Source | What exists | Why unusable |
 | --- | --- | --- |
-| CBRE U.S. Cap Rate Survey H1 2026 | 3,600 estimates across 50+ markets, by sector, class and stabilized/value-add — exactly what E68 wants | Every market-level table is behind "Download the Full Report". The public page carries only directional commentary. Published 2026-08-12. |
-| CoStar | The underlying dataset for the Kidder and Matthews figures | Subscription. E68 stores the brokerages' published figures with CoStar recorded as `underlyingDataProvider`; it does not access CoStar. |
+| CBRE U.S. Cap Rate Survey H1 2026 | 3,600 estimates across 50+ markets, by sector, class and stabilized/value-add — exactly what E86 wants | Every market-level table is behind "Download the Full Report". The public page carries only directional commentary. Published 2026-08-12. |
+| CoStar | The underlying dataset for the Kidder and Matthews figures | Subscription. E86 stores the brokerages' published figures with CoStar recorded as `underlyingDataProvider`; it does not access CoStar. |
 | MSCI / RCA | Transaction-derived cap rates, the top of the source hierarchy | Subscription. |
 | Altus | Valuation and cost intelligence | Subscription. |
 | RealPage | Multifamily analytics | Subscription. |
@@ -227,7 +227,7 @@ replacement, and a pointer to this document.
 
 ### 8.2 Records retained
 
-**No US record retains a cap rate.** E68 found real Houston, Seattle, Phoenix and
+**No US record retains a cap rate.** E86 found real Houston, Seattle, Phoenix and
 Austin figures, but they are *not* written back into E30 — see §9.
 
 ### 8.3 ⚠️ Out of scope but flagged: the 10 Canadian records
@@ -246,15 +246,15 @@ were outside the stated scope, but they should be audited next. CBRE Canada and
 Colliers Canada both publish free Canadian cap-rate reports, so unlike the US
 records these may be genuinely replaceable rather than simply removable.
 
-## 9. Lineage: E68 does not overwrite E30
+## 9. Lineage: E86 does not overwrite E30
 
-Per Part 8, E68 observations and legacy E30 values are kept separate:
+Per Part 8, E86 observations and legacy E30 values are kept separate:
 
-- E68 (`data/cap-rates-us.ts`) is the authoritative, cited source layer.
+- E86 (`data/cap-rates-us.ts`) is the authoritative, cited source layer.
 - E30 city records keep their own history, including nulled values and the
   comment explaining each removal.
-- Nothing from E68 is written back into E30. Seattle is the clearest case: E30's
-  Seattle cap rate is `null` because *its* provenance failed, while E68 now
+- Nothing from E86 is written back into E30. Seattle is the clearest case: E30's
+  Seattle cap rate is `null` because *its* provenance failed, while E86 now
   carries a real Seattle figure from Kidder Mathews. Both states are true and
   both are auditable.
 
@@ -282,7 +282,7 @@ In priority order, if the gaps in §5 matter commercially:
 1. **CBRE U.S. Cap Rate Survey** — the single highest-value acquisition. One
    licence closes office, industrial, retail *and* multifamily across all five
    cities, with class and CBD/suburban splits and an explicit stabilized versus
-   value-add distinction. Everything E68 wants, already structured.
+   value-add distinction. Everything E86 wants, already structured.
 2. **CoStar** — already the de-facto source under three of the four cities
    here, via brokerage republication. A licence would remove the dependency on
    whichever brokerage happens to publish a free quarterly PDF, and would open
@@ -461,7 +461,7 @@ Classification for all ten: **`UNSUPPORTED`**. Set to null.
 
 Historical context preserved, not deleted: each record's in-file comment names
 the removed value, the provenance failure, the git-history trace, the
-comparison against the real replacement, and a pointer to this document. E68's
+comparison against the real replacement, and a pointer to this document. E86's
 real Toronto/Vancouver/etc. figures are **not** written back into E30 — see §9
 (lineage rule), unchanged from Phase 4A.
 
@@ -471,8 +471,8 @@ None. All ten were unsupported.
 
 ## 15. Master coverage table
 
-Every asset-class/city cell E68 has touched, US and Canada, with status.
-`VERIFIED` = a real E68 observation exists; `GAP` = absence recorded with a
+Every asset-class/city cell E86 has touched, US and Canada, with status.
+`VERIFIED` = a real E86 observation exists; `GAP` = absence recorded with a
 reason; blank = not yet investigated for that specific cell (see §5/§13 for
 which sub-combinations were checked).
 
@@ -500,7 +500,7 @@ which sub-combinations were checked).
 | St. John's, NL | Multifamily | — | — | — | GAP | — |
 | Toronto / Vancouver / etc. (all 10) | Office, Industrial, Retail | — | — | — | GAP | — |
 
-**Absence in this table means E68 has not found a sufficiently documented
+**Absence in this table means E86 has not found a sufficiently documented
 public observation for that cell — not that the market has no cap-rate
 data.** CBRE (US and Canada), Colliers Canada and Avison Young all almost
 certainly have it; it was confirmed unreachable by this phase's tooling, not
@@ -539,7 +539,7 @@ confirmed nonexistent.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **CBRE Cap Rate Survey** | 50+ US markets per survey (H1/H2); Canada separately via CBRE Canada | Office, industrial, retail, multifamily, hotel, seniors housing; stabilized vs. value-add | US and Canada | Survey published semiannually (US) / quarterly (Canada); historical archive not publicly documented | None documented publicly | Full report gated behind an account/download on cbre.com | Subscription/account-gated, terms not published | Closes office/industrial/retail everywhere, adds class + CBD/suburban splits, resolves the stabilized-vs-value-add distinction Phase 4A had to work around |
 | **CoStar** | US-wide, property- and market-level, the de-facto source under 3 of the 4 US brokerage figures already in this dataset | All commercial classes | Primarily US | Extensive (decades) | **No public API** — CoStar's Terms of Use explicitly prohibit automated extraction/scraping; no self-serve API exists (confirmed via search, 2026-09-11) | Enterprise subscription, sales-negotiated | Proprietary, redistribution prohibited | Would replace dependency on whichever brokerage happens to publish a free quarterly PDF; opens Miami directly |
-| **MSCI / Real Capital Analytics** | Global, transaction-level | All commercial classes | US, Canada, global | Long-running transaction database | Yes — MSCI documents API/data-delivery products including a Snowflake integration for direct data-warehouse ingestion | Subscription, enterprise-negotiated | Proprietary | Top of E68's own source hierarchy (transaction-derived evidence ranks first); the only realistic route to genuine `derived_transaction` observations, since RCA discloses transaction price and often NOI-adjacent data |
+| **MSCI / Real Capital Analytics** | Global, transaction-level | All commercial classes | US, Canada, global | Long-running transaction database | Yes — MSCI documents API/data-delivery products including a Snowflake integration for direct data-warehouse ingestion | Subscription, enterprise-negotiated | Proprietary | Top of E86's own source hierarchy (transaction-derived evidence ranks first); the only realistic route to genuine `derived_transaction` observations, since RCA discloses transaction price and often NOI-adjacent data |
 | **Altus Group** (incl. Reonomy, acquired July 2026) | Canada-focused valuation/cost intelligence, expanding US property data via Reonomy | Cap rates, hard/soft cost, construction index | Canada primary, US via Reonomy | Not publicly documented | Reonomy offers API access for enterprise ingestion (per Altus product pages) | Subscription | Proprietary | Most valuable for closing the Canadian office/industrial/retail gap this phase left open, and for construction-cost depth in Canada |
 | **RealPage** | US multifamily-focused market analytics | Multifamily only | US | Not publicly documented | Not confirmed publicly documented for cap-rate data specifically | Subscription | Proprietary | Narrowest of the five; only adds value if multifamily depth (vs. breadth into other asset classes) becomes the priority |
 
@@ -551,7 +551,7 @@ none were guessed.
 - Did not implement any paid API integration.
 - Did not estimate a value for any city/asset-class combination lacking a
   source.
-- Did not write E68's real figures back into E30's legacy records.
+- Did not write E86's real figures back into E30's legacy records.
 - Did not attempt to defeat CBRE Canada's, Colliers Canada's, or Avison
   Young's bot-protection (no headless browser, no proxy rotation, no
   credential use) — `FOUND_BUT_INACCESSIBLE` is reported honestly rather than

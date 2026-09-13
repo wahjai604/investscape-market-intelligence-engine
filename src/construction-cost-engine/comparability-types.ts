@@ -1,23 +1,23 @@
 /**
- * InvestScape™ E70 Phase 2 — Construction Cost Comparability Layer: types.
+ * InvestScape™ E88 Phase 2 — Construction Cost Comparability Layer: types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Architecturally analogous to E69's comparability-types.ts, but
- * independently owned by E70 — this file does not import from
- * src/cap-rate-engine/ at all, and E69 is not modified anywhere in this work.
+ * Architecturally analogous to E87's comparability-types.ts, but
+ * independently owned by E88 — this file does not import from
+ * src/cap-rate-engine/ at all, and E87 is not modified anywhere in this work.
  */
 import type { CRECitedObservation } from "../cre-intelligence/types";
 import type { MappingConfidence } from "./taxonomy";
 import type { ConstructionCostRequest, NormalizedConstructionCostObservation } from "./types";
 
-/** The four-tier vocabulary reused verbatim from E68/E70's taxonomy.ts. */
+/** The four-tier vocabulary reused verbatim from E86/E88's taxonomy.ts. */
 export type CCMatchLevel = MappingConfidence;
 
 /**
  * A single comparability dimension's result. "not_constrained" means the
  * REQUEST did not specify anything on this axis — such dimensions never
  * participate in the overall floor (see `combineDimensions` in
- * comparability.ts), matching E69's identical convention.
+ * comparability.ts), matching E87's identical convention.
  */
 export interface CCDimensionResult {
   level: CCMatchLevel | "not_constrained";
@@ -47,7 +47,7 @@ export type CCInclusionDecision = "INCLUDED" | "EXCLUDED";
 
 /**
  * Machine-readable exclusion reasons, scoped to comparability only — distinct
- * from E70's own `CCDataGapReasonCode` (gap-types.ts), which answers "why does
+ * from E88's own `CCDataGapReasonCode` (gap-types.ts), which answers "why does
  * no benchmark exist for this request at all" rather than "why was this one
  * candidate excluded."
  */

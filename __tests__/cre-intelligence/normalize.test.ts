@@ -20,7 +20,7 @@ const base = (overrides: Partial<CREObservation>): CREObservation => ({
   ...overrides,
 });
 
-describe("E68 CRE normalization", () => {
+describe("E86 CRE normalization", () => {
   test("normalizes percentage cap rates to decimals", () => {
     const result = normalizeCapRateObservation(base({ value: 5.5, low: 5, high: 6 }));
     expect(result.value).toBeCloseTo(0.055);

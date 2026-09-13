@@ -1,22 +1,22 @@
 /**
- * InvestScape™ E69 Phase 6 — Scenario / Sensitivity Framework: types.
+ * InvestScape™ E87 Phase 6 — Scenario / Sensitivity Framework: types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E69 Phase 6 answers exactly one question: "what cap-rate scenarios can
+ * E87 Phase 6 answers exactly one question: "what cap-rate scenarios can
  * legitimately be evaluated around this benchmark?" It is NOT a property
  * valuation engine, NOT an NOI forecast, NOT a DCF/IRR/feasibility engine, and
  * NOT an investment recommendation engine. See
- * docs/E69-phase6-scenario-sensitivity.md for the full design rationale.
+ * docs/E87-phase6-scenario-sensitivity.md for the full design rationale.
  *
  * CORE DISTINCTION preserved throughout this file: a mechanically generated
  * sensitivity scenario is NEVER represented as, and never acquires the type
- * of, an observed/derived market cap rate. `E69ScenarioProvenance` is the
+ * of, an observed/derived market cap rate. `E87ScenarioProvenance` is the
  * field that carries this distinction end-to-end.
  */
 import type { CREGeography } from "../cre-intelligence/types";
-import type { E69ConfidenceTier } from "./consensus-types";
-import type { E69BenchmarkOrigin } from "./pipeline-types";
-import type { E69PipelineDataGapResult } from "./pipeline-types";
+import type { E87ConfidenceTier } from "./consensus-types";
+import type { E87BenchmarkOrigin } from "./pipeline-types";
+import type { E87PipelineDataGapResult } from "./pipeline-types";
 
 /**
  * Where a scenario's cap-rate value actually came from.
@@ -26,37 +26,37 @@ import type { E69PipelineDataGapResult } from "./pipeline-types";
  *  - "derived": the benchmark itself, when the underlying Phase 5 origin was
  *    transaction-derived (Phase 4 arithmetic on real transaction inputs, not
  *    a mechanical sensitivity step).
- *  - "user_override": the benchmark's active value came from an E68 user
+ *  - "user_override": the benchmark's active value came from an E86 user
  *    override (Phase 5 `user_overridden`). Never presented as publisher data.
  *  - "mechanically_generated": a caller-requested sensitivity delta applied
  *    to a reference value. Never presented as, and never carries the
  *    confidence of, an observed or derived market reading.
  */
-export type E69ScenarioProvenance = "observed" | "derived" | "user_override" | "mechanically_generated";
+export type E87ScenarioProvenance = "observed" | "derived" | "user_override" | "mechanically_generated";
 
 /** Neutral labels only — none of these imply a favorable/unfavorable outcome. */
-export type E69ScenarioType = "benchmark" | "downside" | "base" | "upside" | "custom";
+export type E87ScenarioType = "benchmark" | "downside" | "base" | "upside" | "custom";
 
 /** What a scenario's cap-rate value is expressed relative to. */
-export type E69ScenarioBasis = "benchmark" | "user_override" | "hypothetical";
+export type E87ScenarioBasis = "benchmark" | "user_override" | "hypothetical";
 
 /**
  * One scenario cap-rate value. `capRateValue` and `deltaBps` are always both
  * populated (deltaBps === 0 for the anchor scenario) so a consumer never has
  * to infer one from the other.
  */
-export interface E69Scenario {
-  scenarioType: E69ScenarioType;
+export interface E87Scenario {
+  scenarioType: E87ScenarioType;
   /** The scenario's cap-rate value, in the same percent unit as the benchmark. Never rounded beyond the benchmark's own precision plus the requested integer bps. */
   capRateValue: number;
   /** Signed, integer basis points relative to the reference value. 0 for the anchor scenario. */
   deltaBps: number;
   /** The value this scenario is computed relative to (the benchmark's or override's active value, or a caller-supplied hypothetical base). */
   referenceValue: number;
-  provenance: E69ScenarioProvenance;
-  basis: E69ScenarioBasis;
+  provenance: E87ScenarioProvenance;
+  basis: E87ScenarioBasis;
   /** Only meaningful for provenance "observed" | "derived" | "user_override" — the benchmark's own confidence. Absent (never fabricated) for "mechanically_generated". */
-  confidence?: E69ConfidenceTier;
+  confidence?: E87ConfidenceTier;
   /** Deterministic, human-presentable explanation of exactly how this value was produced. */
   auditExplanation: string;
 }
@@ -67,7 +67,7 @@ export interface E69Scenario {
  * constructed by applying an arbitrary +/-N bps to a point value — every
  * field here traces to real contributing observations.
  */
-export type E69EvidenceSupportedRange =
+export type E87EvidenceSupportedRange =
   | {
       available: true;
       low: number;
@@ -88,17 +88,17 @@ export type E69EvidenceSupportedRange =
     };
 
 /** A caller-requested sensitivity delta, optionally with a caller-chosen label (forces scenarioType "custom"). */
-export type E69SensitivityDeltaInput = number | { bps: number; label?: string };
+export type E87SensitivityDeltaInput = number | { bps: number; label?: string };
 
-export interface E69SensitivityRequest {
+export interface E87SensitivityRequest {
   /** Integer basis points. Duplicates are deterministically deduped; order does not affect output (deltas are sorted ascending before processing). Non-integer values are a typed error, never silently rounded. */
-  deltas: readonly E69SensitivityDeltaInput[];
+  deltas: readonly E87SensitivityDeltaInput[];
 }
 
 /**
  * PROVISIONAL convenience policy, versioned and clearly NOT market evidence.
  * Never applied automatically — a caller must explicitly opt in via
- * `useDefaultDeltas: true`. See docs/E69-phase6-scenario-sensitivity.md
+ * `useDefaultDeltas: true`. See docs/E87-phase6-scenario-sensitivity.md
  * "Default sensitivity policy" for why this exists and why it is not a set
  * of universal stress-test rules.
  */
@@ -108,54 +108,54 @@ export interface DefaultSensitivityPolicy {
 }
 
 export const DEFAULT_SENSITIVITY_POLICY: DefaultSensitivityPolicy = {
-  version: "E69-phase6-provisional-v1",
+  version: "E87-phase6-provisional-v1",
   deltasBps: [-50, -25, 0, 25, 50],
 };
 
-export type E69ScenarioGapReasonCode = "INVALID_DELTA" | "NO_BENCHMARK_DATA_GAP" | "NO_DELTAS_REQUESTED";
+export type E87ScenarioGapReasonCode = "INVALID_DELTA" | "NO_BENCHMARK_DATA_GAP" | "NO_DELTAS_REQUESTED";
 
 /** Scenarios could not be produced for a structural reason (not an evidence gap — see the "data_gap" variant below for that). */
-export interface E69ScenarioError {
+export interface E87ScenarioError {
   scenarioStatus: "error";
-  reasonCode: E69ScenarioGapReasonCode;
+  reasonCode: E87ScenarioGapReasonCode;
   explanation: string;
 }
 
-/** The underlying E69 benchmark was itself a DATA_GAP. Scenarios are never mechanically generated from nothing — the original gap and audit trail are preserved verbatim. */
-export interface E69ScenarioDataGap {
+/** The underlying E87 benchmark was itself a DATA_GAP. Scenarios are never mechanically generated from nothing — the original gap and audit trail are preserved verbatim. */
+export interface E87ScenarioDataGap {
   scenarioStatus: "data_gap";
-  underlyingGap: E69PipelineDataGapResult;
+  underlyingGap: E87PipelineDataGapResult;
   requestedGeography: CREGeography;
   explanation: string;
 }
 
-export interface E69ScenarioSetSuccess {
+export interface E87ScenarioSetSuccess {
   scenarioStatus: "success";
-  origin: E69BenchmarkOrigin | "n/a";
-  /** true when the reference value came from an E68 user override rather than the raw Phase 3 benchmark. */
+  origin: E87BenchmarkOrigin | "n/a";
+  /** true when the reference value came from an E86 user override rather than the raw Phase 3 benchmark. */
   isOverrideBased: boolean;
   requestedGeography: CREGeography;
   referenceValue: number;
   /** Always includes exactly one deltaBps===0 scenario (scenarioType "benchmark"), reflecting the actual benchmark/override value, plus one entry per requested (deduped, sorted) delta. */
-  scenarios: E69Scenario[];
-  evidenceRange: E69EvidenceSupportedRange;
+  scenarios: E87Scenario[];
+  evidenceRange: E87EvidenceSupportedRange;
 }
 
 /**
- * A pure hypothetical scenario set with NO E69 benchmark behind it at all —
- * see docs/E69-phase6-scenario-sensitivity.md "Hypothetical scenarios without
+ * A pure hypothetical scenario set with NO E87 benchmark behind it at all —
+ * see docs/E87-phase6-scenario-sensitivity.md "Hypothetical scenarios without
  * a benchmark" for why this exists only in this minimal, unmistakably-labeled
  * form.
  */
-export interface E69HypotheticalScenarioSet {
+export interface E87HypotheticalScenarioSet {
   scenarioStatus: "hypothetical";
   /** Always true; present so a consumer can discriminate this variant without a type-narrow on scenarioStatus alone. */
   isHypothetical: true;
   callerSuppliedBaseValue: number;
-  scenarios: E69Scenario[];
-  evidenceRange: E69EvidenceSupportedRange;
+  scenarios: E87Scenario[];
+  evidenceRange: E87EvidenceSupportedRange;
   /** Mandatory — refuses to run without an explicit caller acknowledgment that this is not derived from any market evidence. */
   disclaimer: string;
 }
 
-export type E69ScenarioResult = E69ScenarioSetSuccess | E69ScenarioDataGap | E69ScenarioError;
+export type E87ScenarioResult = E87ScenarioSetSuccess | E87ScenarioDataGap | E87ScenarioError;

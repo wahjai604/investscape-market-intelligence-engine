@@ -1,7 +1,7 @@
 /**
- * InvestScape™ E68 — Commercial Real Estate source registry.
+ * InvestScape™ E86 — Commercial Real Estate source registry.
  *
- * Registry metadata only. E68 does not copy, cache, or redistribute proprietary
+ * Registry metadata only. E86 does not copy, cache, or redistribute proprietary
  * datasets. Public-report availability does not by itself grant redistribution
  * rights; callers must respect each publisher's current terms.
  */
@@ -154,7 +154,7 @@ export const CRE_SOURCE_REGISTRY: readonly CRESourceDefinition[] = [
     redistribution: "license_required",
     license: "subscription",
     defaultQuality: 98,
-    notes: "Property-level and market transaction/analytics platform; no proprietary records should be copied into E68 without license.",
+    notes: "Property-level and market transaction/analytics platform; no proprietary records should be copied into E86 without license.",
   },
   {
     sourceId: "realpage-multifamily",

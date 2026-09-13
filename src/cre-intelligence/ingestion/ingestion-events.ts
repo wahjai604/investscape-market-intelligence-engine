@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 8 — Ingestion Event Model.
+ * InvestScape™ E86 Phase 8 — Ingestion Event Model.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Part 9 of the Phase 8 specification. An ingestion event records ONE

@@ -1,11 +1,11 @@
 /**
- * InvestScape™ E68 Phase 7 — Government & Public Data Source Inventory.
+ * InvestScape™ E86 Phase 7 — Government & Public Data Source Inventory.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Research-only classification metadata (Parts 2, 3, 10, 12 of the Phase 7
  * specification). No numeric CRE benchmark values live in this file — only
  * enums, URLs, dates, and descriptive notes about what each source publishes
- * and under what terms. See docs/E68-phase7-government-public-api-ingestion.md
+ * and under what terms. See docs/E86-phase7-government-public-api-ingestion.md
  * for the full narrative report and additional citations.
  *
  * IMPORTANT: "publicly accessible" is not "freely redistributable." A source
@@ -40,7 +40,7 @@ export const CRE_PUBLIC_SOURCE_REGISTRY: readonly CREPublicSourceProfile[] = [
     legallyIncorporable: true,
     licenseTags: ["PUBLIC_GOVERNMENT", "PUBLIC_API", "PUBLIC_DOWNLOAD", "ATTRIBUTION_REQUIRED", "COMMERCIAL_USE_PERMITTED"],
     refresh: {
-      lastKnownPublicationPeriod: "Q2 2026 (per E68's existing statcan-bcpi registry entry)",
+      lastKnownPublicationPeriod: "Q2 2026 (per E86's existing statcan-bcpi registry entry)",
       retrievalMechanism: "WDS REST API (getDataFromCubePidCoordAndLatestNPeriods / getFullTableDownloadCSV)",
       historicalBackfillPossible: true,
       automatedIngestionSafe: true,
@@ -52,7 +52,7 @@ export const CRE_PUBLIC_SOURCE_REGISTRY: readonly CREPublicSourceProfile[] = [
       "https://www.statcan.gc.ca/en/reference/licence",
     ],
     dateVerified: "2026-09-11",
-    notes: "Statistics Canada's Open Licence (statcan.gc.ca/en/reference/licence) permits commercial use, modification and redistribution with attribution to Statistics Canada; this is the strongest redistribution posture of any source in this inventory. BCPI is a contractor-price index, not a direct cap-rate or $/SF benchmark — E68 already uses it only for escalation. Victoria and St. John's are not separately identified CMAs in the CMA-level BCPI table; national/regional series may exist at coarser granularity only (GEOGRAPHY_NOT_COVERED / GRANULARITY_NOT_AVAILABLE risk for those two cities, not verified as covered).",
+    notes: "Statistics Canada's Open Licence (statcan.gc.ca/en/reference/licence) permits commercial use, modification and redistribution with attribution to Statistics Canada; this is the strongest redistribution posture of any source in this inventory. BCPI is a contractor-price index, not a direct cap-rate or $/SF benchmark — E86 already uses it only for escalation. Victoria and St. John's are not separately identified CMAs in the CMA-level BCPI table; national/regional series may exist at coarser granularity only (GEOGRAPHY_NOT_COVERED / GRANULARITY_NOT_AVAILABLE risk for those two cities, not verified as covered).",
   },
   {
     sourceId: "cmhc-hmip",
@@ -172,7 +172,7 @@ export const CRE_PUBLIC_SOURCE_REGISTRY: readonly CREPublicSourceProfile[] = [
     citiesCoveredVerified: ["Toronto"],
     evidenceUrls: ["https://open.toronto.ca/", "https://open.toronto.ca/open-data-licence/"],
     dateVerified: "2026-09-11",
-    notes: "Building-permit counts/values are construction-activity indicators, not cap rates or $/SF construction costs. Representative example only; other E68 priority Canadian cities (Vancouver, Calgary, Edmonton, Winnipeg, Ottawa, Montreal, Halifax, St. John's, Victoria) each run separate municipal open-data portals under their own terms, not individually inventoried here — treat as GEOGRAPHY_NOT_COVERED per-city until each is checked.",
+    notes: "Building-permit counts/values are construction-activity indicators, not cap rates or $/SF construction costs. Representative example only; other E86 priority Canadian cities (Vancouver, Calgary, Edmonton, Winnipeg, Ottawa, Montreal, Halifax, St. John's, Victoria) each run separate municipal open-data portals under their own terms, not individually inventoried here — treat as GEOGRAPHY_NOT_COVERED per-city until each is checked.",
   },
 
   // ------------------------------------------------------------------- USA
@@ -205,7 +205,7 @@ export const CRE_PUBLIC_SOURCE_REGISTRY: readonly CREPublicSourceProfile[] = [
     citiesCoveredVerified: ["Austin", "Houston", "Miami", "Seattle", "Phoenix"],
     evidenceUrls: ["https://fred.stlouisfed.org/docs/api/fred/", "https://fred.stlouisfed.org/docs/api/terms_of_use.html"],
     dateVerified: "2026-09-11",
-    notes: "FRED itself republishes data originally produced by other agencies (BLS, Census, private compilers like Zillow for some series) — the underlying-producer distinction matters for citation (see CRECitation.underlyingDataProvider) and was the exact failure mode of the discredited Phase 4 Miami/Seattle cap-rate figures. FRED has NEVER published a commercial cap rate for any metro; E68's Phase 7 FRED adapter (adapters/fred-adapter.ts) is restricted by construction to producing `EconomicIndicatorObservation`s (category cre_adjacent_economic), which cannot satisfy the `CREObservation` cap_rate type. Full commercial-use/redistribution terms require reading the linked Terms of Use in detail; marked REQUIRES LICENSE REVIEW pending that.",
+    notes: "FRED itself republishes data originally produced by other agencies (BLS, Census, private compilers like Zillow for some series) — the underlying-producer distinction matters for citation (see CRECitation.underlyingDataProvider) and was the exact failure mode of the discredited Phase 4 Miami/Seattle cap-rate figures. FRED has NEVER published a commercial cap rate for any metro; E86's Phase 7 FRED adapter (adapters/fred-adapter.ts) is restricted by construction to producing `EconomicIndicatorObservation`s (category cre_adjacent_economic), which cannot satisfy the `CREObservation` cap_rate type. Full commercial-use/redistribution terms require reading the linked Terms of Use in detail; marked REQUIRES LICENSE REVIEW pending that.",
   },
   {
     sourceId: "us-census-api",

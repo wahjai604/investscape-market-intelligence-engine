@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 8 — Schema Change Detection Contract.
+ * InvestScape™ E86 Phase 8 — Schema Change Detection Contract.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Part 11 of the Phase 8 specification. Phase 7 adapters already fail safe

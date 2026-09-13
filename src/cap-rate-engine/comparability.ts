@@ -1,9 +1,9 @@
 /**
- * InvestScape™ E69 Phase 2 — Cap-Rate Comparability Layer.
+ * InvestScape™ E87 Phase 2 — Cap-Rate Comparability Layer.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Given an `E69ComparabilityRequest` (the benchmark identity someone wants)
- * and a pool of E68 `CRECitedObservation`s, classifies every candidate
+ * Given an `E87ComparabilityRequest` (the benchmark identity someone wants)
+ * and a pool of E86 `CRECitedObservation`s, classifies every candidate
  * EXACT/CLOSE/APPROXIMATE/UNSUPPORTED, exposes the per-dimension reasoning,
  * and produces an explicit INCLUDED/EXCLUDED decision with a machine-readable
  * reason and a deterministic audit explanation.
@@ -12,9 +12,9 @@
  * transaction-derived cap rate, or produce scenarios. It answers exactly one
  * question per candidate: "does this observation legitimately inform the
  * requested benchmark, and how closely?" Those are separate, later phases
- * (see docs/E69-phase1-technical-specification.md Part 20, Phase 3+).
+ * (see docs/E87-phase1-technical-specification.md Part 20, Phase 3+).
  *
- * DESIGN PRECEDENT REUSED FROM E68 (not reimplemented differently):
+ * DESIGN PRECEDENT REUSED FROM E86 (not reimplemented differently):
  * - The four-tier vocabulary (`exact|close|approximate|unsupported`) is
  *   `mapping.ts`'s `MappingConfidence`, unchanged.
  * - Dimensions combine by FLOOR, never by average, exactly as
@@ -36,17 +36,17 @@
 import { CAP_RATE_FAMILY, type CREGeography } from "../cre-intelligence/types";
 import type { CREPresentationFreshness } from "../cre-intelligence/ingestion/observation-lifecycle";
 import type {
-  E69CandidateInput,
-  E69ComparabilityCandidate,
-  E69ComparabilityDimensions,
-  E69ComparabilityRequest,
-  E69ComparabilityResult,
-  E69DimensionResult,
-  E69ExclusionReasonCode,
-  E69MatchLevel,
+  E87CandidateInput,
+  E87ComparabilityCandidate,
+  E87ComparabilityDimensions,
+  E87ComparabilityRequest,
+  E87ComparabilityResult,
+  E87DimensionResult,
+  E87ExclusionReasonCode,
+  E87MatchLevel,
 } from "./comparability-types";
 
-const RANK: Readonly<Record<E69MatchLevel, number>> = {
+const RANK: Readonly<Record<E87MatchLevel, number>> = {
   unsupported: 0,
   approximate: 1,
   close: 2,
@@ -68,7 +68,7 @@ function normalize(s: string | undefined): string {
   return (s ?? "").trim().toLowerCase();
 }
 
-function worseOf(a: E69MatchLevel, b: E69MatchLevel): E69MatchLevel {
+function worseOf(a: E87MatchLevel, b: E87MatchLevel): E87MatchLevel {
   return RANK[a] <= RANK[b] ? a : b;
 }
 
@@ -76,7 +76,7 @@ function worseOf(a: E69MatchLevel, b: E69MatchLevel): E69MatchLevel {
 // Geography (country / region / metro / city / submarket)
 // ---------------------------------------------------------------------------
 
-function evaluateGeography(request: CREGeography, obs: CREGeography): E69DimensionResult {
+function evaluateGeography(request: CREGeography, obs: CREGeography): E87DimensionResult {
   if (normalize(request.country) !== normalize(obs.country)) {
     return { level: "unsupported", reason: `Requested country "${request.country}" does not match observation country "${obs.country}".` };
   }
@@ -143,9 +143,9 @@ function evaluateGeography(request: CREGeography, obs: CREGeography): E69Dimensi
 // ---------------------------------------------------------------------------
 
 function evaluateGeographyType(
-  requested: E69ComparabilityRequest["locationType"],
+  requested: E87ComparabilityRequest["locationType"],
   obsLocationType: string | undefined,
-): E69DimensionResult {
+): E87DimensionResult {
   if (requested === undefined) {
     return { level: "not_constrained", reason: "Request does not pin a downtown/suburban/urban geography type." };
   }
@@ -174,16 +174,16 @@ function evaluateGeographyType(
 }
 
 // ---------------------------------------------------------------------------
-// Asset class (binary in E68 today — see mapToLegacyCapRateKey's default case)
+// Asset class (binary in E86 today — see mapToLegacyCapRateKey's default case)
 // ---------------------------------------------------------------------------
 
-function evaluateAssetClass(requested: string, obsAssetClass: string): E69DimensionResult {
+function evaluateAssetClass(requested: string, obsAssetClass: string): E87DimensionResult {
   if (requested === obsAssetClass) {
     return { level: "exact", reason: `Asset class matches: "${requested}".` };
   }
   return {
     level: "unsupported",
-    reason: `Requested asset class "${requested}" does not equal observation asset class "${obsAssetClass}" — asset class has no valid narrowing in E68 today; never folded into an unrelated category.`,
+    reason: `Requested asset class "${requested}" does not equal observation asset class "${obsAssetClass}" — asset class has no valid narrowing in E86 today; never folded into an unrelated category.`,
   };
 }
 
@@ -191,7 +191,7 @@ function evaluateAssetClass(requested: string, obsAssetClass: string): E69Dimens
 // Property subtype (source-native string, e.g. "office_prime")
 // ---------------------------------------------------------------------------
 
-function evaluateSubtype(requested: string | undefined, obsSubtype: string | undefined): E69DimensionResult {
+function evaluateSubtype(requested: string | undefined, obsSubtype: string | undefined): E87DimensionResult {
   if (requested === undefined) {
     return { level: "not_constrained", reason: "Request does not pin a property subtype." };
   }
@@ -206,7 +206,7 @@ function evaluateSubtype(requested: string | undefined, obsSubtype: string | und
   }
   return {
     level: "unsupported",
-    reason: `Request pins subtype "${requested}"; observation states a different subtype "${obsSubtype}". No documented subtype-family mapping exists in E68 today, so no narrower tier than unsupported is available.`,
+    reason: `Request pins subtype "${requested}"; observation states a different subtype "${obsSubtype}". No documented subtype-family mapping exists in E86 today, so no narrower tier than unsupported is available.`,
   };
 }
 
@@ -214,7 +214,7 @@ function evaluateSubtype(requested: string | undefined, obsSubtype: string | und
 // Property class (A/B/C/unspecified)
 // ---------------------------------------------------------------------------
 
-function evaluatePropertyClass(requested: string | undefined, obsClass: string | undefined): E69DimensionResult {
+function evaluatePropertyClass(requested: string | undefined, obsClass: string | undefined): E87DimensionResult {
   if (requested === undefined) {
     return { level: "not_constrained", reason: "Request does not pin a property class." };
   }
@@ -243,10 +243,10 @@ function monthsBetween(a: number, b: number): number {
 }
 
 function evaluatePeriod(
-  requested: E69ComparabilityRequest["effectivePeriod"],
+  requested: E87ComparabilityRequest["effectivePeriod"],
   obsStart: string,
   obsEnd: string,
-): E69DimensionResult {
+): E87DimensionResult {
   if (requested === undefined) {
     return { level: "not_constrained", reason: "Request does not pin an effective period." };
   }
@@ -292,10 +292,10 @@ function evaluatePeriod(
 }
 
 // ---------------------------------------------------------------------------
-// Freshness (consumes E68's CREPresentationFreshness verbatim; never recomputed here)
+// Freshness (consumes E86's CREPresentationFreshness verbatim; never recomputed here)
 // ---------------------------------------------------------------------------
 
-function evaluateFreshness(freshness: CREPresentationFreshness | undefined): E69DimensionResult {
+function evaluateFreshness(freshness: CREPresentationFreshness | undefined): E87DimensionResult {
   if (freshness === undefined) {
     return {
       level: "approximate",
@@ -332,7 +332,7 @@ function evaluateFreshness(freshness: CREPresentationFreshness | undefined): E69
 function evaluateRepresentation(
   requestedType: string | undefined,
   obsType: string | undefined,
-): E69DimensionResult {
+): E87DimensionResult {
   if (requestedType === undefined) {
     return { level: "not_constrained", reason: "Request does not pin a cap-rate representation/methodology (capRateType)." };
   }
@@ -363,8 +363,8 @@ function evaluateRepresentation(
 // Combine + decide + explain
 // ---------------------------------------------------------------------------
 
-function combineDimensions(dims: E69ComparabilityDimensions): E69MatchLevel {
-  let overall: E69MatchLevel = "exact";
+function combineDimensions(dims: E87ComparabilityDimensions): E87MatchLevel {
+  let overall: E87MatchLevel = "exact";
   for (const dim of Object.values(dims)) {
     if (dim.level === "not_constrained") continue;
     overall = worseOf(overall, dim.level);
@@ -372,7 +372,7 @@ function combineDimensions(dims: E69ComparabilityDimensions): E69MatchLevel {
   return overall;
 }
 
-const EXCLUSION_PRIORITY: ReadonlyArray<{ key: keyof E69ComparabilityDimensions; code: E69ExclusionReasonCode }> = [
+const EXCLUSION_PRIORITY: ReadonlyArray<{ key: keyof E87ComparabilityDimensions; code: E87ExclusionReasonCode }> = [
   { key: "assetMatch", code: "WRONG_ASSET_TYPE" },
   { key: "subtypeMatch", code: "WRONG_ASSET_SUBTYPE" },
   { key: "geographyMatch", code: "WRONG_GEOGRAPHY" },
@@ -383,7 +383,7 @@ const EXCLUSION_PRIORITY: ReadonlyArray<{ key: keyof E69ComparabilityDimensions;
   { key: "freshnessMatch", code: "UNAVAILABLE" },
 ];
 
-function hasProvenance(obs: E69CandidateInput["observation"]): boolean {
+function hasProvenance(obs: E87CandidateInput["observation"]): boolean {
   const c = obs.citation;
   return Boolean(
     c &&
@@ -398,11 +398,11 @@ function hasProvenance(obs: E69CandidateInput["observation"]): boolean {
 
 function buildExplanation(
   decision: "INCLUDED" | "EXCLUDED",
-  dims: E69ComparabilityDimensions,
-  comparability: E69MatchLevel,
-  exclusionReasonCode?: E69ExclusionReasonCode,
+  dims: E87ComparabilityDimensions,
+  comparability: E87MatchLevel,
+  exclusionReasonCode?: E87ExclusionReasonCode,
 ): string {
-  const entries = Object.entries(dims) as Array<[keyof E69ComparabilityDimensions, E69DimensionResult]>;
+  const entries = Object.entries(dims) as Array<[keyof E87ComparabilityDimensions, E87DimensionResult]>;
   if (decision === "EXCLUDED") {
     const failing = entries.filter(([, d]) => d.level === "unsupported");
     const detail = failing.map(([name, d]) => `${name}=unsupported (${d.reason})`).join("; ");
@@ -419,13 +419,13 @@ function buildExplanation(
  * same inputs every time.
  */
 export function evaluateCandidate(
-  request: E69ComparabilityRequest,
-  input: E69CandidateInput,
-): E69ComparabilityCandidate {
+  request: E87ComparabilityRequest,
+  input: E87CandidateInput,
+): E87ComparabilityCandidate {
   const obs = input.observation;
   const warnings: string[] = [];
 
-  const dimensions: E69ComparabilityDimensions = {
+  const dimensions: E87ComparabilityDimensions = {
     geographyMatch: evaluateGeography(request.geography, obs.geography),
     geographyTypeMatch: evaluateGeographyType(request.locationType, obs.locationType),
     assetMatch: evaluateAssetClass(request.assetClass, obs.assetClass),
@@ -441,7 +441,7 @@ export function evaluateCandidate(
   }
 
   // Insufficient provenance is a hard exclusion regardless of dimension outcome —
-  // an observation E69 cannot trace back to a source must never back a benchmark.
+  // an observation E87 cannot trace back to a source must never back a benchmark.
   if (!hasProvenance(obs)) {
     const dimsForExplain = dimensions;
     return {
@@ -464,7 +464,7 @@ export function evaluateCandidate(
     const required = FRESHNESS_RANK[request.minFreshness];
     const actualRank = input.freshness !== undefined ? FRESHNESS_RANK[input.freshness] : FRESHNESS_RANK.historical;
     if (actualRank < required) {
-      const code: E69ExclusionReasonCode = input.freshness === "unavailable" ? "UNAVAILABLE" : "STALE";
+      const code: E87ExclusionReasonCode = input.freshness === "unavailable" ? "UNAVAILABLE" : "STALE";
       return {
         observation: obs,
         comparability: "unsupported",
@@ -479,7 +479,7 @@ export function evaluateCandidate(
 
   if (comparability === "unsupported") {
     const failing = EXCLUSION_PRIORITY.find(({ key }) => dimensions[key].level === "unsupported");
-    const code: E69ExclusionReasonCode = failing?.code ?? "UNSUPPORTED_MAPPING";
+    const code: E87ExclusionReasonCode = failing?.code ?? "UNSUPPORTED_MAPPING";
     return {
       observation: obs,
       comparability,
@@ -509,9 +509,9 @@ export function evaluateCandidate(
  * or value selection.
  */
 export function evaluateComparability(
-  request: E69ComparabilityRequest,
-  pool: readonly E69CandidateInput[],
-): E69ComparabilityResult {
+  request: E87ComparabilityRequest,
+  pool: readonly E87CandidateInput[],
+): E87ComparabilityResult {
   const candidates = pool.map((input) => evaluateCandidate(request, input));
   return {
     request,

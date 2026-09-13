@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 — U.S. construction-cost observations.
+ * InvestScape™ E86 — U.S. construction-cost observations.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * SINGLE SOURCE FOR THIS FILE
@@ -32,7 +32,7 @@
  * WHY THERE ARE NO MIDPOINTS
  *   RLB publishes low/high ranges. `value` is therefore left undefined on every
  *   $/SF observation. Use `rangeMidpoint()` at read time if a single number is
- *   needed; E68 does not bake one in.
+ *   needed; E86 does not bake one in.
  *
  * EXTRACTION HAZARD — READ BEFORE EDITING
  *   Text-extracting this PDF misaligns the "Annual % Change" column by one row
@@ -262,7 +262,7 @@ export const US_CITY_CONSTRUCTION_INDEX_OBSERVATIONS: readonly CRECitedObservati
 
 /**
  * Published annual cost change. Kept as its own metric so it can never be
- * mistaken for a $/SF benchmark (E68 rule: an inflation percentage is not a
+ * mistaken for a $/SF benchmark (E86 rule: an inflation percentage is not a
  * cost). Each value was reconciled against the index levels above.
  */
 export const US_CITY_CONSTRUCTION_CHANGE_OBSERVATIONS: readonly CRECitedObservation[] = CITY_INDEX.map(

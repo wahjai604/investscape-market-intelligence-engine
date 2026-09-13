@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 — U.S. cap-rate observations.
+ * InvestScape™ E86 — U.S. cap-rate observations.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Phase 4 found nothing. Phase 4A searched harder — past the CBRE landing page,
@@ -72,13 +72,13 @@ const MATTHEWS: CRESource = {
 // IMPORTANT DISCREPANCY, RECORDED NOT RESOLVED: the chart's own footnote reads
 // "SOURCE: Newmark, updated December 2024", while the PDF itself was created
 // 2025-08-05 and the block is labelled "2Q25 Cap Rates". A December 2024 update
-// cannot contain April–June 2025 data. E68 stores the periods exactly as the
+// cannot contain April–June 2025 data. E86 stores the periods exactly as the
 // chart labels them and surfaces the contradiction in methodologyNote rather
 // than silently picking one reading. Treat sourceQuality accordingly.
 //
 // The "Market Peak Cap Rates" block on the same chart is deliberately NOT
 // stored: "market peak" names no period, and an observation without a period
-// cannot satisfy E68's citation standard.
+// cannot satisfy E86's citation standard.
 
 const HOUSTON_URL = "https://nmrk.imgix.net/uploads/fields/pdf-market-reports/2Q25-Houston-Multifamily-Market-Report.pdf";
 const HOUSTON_NOTE =
@@ -214,7 +214,7 @@ const KIDDER_OBSERVATIONS: CRECitedObservation[] = KIDDER_CITIES.flatMap(
       metric: "cap_rate" as const,
       assetClass: "multifamily" as const,
       // The table publishes one market-wide average with no class or geography
-      // split. Inventing either would be exactly the inference E68 forbids.
+      // split. Inventing either would be exactly the inference E86 forbids.
       propertyClass: "unspecified" as const,
       locationType: "unspecified" as const,
       capRateType: "transaction" as const,

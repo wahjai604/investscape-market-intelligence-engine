@@ -1,12 +1,12 @@
 /**
- * InvestScape™ E70 Phase 4 — Index series data layer.
+ * InvestScape™ E88 Phase 4 — Index series data layer.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Read-only wrapper around E68's EXISTING construction_index observations
- * (`src/cre-intelligence/data/construction-costs-us.ts`) plus E70's own
+ * Read-only wrapper around E86's EXISTING construction_index observations
+ * (`src/cre-intelligence/data/construction-costs-us.ts`) plus E88's own
  * Phase 3 source-research register (source-research.ts). No new index VALUE
  * is invented anywhere in this file — every `CCIndexObservation` below
- * carries an actual E68-cited observation verbatim.
+ * carries an actual E86-cited observation verbatim.
  *
  * Per Phase 4 Implementation Safety steps 4/5: this file is the definitive
  * confirmation of what index evidence actually exists in this codebase today.
@@ -16,12 +16,12 @@
  *     Q2 2023 - Q2 2026, no city dimension.
  *   - Statistics Canada BCPI: REGISTERED (source-research.ts) as a real,
  *     free, redistributable index — but ZERO observations have been ingested
- *     anywhere in E68 or E70 as of Phase 3. It is listed below with an EMPTY
+ *     anywhere in E86 or E88 as of Phase 3. It is listed below with an EMPTY
  *     observation array so applicability/escalation code can recognize the
  *     series exists without being able to fabricate a value for it. Ingesting
  *     actual BCPI figures is out of Phase 4 scope (would be new data
  *     acquisition, not escalation-logic implementation) and is called out as
- *     a known limitation in docs/E70-phase4-escalation-and-index.md.
+ *     a known limitation in docs/E88-phase4-escalation-and-index.md.
  *
  * No U.S. city outside these 4 has a city-level index; no Canadian city has
  * any RLB-cited index observation at all (RLB's Comparative Cost Index table
@@ -43,7 +43,7 @@ export const RLB_CITY_INDEX_SERIES: CCIndexSeries = {
   applicableCurrency: "USD",
   sourceStatus: "USE",
   statusNote:
-    "Already in active use as of E68 Phase 4 / E70 Phase 1-3. Covers exactly 4 US cities (Austin, Miami, Seattle, Phoenix), 2 periods each (April 2025, April 2026).",
+    "Already in active use as of E86 Phase 4 / E88 Phase 1-3. Covers exactly 4 US cities (Austin, Miami, Seattle, Phoenix), 2 periods each (April 2025, April 2026).",
 };
 
 export const RLB_NATIONAL_INDEX_SERIES: CCIndexSeries = {
@@ -75,7 +75,7 @@ export const STATCAN_BCPI_INDEX_SERIES: CCIndexSeries = {
   applicableCurrency: "CAD",
   sourceStatus: "REGISTER",
   statusNote:
-    "Confirmed real, free, and redistributable (Phase 3 source-research.ts) but NOT ingested — zero observations exist in E68 or E70. Any escalation request routed to this series returns DATA_GAP (INSUFFICIENT_INDEX_EVIDENCE / SOURCE_NOT_VERIFIED), never a fabricated value.",
+    "Confirmed real, free, and redistributable (Phase 3 source-research.ts) but NOT ingested — zero observations exist in E86 or E88. Any escalation request routed to this series returns DATA_GAP (INSUFFICIENT_INDEX_EVIDENCE / SOURCE_NOT_VERIFIED), never a fabricated value.",
 };
 
 export const CC_KNOWN_INDEX_SERIES: readonly CCIndexSeries[] = [
@@ -95,7 +95,7 @@ export const RLB_NATIONAL_INDEX_OBSERVATIONS: readonly CCIndexObservation[] = US
 /** Always empty — see STATCAN_BCPI_INDEX_SERIES's statusNote above. */
 export const STATCAN_BCPI_INDEX_OBSERVATIONS: readonly CCIndexObservation[] = [];
 
-/** Every index observation E70 can actually see, across every known series. */
+/** Every index observation E88 can actually see, across every known series. */
 export const CC_KNOWN_INDEX_OBSERVATIONS: readonly CCIndexObservation[] = [
   ...RLB_CITY_INDEX_OBSERVATIONS,
   ...RLB_NATIONAL_INDEX_OBSERVATIONS,

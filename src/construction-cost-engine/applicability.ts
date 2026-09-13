@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 4 — Index Applicability Engine.
+ * InvestScape™ E88 Phase 4 — Index Applicability Engine.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Deterministic applicability evaluation: given one cost observation and one
@@ -39,7 +39,7 @@ function parseCurrencyFromUnit(unit: string): "USD" | "CAD" | undefined {
  *
  * `rlb-national-construction-cost-index`: INDIRECT, for any US city cost
  * observation, gated by `policy.geography.allowNationalIndexForCityCost`.
- * This is a considered, documented judgment call (see docs/E70-phase4-
+ * This is a considered, documented judgment call (see docs/E88-phase4-
  * escalation-and-index.md "RLB national index policy"), not an automatic
  * "national = local" assumption: RLB's own report publishes this specific
  * series as a cross-market US escalation index, independent of any one

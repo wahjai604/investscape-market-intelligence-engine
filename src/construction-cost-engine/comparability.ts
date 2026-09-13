@@ -1,8 +1,8 @@
 /**
- * InvestScape™ E70 Phase 2 — Construction Cost Comparability Layer.
+ * InvestScape™ E88 Phase 2 — Construction Cost Comparability Layer.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Given a `ConstructionCostRequest` and a pool of E68 `CRECitedObservation`s
+ * Given a `ConstructionCostRequest` and a pool of E86 `CRECitedObservation`s
  * (wrapped as `ConstructionCostCandidateInput`), classifies every candidate
  * EXACT/CLOSE/APPROXIMATE/UNSUPPORTED, exposes per-dimension reasoning, and
  * produces an explicit INCLUDED/EXCLUDED decision with a machine-readable
@@ -15,13 +15,13 @@
  * exactly one question per candidate: "does this observation legitimately
  * inform the requested benchmark, and how closely?"
  *
- * DESIGN PRECEDENT REUSED FROM E68/E69 (architectural philosophy, not code):
+ * DESIGN PRECEDENT REUSED FROM E86/E87 (architectural philosophy, not code):
  * - The four-tier vocabulary (`exact|close|approximate|unsupported`) is
- *   E68's `MappingConfidence`, re-exported by taxonomy.ts, unchanged.
+ *   E86's `MappingConfidence`, re-exported by taxonomy.ts, unchanged.
  * - Dimensions combine by FLOOR, never by average — one disqualifying
- *   dimension is never papered over by several strong ones (E69's
+ *   dimension is never papered over by several strong ones (E87's
  *   `combineDimensions` precedent, independently re-implemented here).
- * - "Only filter on a dimension the request actually specifies" (E69's
+ * - "Only filter on a dimension the request actually specifies" (E87's
  *   `matchesIdentity` principle).
  * - A subtype mapped at "close" or "approximate" confidence is NEVER
  *   reported as "exact" merely because the canonical subtype name matches —
@@ -29,7 +29,7 @@
  *
  * NOTHING under src/cre-intelligence/ or src/cap-rate-engine/ is imported for
  * its mutation surface; every import below is a read-only type or pure
- * function, and E69 (src/cap-rate-engine/) is not imported at all — E70 is
+ * function, and E87 (src/cap-rate-engine/) is not imported at all — E88 is
  * independently owned.
  */
 import type { CREGeography } from "../cre-intelligence/types";
@@ -53,7 +53,7 @@ const RANK: Readonly<Record<CCMatchLevel, number>> = {
   exact: 3,
 };
 
-/** Freshest-to-oldest rank, matching E68's `assessFreshness` band ordering. */
+/** Freshest-to-oldest rank, matching E86's `assessFreshness` band ordering. */
 const FRESHNESS_RANK: Readonly<Record<CREPresentationFreshness, number>> = {
   live_current: 4,
   recent: 3,

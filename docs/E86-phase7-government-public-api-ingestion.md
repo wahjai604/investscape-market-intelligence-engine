@@ -1,16 +1,16 @@
-# E68 Phase 7 — Government & Public/API Data Ingestion
+# E86 Phase 7 — Government & Public/API Data Ingestion
 
 Research and implementation date **2026-09-11**. This phase adds the ingestion
-architecture and first public-source adapters for E68. It builds on, and does
+architecture and first public-source adapters for E86. It builds on, and does
 not duplicate, Phases 1–6:
 
 - `types.ts` — `CREObservation`, `CREDataGap`, citation/provenance model
 - `source-registry.ts` — `CRE_SOURCE_REGISTRY`, `isRedistributable`
 - `normalize.ts` / `qualification.ts` / `mapping.ts` — normalization, validation, qualification
 - `paid-source-analysis.ts` — Phase 6 paid-source classification (unchanged)
-- `docs/e68-source-registry.md`, `docs/E68-cap-rate-data-coverage.md`, `docs/E68-phase6-paid-source-analysis.md`
+- `docs/e86-source-registry.md`, `docs/E86-cap-rate-data-coverage.md`, `docs/E86-phase6-paid-source-analysis.md`
 
-E68 remains the sole data-foundation engine. No E69+ engine, valuation logic,
+E86 remains the sole data-foundation engine. No E87+ engine, valuation logic,
 underwriting logic, or downstream cap-rate/construction-cost calculation was
 added in this phase.
 
@@ -69,7 +69,7 @@ distinction Phase 4's fabrication problem violated.
 | Toronto Open Data | Deferred (representative only) | Confirms the municipal-portal pattern works; not itself a CRE benchmark source, and the other 9 Canadian priority cities were not individually checked. |
 | BEA API | Deferred, architecturally supported | Public API, free key, metro GDP — a natural next adapter using the same `SourceAdapter` contract, not implemented this phase. |
 | BLS API | Deferred, architecturally supported | Public API, free key; national PPI construction already used in `CRE_SOURCE_REGISTRY` (`bls-ppi-construction`); metro-level adapter not implemented this phase. |
-| HUD USER FMR | Deferred | Public API exists, but Fair Market Rents are a residential subsidy benchmark, not a market rent or CRE metric — low priority for E68's scope. |
+| HUD USER FMR | Deferred | Public API exists, but Fair Market Rents are a residential subsidy benchmark, not a market rent or CRE metric — low priority for E86's scope. |
 | data.gov | Deferred (index only) | Routing layer, not an independent dataset. |
 | Austin Open Data | Deferred (representative only) | Confirms the Socrata municipal pattern; Houston/Miami/Seattle/Phoenix each run separate portals, not individually checked. |
 | Any paid source (CoStar, MSCI/RCA, CBRE gated download, Altus, RSMeans, etc.) | Out of scope by design | Part 15 of the spec forbids new paid integration in this phase; Phase 6's existing analysis stands unchanged. |
@@ -154,7 +154,7 @@ published terms page; every uncertain case is marked `unclear` /
   particular varies series-by-series).
 - Sub-metro (submarket) granularity is **not available** from any source in
   this inventory — this is a real ceiling on public data's usefulness for
-  E68, not an oversight.
+  E86, not an oversight.
 
 ## 8. Historical coverage
 
@@ -221,7 +221,7 @@ it.
 message the spec calls for, e.g.:
 
 > "Commercial cap rate unavailable from public government sources for Miami,
-> FL. This metric is not published by any public/government source E68 has
+> FL. This metric is not published by any public/government source E86 has
 > checked. Licensed CRE market source required."
 
 No new `CREDataGap` rows were added to the existing cap-rate/construction-cost
@@ -296,7 +296,7 @@ no test performs a live HTTP request. Registry integrity tests confirm every
 a verification date, that source IDs are unique, and that FRED/Census are
 never classified as direct CRE benchmark sources.
 
-**Full E68 suite result (this phase):** 29 test suites, 321 tests, all
+**Full E86 suite result (this phase):** 29 test suites, 321 tests, all
 passing (`npx jest` in `investscape-market-intelligence-engine`); `npx tsc
 --noEmit` clean. No existing test was modified or weakened.
 

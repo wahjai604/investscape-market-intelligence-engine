@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 6 — Deferred/Registered Source Adapters.
+ * InvestScape™ E88 Phase 6 — Deferred/Registered Source Adapters.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Adapter definitions for every currently non-ingested source (Turner &
@@ -19,36 +19,36 @@ import {
   RSMEANS_SOURCE_DEFINITION,
   STATCAN_BCPI_SOURCE_DEFINITION,
   TURNER_TOWNSEND_SOURCE_DEFINITION,
-} from "../source-registry-e70";
-import { gatedObservations, type E70SourceAdapter } from "../source-adapter-types";
+} from "../source-registry-e88";
+import { gatedObservations, type E88SourceAdapter } from "../source-adapter-types";
 
-export const TURNER_TOWNSEND_ADAPTER: E70SourceAdapter = {
+export const TURNER_TOWNSEND_ADAPTER: E88SourceAdapter = {
   definition: TURNER_TOWNSEND_SOURCE_DEFINITION,
   listObservations: () => gatedObservations(TURNER_TOWNSEND_SOURCE_DEFINITION, () => []),
 };
 
-export const RSMEANS_ADAPTER: E70SourceAdapter = {
+export const RSMEANS_ADAPTER: E88SourceAdapter = {
   definition: RSMEANS_SOURCE_DEFINITION,
   listObservations: () => gatedObservations(RSMEANS_SOURCE_DEFINITION, () => []),
 };
 
-export const ALTUS_ADAPTER: E70SourceAdapter = {
+export const ALTUS_ADAPTER: E88SourceAdapter = {
   definition: ALTUS_SOURCE_DEFINITION,
   listObservations: () => gatedObservations(ALTUS_SOURCE_DEFINITION, () => []),
 };
 
 /** Index-only, per its definition's metricScope — never a cost-observation adapter. */
-export const STATCAN_BCPI_ADAPTER: E70SourceAdapter = {
+export const STATCAN_BCPI_ADAPTER: E88SourceAdapter = {
   definition: STATCAN_BCPI_SOURCE_DEFINITION,
   listObservations: () => gatedObservations(STATCAN_BCPI_SOURCE_DEFINITION, () => []),
 };
 
-export const CMHC_ADAPTER: E70SourceAdapter = {
+export const CMHC_ADAPTER: E88SourceAdapter = {
   definition: CMHC_SOURCE_DEFINITION,
   listObservations: () => gatedObservations(CMHC_SOURCE_DEFINITION, () => []),
 };
 
-export const E70_DEFERRED_ADAPTERS: readonly E70SourceAdapter[] = [
+export const E88_DEFERRED_ADAPTERS: readonly E88SourceAdapter[] = [
   TURNER_TOWNSEND_ADAPTER,
   RSMEANS_ADAPTER,
   ALTUS_ADAPTER,

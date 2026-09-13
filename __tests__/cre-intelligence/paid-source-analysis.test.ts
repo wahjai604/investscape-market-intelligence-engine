@@ -25,7 +25,7 @@ const VALID_COST_TIERS = new Set(["FREE", "PARTIALLY_PUBLIC", "PRICING_NOT_PUBLI
 const VALID_COUNTRY_COVERAGE = new Set(["CA", "US", "CA_AND_US", "UNCONFIRMED"]);
 const VALID_TIERS = new Set(["TIER_1", "TIER_2", "TIER_3", "TIER_4"]);
 
-describe("E68 Phase 6 paid-source classification", () => {
+describe("E86 Phase 6 paid-source classification", () => {
   test("source IDs are unique", () => {
     const ids = CRE_PAID_SOURCE_PROFILES.map((source) => source.sourceId);
     expect(new Set(ids).size).toBe(ids.length);
@@ -158,7 +158,7 @@ describe("E68 Phase 6 paid-source classification", () => {
     const knownIds = new Set([...CRE_PAID_SOURCE_PROFILES.map((s) => s.sourceId)]);
     for (const scenario of CRE_SCENARIO_SUMMARIES) {
       for (const id of scenario.sourceIds) {
-        // Scenario A references E68's existing free-source registry IDs, not
+        // Scenario A references E86's existing free-source registry IDs, not
         // this module's paid-source IDs; B and C must reference real paid IDs.
         if (scenario.scenarioId !== "SCENARIO_A_ZERO_BUDGET") {
           expect(knownIds.has(id)).toBe(true);

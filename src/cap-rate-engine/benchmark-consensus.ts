@@ -1,39 +1,39 @@
 /**
- * InvestScape™ E69 Phase 3 — Consensus & Benchmark Selection.
+ * InvestScape™ E87 Phase 3 — Consensus & Benchmark Selection.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Phase 2 (`comparability.ts`) answers "which observations are comparable to
  * this request?" This file answers the next question: "given the comparable
  * ones, is there enough legitimate, non-conflicting evidence to defend a
  * benchmark?" It NEVER re-derives comparability — it consumes
- * `E69ComparabilityResult` (Phase 2's own output type) as its sole input and
+ * `E87ComparabilityResult` (Phase 2's own output type) as its sole input and
  * treats Phase 2's INCLUDED/EXCLUDED split as authoritative.
  *
  * THIS FILE DOES NOT: recompute comparability dimensions, calculate a
  * transaction-derived cap rate from NOI/price (Phase 4), fabricate a value
  * when evidence is missing/conflicting/stale/incompatible, or select
- * randomly among tied candidates. See docs/E69-phase3-consensus-and-benchmark.md.
+ * randomly among tied candidates. See docs/E87-phase3-consensus-and-benchmark.md.
  */
 import { CAP_RATE_FAMILY, rangeMidpoint, type CRECapRateType } from "../cre-intelligence/types";
-import type { E69ComparabilityCandidate, E69ComparabilityResult, E69MatchLevel } from "./comparability-types";
+import type { E87ComparabilityCandidate, E87ComparabilityResult, E87MatchLevel } from "./comparability-types";
 import {
   DEFAULT_DISPERSION_POLICY,
   SOURCE_HIERARCHY_RANK,
   floorConfidence,
   type DispersionPolicy,
-  type E69Benchmark,
-  type E69BenchmarkAudit,
-  type E69BenchmarkAuditEntry,
-  type E69BenchmarkGap,
-  type E69BenchmarkGapReasonCode,
-  type E69BenchmarkOptions,
-  type E69BenchmarkResult,
-  type E69ConfidenceTier,
-  type E69Dispersion,
-  type E69DispersionTier,
-  type E69EnrichedCandidate,
-  type E69Representation,
-  type E69SourceHierarchyTier,
+  type E87Benchmark,
+  type E87BenchmarkAudit,
+  type E87BenchmarkAuditEntry,
+  type E87BenchmarkGap,
+  type E87BenchmarkGapReasonCode,
+  type E87BenchmarkOptions,
+  type E87BenchmarkResult,
+  type E87ConfidenceTier,
+  type E87Dispersion,
+  type E87DispersionTier,
+  type E87EnrichedCandidate,
+  type E87Representation,
+  type E87SourceHierarchyTier,
 } from "./consensus-types";
 
 // ---------------------------------------------------------------------------
@@ -58,10 +58,10 @@ const KNOWN_TAG_REPRESENTATIONS: ReadonlySet<string> = new Set([
  * inference — this never fabricates a representation the observation does
  * not structurally support.
  */
-export function classifyRepresentation(obs: E69ComparabilityCandidate["observation"]): E69Representation {
+export function classifyRepresentation(obs: E87ComparabilityCandidate["observation"]): E87Representation {
   const tag = obs.tags?.representation;
   if (tag !== undefined) {
-    return KNOWN_TAG_REPRESENTATIONS.has(tag) ? (tag as E69Representation) : "unsupported";
+    return KNOWN_TAG_REPRESENTATIONS.has(tag) ? (tag as E87Representation) : "unsupported";
   }
   if (obs.capRateType === "derived_transaction") return "transaction_derived";
   if (obs.capRateType === "survey_estimate") return "survey_estimate";
@@ -73,14 +73,14 @@ export function classifyRepresentation(obs: E69ComparabilityCandidate["observati
 /**
  * Extract a single scalar for consensus math, WITHOUT unifying the original
  * representation away from the audit trail (the enriched candidate keeps
- * both). `range` uses E68's own `rangeMidpoint` (a pure, already-reviewed
+ * both). `range` uses E86's own `rangeMidpoint` (a pure, already-reviewed
  * transformation) — this is the one explicit, documented scalar
  * transformation Phase 3 performs; every other representation already
  * carries a publisher-printed scalar (`value`), used verbatim.
  */
 export function extractScalarValue(
-  obs: E69ComparabilityCandidate["observation"],
-  representation: E69Representation,
+  obs: E87ComparabilityCandidate["observation"],
+  representation: E87Representation,
 ): number | undefined {
   switch (representation) {
     case "point":
@@ -102,7 +102,7 @@ export function extractScalarValue(
 // ---------------------------------------------------------------------------
 
 /**
- * Deterministic five-tier source hierarchy, derived ONLY from E68 fields that
+ * Deterministic five-tier source hierarchy, derived ONLY from E86 fields that
  * already exist (`CRESource.sourceType`, `CRECapRateType`/`CAP_RATE_FAMILY`,
  * `CREDerivedTransaction`) — no new source-quality vocabulary is invented
  * beyond what the Phase 3 spec requires. This tier affects WEIGHT and
@@ -111,7 +111,7 @@ export function extractScalarValue(
  * cap-rate-family observation compatible (proved by
  * `sourceHierarchyNeverOverridesIncompatibility` in the test suite).
  */
-export function sourceHierarchyTier(obs: E69ComparabilityCandidate["observation"]): E69SourceHierarchyTier {
+export function sourceHierarchyTier(obs: E87ComparabilityCandidate["observation"]): E87SourceHierarchyTier {
   const family = obs.capRateType ? CAP_RATE_FAMILY[obs.capRateType] : undefined;
   switch (obs.source.sourceType) {
     case "valuation":
@@ -140,7 +140,7 @@ export function sourceHierarchyTier(obs: E69ComparabilityCandidate["observation"
 // Deterministic weighting (Part 6/8 of the Phase 3 doc)
 // ---------------------------------------------------------------------------
 
-const HIERARCHY_WEIGHT: Readonly<Record<E69SourceHierarchyTier, number>> = {
+const HIERARCHY_WEIGHT: Readonly<Record<E87SourceHierarchyTier, number>> = {
   primary_specialist_research: 5,
   primary_brokerage_research: 4,
   transaction_derived_complete_provenance: 3,
@@ -156,7 +156,7 @@ const FRESHNESS_WEIGHT: Readonly<Record<string, number>> = {
   unavailable: 1,
 };
 
-const COMPARABILITY_WEIGHT: Readonly<Record<E69MatchLevel, number>> = {
+const COMPARABILITY_WEIGHT: Readonly<Record<E87MatchLevel, number>> = {
   exact: 3,
   close: 2,
   approximate: 1,
@@ -169,7 +169,7 @@ const COMPARABILITY_WEIGHT: Readonly<Record<E69MatchLevel, number>> = {
  * incompatibility itself is handled entirely upstream by Phase 2 and by the
  * cap-rate-family grouping below, never by this weight collapsing to zero.
  */
-function computeWeight(tier: E69SourceHierarchyTier, freshness: string | undefined, comparability: E69MatchLevel): number {
+function computeWeight(tier: E87SourceHierarchyTier, freshness: string | undefined, comparability: E87MatchLevel): number {
   const freshnessWeight = freshness !== undefined ? (FRESHNESS_WEIGHT[freshness] ?? 1) : 1;
   return HIERARCHY_WEIGHT[tier] + freshnessWeight + COMPARABILITY_WEIGHT[comparability];
 }
@@ -178,7 +178,7 @@ function computeWeight(tier: E69SourceHierarchyTier, freshness: string | undefin
 // Confidence tiers (Part 9 of the Phase 3 doc — two axes, floor only)
 // ---------------------------------------------------------------------------
 
-function hierarchyToConfidence(tier: E69SourceHierarchyTier): E69ConfidenceTier {
+function hierarchyToConfidence(tier: E87SourceHierarchyTier): E87ConfidenceTier {
   switch (tier) {
     case "primary_specialist_research":
       return "high";
@@ -193,7 +193,7 @@ function hierarchyToConfidence(tier: E69SourceHierarchyTier): E69ConfidenceTier 
   }
 }
 
-function freshnessToConfidence(freshness: string | undefined): E69ConfidenceTier {
+function freshnessToConfidence(freshness: string | undefined): E87ConfidenceTier {
   switch (freshness) {
     case "live_current":
       return "high";
@@ -210,7 +210,7 @@ function freshnessToConfidence(freshness: string | undefined): E69ConfidenceTier
   }
 }
 
-function comparabilityToConfidence(level: E69MatchLevel): E69ConfidenceTier {
+function comparabilityToConfidence(level: E87MatchLevel): E87ConfidenceTier {
   switch (level) {
     case "exact":
       return "high";
@@ -226,13 +226,13 @@ function comparabilityToConfidence(level: E69MatchLevel): E69ConfidenceTier {
 /**
  * Data confidence: the quality of the OBSERVATIONS themselves, taken as the
  * FLOOR across every contributing candidate's own floor (hierarchy /\
- * freshness /\ comparability). Consistent with E68's project-wide rule that
+ * freshness /\ comparability). Consistent with E86's project-wide rule that
  * dimensions combine by floor, never average — one weak contributing
  * observation legitimately caps how much the underlying evidence can be
  * trusted, even inside an otherwise strong group.
  */
-function computeDataConfidence(enriched: E69EnrichedCandidate[]): E69ConfidenceTier {
-  let floor: E69ConfidenceTier = "high";
+function computeDataConfidence(enriched: E87EnrichedCandidate[]): E87ConfidenceTier {
+  let floor: E87ConfidenceTier = "high";
   for (const c of enriched) {
     const candidateFloor = [
       hierarchyToConfidence(c.sourceHierarchyTier),
@@ -244,7 +244,7 @@ function computeDataConfidence(enriched: E69EnrichedCandidate[]): E69ConfidenceT
   return floor;
 }
 
-function sampleSizeConfidence(n: number): E69ConfidenceTier {
+function sampleSizeConfidence(n: number): E87ConfidenceTier {
   // PROVISIONAL: a single excellent observation is deliberately NOT downgraded to
   // "low" for being alone (Phase 3 spec: "one excellent observation may be
   // sufficient") — but it is capped below "high" because breadth of evidence is
@@ -253,7 +253,7 @@ function sampleSizeConfidence(n: number): E69ConfidenceTier {
   return "moderate";
 }
 
-function dispersionConfidence(tier: E69DispersionTier): E69ConfidenceTier {
+function dispersionConfidence(tier: E87DispersionTier): E87ConfidenceTier {
   switch (tier) {
     case "single_observation":
     case "tight":
@@ -267,12 +267,12 @@ function dispersionConfidence(tier: E69DispersionTier): E69ConfidenceTier {
   }
 }
 
-function sourceIndependenceConfidence(enriched: E69EnrichedCandidate[]): E69ConfidenceTier {
+function sourceIndependenceConfidence(enriched: E87EnrichedCandidate[]): E87ConfidenceTier {
   const distinctSources = new Set(enriched.map((c) => c.candidate.observation.source.sourceId));
   return distinctSources.size >= 2 ? "high" : "moderate";
 }
 
-function computeBenchmarkConfidence(enriched: E69EnrichedCandidate[], dispersionTier: E69DispersionTier): E69ConfidenceTier {
+function computeBenchmarkConfidence(enriched: E87EnrichedCandidate[], dispersionTier: E87DispersionTier): E87ConfidenceTier {
   return [
     sampleSizeConfidence(enriched.length),
     dispersionConfidence(dispersionTier),
@@ -284,7 +284,7 @@ function computeBenchmarkConfidence(enriched: E69EnrichedCandidate[], dispersion
 // Dispersion (Part 7 of the Phase 3 doc)
 // ---------------------------------------------------------------------------
 
-function classifyDispersion(values: number[], policy: DispersionPolicy): { bps: number; tier: E69DispersionTier } {
+function classifyDispersion(values: number[], policy: DispersionPolicy): { bps: number; tier: E87DispersionTier } {
   if (values.length <= 1) return { bps: 0, tier: "single_observation" };
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -304,7 +304,7 @@ function classifyDispersion(values: number[], policy: DispersionPolicy): { bps: 
  * is needed (audit listing, tie-breaking). Never depends on input array
  * order, object key order, or any non-deterministic source (Date.now, Math.random).
  */
-function compareCandidatesDeterministically(a: E69EnrichedCandidate, b: E69EnrichedCandidate): number {
+function compareCandidatesDeterministically(a: E87EnrichedCandidate, b: E87EnrichedCandidate): number {
   if (a.weight !== b.weight) return b.weight - a.weight; // higher weight first
   const aId = a.candidate.observation.source.sourceId;
   const bId = b.candidate.observation.source.sourceId;
@@ -321,7 +321,7 @@ function compareCandidatesDeterministically(a: E69EnrichedCandidate, b: E69Enric
 // Audit entries
 // ---------------------------------------------------------------------------
 
-function toAuditEntry(enriched: E69EnrichedCandidate, note: string): E69BenchmarkAuditEntry {
+function toAuditEntry(enriched: E87EnrichedCandidate, note: string): E87BenchmarkAuditEntry {
   const obs = enriched.candidate.observation;
   return {
     sourceId: obs.source.sourceId,
@@ -337,7 +337,7 @@ function toAuditEntry(enriched: E69EnrichedCandidate, note: string): E69Benchmar
   };
 }
 
-function excludedEntryFromComparability(candidate: E69ComparabilityCandidate): E69BenchmarkAuditEntry {
+function excludedEntryFromComparability(candidate: E87ComparabilityCandidate): E87BenchmarkAuditEntry {
   const obs = candidate.observation;
   return {
     sourceId: obs.source.sourceId,
@@ -355,7 +355,7 @@ function excludedEntryFromComparability(candidate: E69ComparabilityCandidate): E
 // ---------------------------------------------------------------------------
 
 const HIERARCHY_SUMMARY =
-  "Tier 1 primary_specialist_research (E68 sourceType 'valuation') > Tier 2 primary_brokerage_research " +
+  "Tier 1 primary_specialist_research (E86 sourceType 'valuation') > Tier 2 primary_brokerage_research " +
   "('brokerage') > Tier 3 transaction_derived_complete_provenance ('transaction_database' with a complete " +
   "CREDerivedTransaction) > Tier 4 secondary_aggregated ('government'/'construction_cost'/'other', or a " +
   "'transaction_database' lacking complete derivation provenance) > Tier 5 unsupported_unknown " +
@@ -368,9 +368,9 @@ const HIERARCHY_SUMMARY =
  * identical result.
  */
 export function buildCapRateBenchmark(
-  comparability: E69ComparabilityResult,
-  options: E69BenchmarkOptions = {},
-): E69BenchmarkResult {
+  comparability: E87ComparabilityResult,
+  options: E87BenchmarkOptions = {},
+): E87BenchmarkResult {
   const policy = options.dispersionPolicy ?? DEFAULT_DISPERSION_POLICY;
   const request = comparability.request;
   const narrative: string[] = [];
@@ -386,13 +386,13 @@ export function buildCapRateBenchmark(
     const staleCodes = new Set(["STALE", "UNAVAILABLE"]);
     const allStale =
       comparability.excluded.length > 0 && comparability.excluded.every((c) => staleCodes.has(c.exclusionReasonCode ?? ""));
-    const reasonCode: E69BenchmarkGapReasonCode = allStale ? "INSUFFICIENT_FRESHNESS" : "NO_COMPARABLE_OBSERVATIONS";
+    const reasonCode: E87BenchmarkGapReasonCode = allStale ? "INSUFFICIENT_FRESHNESS" : "NO_COMPARABLE_OBSERVATIONS";
     narrative.push(
       reasonCode === "INSUFFICIENT_FRESHNESS"
         ? "Every candidate that would otherwise be comparable failed the freshness requirement."
         : "No candidate observation was comparable to the requested benchmark identity.",
     );
-    const audit: E69BenchmarkAudit = {
+    const audit: E87BenchmarkAudit = {
       requestedBenchmark: request,
       observationsConsideredCount: comparability.candidates.length,
       excludedByComparability,
@@ -424,7 +424,7 @@ export function buildCapRateBenchmark(
   // Phase 2 does not carry the raw CREPresentationFreshness on the candidate (only the
   // derived freshnessMatch dimension result), so Phase 3 reads freshness back from that
   // dimension's tier rather than re-assessing it — this keeps intact Phase 2's rule that
-  // E69 never recomputes freshness itself. "not_constrained" cannot occur here because
+  // E87 never recomputes freshness itself. "not_constrained" cannot occur here because
   // `evaluateFreshness` always returns a tier (never "not_constrained").
   const dimensionToFreshness: Readonly<Record<string, string>> = {
     exact: "live_current",
@@ -434,7 +434,7 @@ export function buildCapRateBenchmark(
   };
 
   // Enrich every Phase-2-included candidate with Phase-3-only metadata.
-  const enrichedAll: E69EnrichedCandidate[] = comparability.included.map((candidate) => {
+  const enrichedAll: E87EnrichedCandidate[] = comparability.included.map((candidate) => {
     const obs = candidate.observation;
     const representation = classifyRepresentation(obs);
     const scalarValue = extractScalarValue(obs, representation);
@@ -446,14 +446,14 @@ export function buildCapRateBenchmark(
       representation,
       scalarValue,
       sourceHierarchyTier: tier,
-      freshness: freshness as E69EnrichedCandidate["freshness"],
+      freshness: freshness as E87EnrichedCandidate["freshness"],
       comparability: candidate.comparability,
       weight: 0,
     };
   });
 
   // Phase-3-only exclusion: representation could not yield a usable scalar.
-  const excludedByPhase3: E69BenchmarkAuditEntry[] = [];
+  const excludedByPhase3: E87BenchmarkAuditEntry[] = [];
   const withScalar = enrichedAll.filter((e) => {
     if (e.scalarValue === undefined) {
       excludedByPhase3.push(toAuditEntry(e, "Excluded by Phase 3: representation did not yield a usable scalar value (UNSUPPORTED_REPRESENTATION)."));
@@ -463,7 +463,7 @@ export function buildCapRateBenchmark(
   });
 
   if (withScalar.length === 0) {
-    const audit: E69BenchmarkAudit = {
+    const audit: E87BenchmarkAudit = {
       requestedBenchmark: request,
       observationsConsideredCount: comparability.candidates.length,
       excludedByComparability,
@@ -493,9 +493,9 @@ export function buildCapRateBenchmark(
   }
 
   // Cap-rate family / type grouping (Part 4 of the Phase 3 doc). Compatibility is
-  // determined by the EXACT capRateType, not merely CAP_RATE_FAMILY, mirroring E68's
+  // determined by the EXACT capRateType, not merely CAP_RATE_FAMILY, mirroring E86's
   // `assertComparableCapRates` guard in consensus.ts ("cannot mix cap-rate types").
-  const byType = new Map<string, E69EnrichedCandidate[]>();
+  const byType = new Map<string, E87EnrichedCandidate[]>();
   for (const e of withScalar) {
     const key = e.candidate.observation.capRateType ?? "(unstated)";
     const list = byType.get(key) ?? [];
@@ -503,8 +503,8 @@ export function buildCapRateBenchmark(
     byType.set(key, list);
   }
 
-  let targetGroup: E69EnrichedCandidate[];
-  const droppedGroups: E69EnrichedCandidate[] = [];
+  let targetGroup: E87EnrichedCandidate[];
+  const droppedGroups: E87EnrichedCandidate[] = [];
 
   if (request.capRateType !== undefined) {
     targetGroup = byType.get(request.capRateType) ?? [];
@@ -533,7 +533,7 @@ export function buildCapRateBenchmark(
       .flatMap((t) => byType.get(t)!)
       .sort(compareCandidatesDeterministically)
       .map((e) => toAuditEntry(e, `Distinct capRateType group "${e.candidate.observation.capRateType}".`));
-    const audit: E69BenchmarkAudit = {
+    const audit: E87BenchmarkAudit = {
       requestedBenchmark: request,
       observationsConsideredCount: comparability.candidates.length,
       excludedByComparability,
@@ -567,7 +567,7 @@ export function buildCapRateBenchmark(
   }
 
   if (targetGroup.length === 0) {
-    const audit: E69BenchmarkAudit = {
+    const audit: E87BenchmarkAudit = {
       requestedBenchmark: request,
       observationsConsideredCount: comparability.candidates.length,
       excludedByComparability,
@@ -604,7 +604,7 @@ export function buildCapRateBenchmark(
 
   const values = targetGroup.map((e) => e.scalarValue!);
   const dispersionInfo = classifyDispersion(values, policy);
-  const dispersion: E69Dispersion = { bps: dispersionInfo.bps, tier: dispersionInfo.tier, policy, values: [...values].sort((a, b) => a - b) };
+  const dispersion: E87Dispersion = { bps: dispersionInfo.bps, tier: dispersionInfo.tier, policy, values: [...values].sort((a, b) => a - b) };
 
   const dataConfidence = computeDataConfidence(targetGroup);
 
@@ -628,13 +628,13 @@ export function buildCapRateBenchmark(
       );
       const benchmarkConfidence = floorConfidence(computeBenchmarkConfidence(targetGroup, dispersionInfo.tier), "low");
       const confidence = floorConfidence(dataConfidence, benchmarkConfidence);
-      const benchmark: E69Benchmark = {
+      const benchmark: E87Benchmark = {
         value: chosen.scalarValue!,
         unit: chosen.candidate.observation.unit,
         capRateType: chosen.candidate.observation.capRateType,
         method: "methodology_preferred",
       };
-      const audit: E69BenchmarkAudit = {
+      const audit: E87BenchmarkAudit = {
         requestedBenchmark: request,
         observationsConsideredCount: comparability.candidates.length,
         excludedByComparability,
@@ -669,7 +669,7 @@ export function buildCapRateBenchmark(
     // Multiple candidates tie for the best tier and still disagree severely (the CBRE=5.0 /
     // C&W=7.0 conflict case): no methodological preference is defensible. DATA_GAP.
     const conflicting = targetGroup.map((e) => toAuditEntry(e, `Conflicting value ${e.scalarValue} at source-hierarchy tier ${SOURCE_HIERARCHY_RANK[e.sourceHierarchyTier]}.`));
-    const audit: E69BenchmarkAudit = {
+    const audit: E87BenchmarkAudit = {
       requestedBenchmark: request,
       observationsConsideredCount: comparability.candidates.length,
       excludedByComparability,
@@ -715,7 +715,7 @@ export function buildCapRateBenchmark(
   const benchmarkConfidence = computeBenchmarkConfidence(targetGroup, dispersionInfo.tier);
   const confidence = floorConfidence(dataConfidence, benchmarkConfidence);
 
-  const method: E69Benchmark["method"] = targetGroup.length === 1 ? "single_observation" : "weighted_consensus";
+  const method: E87Benchmark["method"] = targetGroup.length === 1 ? "single_observation" : "weighted_consensus";
   const consensusMethod =
     targetGroup.length === 1
       ? "single_observation: exactly one eligible, compatible candidate — its own scalar value is the benchmark verbatim (no math performed)."
@@ -725,7 +725,7 @@ export function buildCapRateBenchmark(
 
   const contributing = targetGroup.map((e) => toAuditEntry(e, "Contributed to the weighted consensus."));
 
-  const audit: E69BenchmarkAudit = {
+  const audit: E87BenchmarkAudit = {
     requestedBenchmark: request,
     observationsConsideredCount: comparability.candidates.length,
     excludedByComparability,

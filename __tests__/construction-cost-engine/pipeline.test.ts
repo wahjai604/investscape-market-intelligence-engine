@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 2 — Pipeline (request gating / DATA_GAP) tests.
+ * InvestScape™ E88 Phase 2 — Pipeline (request gating / DATA_GAP) tests.
  */
 import { evaluateConstructionCostRequest } from "../../src/construction-cost-engine/pipeline";
 import type { ConstructionCostCandidateInput, ConstructionCostRequest } from "../../src/construction-cost-engine/types";

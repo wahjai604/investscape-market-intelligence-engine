@@ -1,4 +1,4 @@
-# E69 Phase 6 — Scenario / Sensitivity Framework
+# E87 Phase 6 — Scenario / Sensitivity Framework
 
 © 2026 Lighthouse Research Ltd. All rights reserved.
 
@@ -7,7 +7,7 @@
 Answer exactly one question: *"what cap-rate scenarios can legitimately be
 evaluated around this benchmark?"* Phase 6 is not a property valuation
 engine, not an NOI forecast, not a DCF/IRR/feasibility engine, and not an
-investment-recommendation engine. It consumes Phase 5's `E69PipelineResult`
+investment-recommendation engine. It consumes Phase 5's `E87PipelineResult`
 verbatim and produces cap-rate scenario values only.
 
 ## 2. Files
@@ -19,7 +19,7 @@ verbatim and produces cap-rate scenario values only.
 
 Phase 6 does not re-implement comparability, consensus, transaction
 derivation, or override resolution — it is a pure function of a Phase 5
-`E69PipelineResult`.
+`E87PipelineResult`.
 
 ## 3. Core distinction
 
@@ -29,8 +29,8 @@ Five things are always kept visually and structurally distinct:
 2. Transaction-derived cap rates (Phase 4, surfaced through Phase 5's
    `origin: "transaction_derived"`).
 3. The consensus benchmark itself (Phase 3 `benchmark.value`).
-4. An evidence-supported range, if one actually exists (`E69EvidenceSupportedRange`).
-5. Mechanically generated sensitivity scenarios (`E69Scenario` with
+4. An evidence-supported range, if one actually exists (`E87EvidenceSupportedRange`).
+5. Mechanically generated sensitivity scenarios (`E87Scenario` with
    `provenance: "mechanically_generated"`).
 
 A mechanically generated scenario can never carry `provenance: "observed"`,
@@ -38,7 +38,7 @@ A mechanically generated scenario can never carry `provenance: "observed"`,
 anchor scenario, which always reflects the actual benchmark/override value,
 never an arithmetic sensitivity step.
 
-## 4. Scenario model (`E69Scenario`)
+## 4. Scenario model (`E87Scenario`)
 
 Fields: `scenarioType` (`benchmark | downside | base | upside | custom`,
 neutral labels only), `capRateValue`, `deltaBps` (signed integer, 0 for the
@@ -62,7 +62,7 @@ Never manufactured via +/-N bps. Only two bases are recognized, both
 grounded in Phase 3's real `contributingObservations`:
 
 - **`publisher_explicit_range`**: exactly one contributing observation, and
-  that observation itself carries `low`/`high` (per E68's `CREObservation`
+  that observation itself carries `low`/`high` (per E86's `CREObservation`
   contract — a range observation sets `low`/`high` and leaves `value`
   undefined). The published range is used verbatim.
 - **`multi_observation_empirical_range`**: two or more contributing
@@ -109,7 +109,7 @@ see §7 — and `NOT_APPLICABLE_HYPOTHETICAL` is used by
 Phase 6 does not decide that ±25bps = normal, ±50bps = reasonable, ±100bps
 = stress, or any other universal rule. The caller supplies deltas
 explicitly. A convenience default (`DEFAULT_SENSITIVITY_POLICY`, currently
-`{version: "E69-phase6-provisional-v1", deltasBps: [-50,-25,0,25,50]}`) is
+`{version: "E87-phase6-provisional-v1", deltasBps: [-50,-25,0,25,50]}`) is
 provided **only** for a caller who wants a starting point — it is explicitly
 versioned, explicitly PROVISIONAL, and is never applied automatically:
 `generateScenarios` never reads it, and `generateScenariosWithDefaultPolicy`
@@ -120,7 +120,7 @@ presented to an end user as market evidence.
 
 If the Phase 5 pipeline result is `pipelineStatus: "data_gap"`,
 `generateScenarios` returns `{ scenarioStatus: "data_gap", underlyingGap,
-requestedGeography, explanation }` — the original Phase 3 `E69BenchmarkGap`
+requestedGeography, explanation }` — the original Phase 3 `E87BenchmarkGap`
 (reason code, explanation, provenance references) is preserved verbatim on
 `underlyingGap`. No scenarios are mechanically generated from nothing.
 
@@ -145,7 +145,7 @@ Reasoning:
 - The compromise implemented: `generateHypotheticalScenarios` (a) requires a
   literal `true` third argument (`acknowledgeHypothetical`) as a
   type-level speed bump against silent misuse, (b) returns a distinct
-  result type (`E69HypotheticalScenarioSet`) with `isHypothetical: true` and
+  result type (`E87HypotheticalScenarioSet`) with `isHypothetical: true` and
   a mandatory `disclaimer` string, (c) always sets `basis: "hypothetical"`
   and `provenance: "mechanically_generated"` on every value including the
   "anchor" (there is no anchor in the observed/derived sense — the caller's
@@ -158,7 +158,7 @@ Reasoning:
 
 If a future engine needs full underwriting-style scenario modeling (NOI
 assumptions, exit multiples, IRR sensitivity, etc.), that belongs in a
-downstream engine, not here — E69 stops at "a hypothetical delta on a number
+downstream engine, not here — E87 stops at "a hypothetical delta on a number
 the caller already supplied and already knows is not market data."
 
 ## 9. User overrides
@@ -169,7 +169,7 @@ When the Phase 5 result is `pipelineStatus: "user_overridden"`:
   `capRateValue`, with `provenance: "user_override"` (never `"observed"` or
   `"derived"`) and `basis: "user_override"`. Its `auditExplanation` names the
   override reason verbatim.
-- `E69ScenarioSetSuccess.isOverrideBased` is `true`, so a consumer can
+- `E87ScenarioSetSuccess.isOverrideBased` is `true`, so a consumer can
   branch on this without inspecting `provenance` string values.
 - The underlying benchmark or DATA_GAP (`pipelineResult.underlying`) is
   never mutated and is used, when it was itself a success, to compute
@@ -184,7 +184,7 @@ When the Phase 5 result is `pipelineStatus: "user_overridden"`:
 ## 10. Determinism
 
 - Same `pipelineResult` + same `deltas` (any order, with duplicates) ->
-  identical `E69ScenarioResult` (`toEqual`-verified in tests 6, 7, 16, 17).
+  identical `E87ScenarioResult` (`toEqual`-verified in tests 6, 7, 16, 17).
 - No wall-clock, randomness, or object identity is read anywhere in
   `scenario-sensitivity.ts`.
 - Arithmetic is via `toScaled`/`fromScaled`/`bpsToScaled` integer-domain
@@ -194,7 +194,7 @@ When the Phase 5 result is `pipelineStatus: "user_overridden"`:
 
 ## 11. Phase 5 origin-classification review (required check)
 
-Phase 5's documented limitation (`docs/E69-phase5-unified-benchmark-output.md`
+Phase 5's documented limitation (`docs/E87-phase5-unified-benchmark-output.md`
 §15) reads: `classifyOrigin` uses `contributingObservations.length === 1` ->
 `publisher_survey`, after first checking for an all-`derived_transaction`
 contributor set (-> `transaction_derived`); everything else -> `consensus`.
@@ -212,7 +212,7 @@ Phase 6 could safely fix using existing structural information — actually
 resolving it in general would require Phase 5 to carry an explicit
 per-observation origin tag through Phase 2/3, which is an architectural
 change to Phases 2/3/5 explicitly out of scope for Phase 6 per the governing
-instructions. Phase 6 instead treats `E69BenchmarkOrigin` (`"publisher_survey"
+instructions. Phase 6 instead treats `E87BenchmarkOrigin` (`"publisher_survey"
 | "transaction_derived" | "consensus"`) as an opaque, already-final label from
 Phase 5 and maps it to scenario `provenance` (`transaction_derived` ->
 `"derived"`; the other two -> `"observed"`) without attempting to
@@ -230,22 +230,22 @@ Phase 3's already-finalized `benchmark.value`, `confidence`, and
 
 No property valuation, NOI forecast, DCF, IRR, feasibility analysis,
 investment recommendation, paid data access, paid-source adapter, live FX
-ingestion, InvestScape frontend/API integration, E68 modification, or new
+ingestion, InvestScape frontend/API integration, E86 modification, or new
 engine was created or touched by this phase.
 
 ## 14. Known limitations / unresolved design decisions
 
 - `computeEvidenceRange`'s multi-observation midpoint fallback (for a
   contributing observation that is itself a range with no `value`) uses a
-  simple arithmetic midpoint, consistent with E68's own `rangeMidpoint()`
+  simple arithmetic midpoint, consistent with E86's own `rangeMidpoint()`
   convention — it is not re-weighted by that observation's Phase 3 weight.
   A future phase could weight the empirical range's implied "typical" value
   by source hierarchy; the min/max range boundary itself is unaffected
   either way since it is a real observed extreme, not a computed statistic.
-- `E69ScenarioGapReasonCode` includes `NO_BENCHMARK_DATA_GAP` and
+- `E87ScenarioGapReasonCode` includes `NO_BENCHMARK_DATA_GAP` and
   `NO_DELTAS_REQUESTED` for API completeness/future use; the current
   implementation reports a data-gap-underlying pipeline result via the
-  dedicated `E69ScenarioDataGap` variant (not `E69ScenarioError`) and treats
+  dedicated `E87ScenarioDataGap` variant (not `E87ScenarioError`) and treats
   zero requested deltas as a valid request (anchor-only output), not an
   error — documented here rather than left silently inconsistent with the
   type.

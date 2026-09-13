@@ -1,4 +1,4 @@
-# E68 — Mapping to the application compatibility layer
+# E86 — Mapping to the application compatibility layer
 
 Status 2026-09-10. Implementation: `src/cre-intelligence/mapping.ts`.
 Tests: `__tests__/cre-intelligence/data-integrity.test.ts` (sections G and H).
@@ -7,10 +7,10 @@ Tests: `__tests__/cre-intelligence/data-integrity.test.ts` (sections G and H).
 
 | Layer | Role |
 | --- | --- |
-| **E68** | Authoritative normalized source layer. Preserves source-native granularity. |
+| **E86** | Authoritative normalized source layer. Preserves source-native granularity. |
 | **`CAP_RATE_BENCHMARKS` / `DEV_BUILDING_SUBTYPES`** | Application-facing compatibility layer with a coarser vocabulary. |
 
-E68 is never distorted to fit the legacy vocabulary. The mapping is explicit,
+E86 is never distorted to fit the legacy vocabulary. The mapping is explicit,
 documented and tested, and it is allowed to refuse.
 
 > **Note for reviewers:** neither `CAP_RATE_BENCHMARKS` nor
@@ -35,7 +35,7 @@ documented and tested, and it is allowed to refuse.
 
 ## Cap-rate key mapping
 
-| E68 input | Legacy key | Confidence | Class carried |
+| E86 input | Legacy key | Confidence | Class carried |
 | --- | --- | --- | --- |
 | office + `cbd` | `office_downtown` | exact | yes |
 | office + `suburban` | `office_suburban` | exact | yes |
@@ -102,7 +102,7 @@ Neither publisher produces a commercial cap rate: FRED carries interest rates an
 housing statistics, Zillow carries residential ZHVI/ZORI. That provenance never
 supported the numbers.
 
-E68 Phase 4 searched for legitimate replacements and found none (see
+E86 Phase 4 searched for legitimate replacements and found none (see
 `data/cap-rates-us.ts`). Per the governing rule, the values were set to `null`
 rather than preserved:
 
@@ -130,12 +130,12 @@ cap rate — CREA publishes residential MLS statistics, CMHC publishes housing
 starts and rental data. Git history traces every value to the original
 2026-08-05 "Mock data store" commit; none was ever backed by a cited report.
 
-Audited and nulled 2026-09-11 (E68 Phase 4B). Checked against real replacement
+Audited and nulled 2026-09-11 (E86 Phase 4B). Checked against real replacement
 data before removal, not assumed fabricated: Cushman & Wakefield's Q2 2026
 Canadian multifamily ranges. Calgary (5.8) and Winnipeg (6.2) fall entirely
 outside both the High Rise and Low Rise ranges for their cities — positive
 evidence the legacy values were never derived from real market data. Full
-trace: `docs/E68-cap-rate-data-coverage.md` §14.
+trace: `docs/E86-cap-rate-data-coverage.md` §14.
 
 Every city record in `E30-city-market-analysis.ts` has now been audited —
 29 of 29, 22 invalid, 22 nulled. None remain with FRED/Zillow/CREA/CMHC

@@ -8,7 +8,7 @@
  * probability anywhere. Result status (result-types.ts) is a SEPARATE
  * concept — never folded into this model as a fourth axis, and the floor
  * helper below operates ONLY over the three axes, never over result
- * status, mirroring E70's `floorConfidence` philosophy
+ * status, mirroring E88's `floorConfidence` philosophy
  * (src/construction-cost-engine/confidence.ts) but independently
  * reimplemented for E85's own tier scale — no import from
  * construction-cost-engine or cap-rate-engine (Phase 2 correction 14).

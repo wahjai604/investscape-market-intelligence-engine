@@ -57,7 +57,7 @@ export interface E85GisLocator {
  * interpretive notes/assumptions that a human reviewer needs to see.
  */
 export interface E85Provenance {
-  /** Identifier of the source (adapter/dataset/publisher) this provenance came from. Scoped to E85's own source registry (Phase 3 correction 13) — never a reuse of E68's `sourceId` space. */
+  /** Identifier of the source (adapter/dataset/publisher) this provenance came from. Scoped to E85's own source registry (Phase 3 correction 13) — never a reuse of E86's `sourceId` space. */
   sourceId: string;
   documentLocator?: E85DocumentLocator;
   gisLocator?: E85GisLocator;

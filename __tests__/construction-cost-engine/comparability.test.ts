@@ -1,9 +1,9 @@
 /**
- * InvestScape™ E70 Phase 2 — Comparability Layer tests.
+ * InvestScape™ E88 Phase 2 — Comparability Layer tests.
  *
  * Adversarial style mirroring __tests__/cap-rate-engine/comparability.test.ts:
  * every case runs evaluateCandidate/evaluateComparability end to end against
- * inline-constructed E68 fixtures, so every dimension's failure mode can
+ * inline-constructed E86 fixtures, so every dimension's failure mode can
  * actually be triggered.
  */
 import { evaluateCandidate, evaluateComparability } from "../../src/construction-cost-engine/comparability";

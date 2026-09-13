@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 3 — Coverage & Source Backfill tests.
+ * InvestScape™ E88 Phase 3 — Coverage & Source Backfill tests.
  *
  * Covers: new source observations, additional cities, source-specific
  * mapping, exact/close/approximate/unsupported, licensing-restricted
@@ -12,13 +12,13 @@ import {
   RLB_BACKFILL_US_HARD_COST_OBSERVATIONS,
   RLB_BACKFILL_CANADA_HARD_COST_OBSERVATIONS,
   RLB_BACKFILL_HARD_COST_OBSERVATIONS,
-  e70ConstructionCostPool,
-  E70_KNOWN_CONSTRUCTION_COST_OBSERVATIONS,
+  e88ConstructionCostPool,
+  E88_KNOWN_CONSTRUCTION_COST_OBSERVATIONS,
 } from "../../src/construction-cost-engine/data";
 import { assessCoverage } from "../../src/construction-cost-engine/coverage-matrix";
 import { evaluateComparability } from "../../src/construction-cost-engine/comparability";
 import { evaluateConstructionCostRequest } from "../../src/construction-cost-engine/pipeline";
-import { E70_PHASE3_SOURCE_RESEARCH } from "../../src/construction-cost-engine/source-research";
+import { E88_PHASE3_SOURCE_RESEARCH } from "../../src/construction-cost-engine/source-research";
 import type { ConstructionCostCandidateInput, ConstructionCostRequest } from "../../src/construction-cost-engine/types";
 import type { CRECitedObservation } from "../../src/cre-intelligence/types";
 
@@ -47,7 +47,7 @@ describe("New source observations / additional cities", () => {
     expect(RLB_BACKFILL_HARD_COST_OBSERVATIONS).toHaveLength(112);
   });
 
-  test("does not duplicate any of the 4 cities E68 already has", () => {
+  test("does not duplicate any of the 4 cities E86 already has", () => {
     const backfilledCities = new Set(RLB_BACKFILL_US_HARD_COST_OBSERVATIONS.map((o) => o.geography.city));
     expect(backfilledCities.has("Austin")).toBe(false);
     expect(backfilledCities.has("Miami")).toBe(false);
@@ -60,8 +60,8 @@ describe("New source observations / additional cities", () => {
     expect(cities.has("Houston")).toBe(false);
   });
 
-  test("combined known-observations pool includes both E68's 53 and E70's 112", () => {
-    expect(E70_KNOWN_CONSTRUCTION_COST_OBSERVATIONS.length).toBe(53 + 112);
+  test("combined known-observations pool includes both E86's 53 and E88's 112", () => {
+    expect(E88_KNOWN_CONSTRUCTION_COST_OBSERVATIONS.length).toBe(53 + 112);
   });
 
   test("every backfilled observation carries full citation/provenance", () => {
@@ -104,7 +104,7 @@ describe("Currency correctness (Canadian observations)", () => {
 
 describe("Source-specific mapping / comparability tiers using new data", () => {
   test("Boston office_prime maps at close (subtype dimension), never exact — same mapping rule as the original 4 cities", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const request = baseRequest({ geography: { country: "US", city: "Boston" }, canonicalSubtype: "office_premium" });
     const result = evaluateComparability(request, pool);
     const bostonCandidate = result.candidates.find((c) => c.observation.geography.city === "Boston" && c.observation.propertySubtype === "office_prime");
@@ -113,7 +113,7 @@ describe("Source-specific mapping / comparability tiers using new data", () => {
   });
 
   test("New York retail_shopping_center maps at exact (subtype dimension)", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const request = baseRequest({ geography: { country: "US", city: "New York" }, assetClass: "retail", canonicalSubtype: "retail_shopping_center" });
     const result = evaluateComparability(request, pool);
     const nyCandidate = result.included.find((c) => c.observation.geography.city === "New York");
@@ -122,7 +122,7 @@ describe("Source-specific mapping / comparability tiers using new data", () => {
   });
 
   test("Toronto hotel_3_star maps at approximate (subtype dimension), never upgraded", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const request = baseRequest({ geography: { country: "CA", city: "Toronto" }, assetClass: "hotel", canonicalSubtype: "hotel_select_service", currency: "CAD" });
     const result = evaluateComparability(request, pool);
     const torontoCandidate = result.candidates.find((c) => c.observation.geography.city === "Toronto" && c.observation.propertySubtype === "hotel_3_star");
@@ -132,7 +132,7 @@ describe("Source-specific mapping / comparability tiers using new data", () => {
 
 describe("Unsupported category still correctly refused (multifamily/industrial)", () => {
   test("multifamily hard-cost request against the full known pool -> DATA_GAP, no fabrication", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const request = baseRequest({ assetClass: "multifamily", canonicalSubtype: "multifamily_mid_rise", geography: { country: "US" } });
     const result = evaluateConstructionCostRequest(request, pool, CHECKED_AT);
     expect(result.status).toBe("DATA_GAP");
@@ -141,7 +141,7 @@ describe("Unsupported category still correctly refused (multifamily/industrial)"
   });
 
   test("industrial hard-cost request against the full known pool -> DATA_GAP, no fabrication", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const request = baseRequest({ assetClass: "industrial", canonicalSubtype: "industrial_warehouse", geography: { country: "US" } });
     const result = evaluateConstructionCostRequest(request, pool, CHECKED_AT);
     expect(result.status).toBe("DATA_GAP");
@@ -152,37 +152,37 @@ describe("Unsupported category still correctly refused (multifamily/industrial)"
 
 describe("Coverage matrix (Part 6)", () => {
   test("DATA_AVAILABLE for a newly-backfilled city/subtype", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const result = assessCoverage(baseRequest({ geography: { country: "US", city: "Denver" }, canonicalSubtype: "office_premium" }), pool, CHECKED_AT);
     expect(result.status).toBe("DATA_AVAILABLE");
   });
 
   test("SOURCE_DOES_NOT_COVER for multifamily", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const result = assessCoverage(baseRequest({ assetClass: "multifamily", canonicalSubtype: "multifamily_mid_rise", geography: { country: "US" } }), pool, CHECKED_AT);
     expect(["SOURCE_DOES_NOT_COVER", "LICENSE_RESTRICTED"]).toContain(result.status);
   });
 
   test("LICENSE_RESTRICTED asserted only for the documented multifamily/industrial hard-cost gap", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const result = assessCoverage(baseRequest({ assetClass: "industrial", canonicalSubtype: "industrial_warehouse", geography: { country: "US" } }), pool, CHECKED_AT);
     expect(result.status).toBe("LICENSE_RESTRICTED");
   });
 
   test("NOT_YET_IMPLEMENTED for soft cost anywhere", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const result = assessCoverage(baseRequest({ costRepresentation: "soft_cost" }), pool, CHECKED_AT);
     expect(result.status).toBe("NOT_YET_IMPLEMENTED");
   });
 
   test("DATA_NOT_FOUND for a city genuinely absent from every source (Houston)", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const result = assessCoverage(baseRequest({ geography: { country: "US", city: "Houston" }, canonicalSubtype: "office_premium" }), pool, CHECKED_AT);
     expect(["DATA_NOT_FOUND", "SOURCE_DOES_NOT_COVER"]).toContain(result.status);
   });
 
   test("deterministic coverage matrix: repeated calls agree", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const request = baseRequest({ geography: { country: "US", city: "Chicago" } });
     const a = assessCoverage(request, pool, CHECKED_AT);
     const b = assessCoverage(request, pool, CHECKED_AT);
@@ -190,7 +190,7 @@ describe("Coverage matrix (Part 6)", () => {
   });
 
   test("coverage matrix never reports DATA_AVAILABLE for a request no candidate can satisfy (no synthetic fallback)", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const result = assessCoverage(baseRequest({ costRepresentation: "total_cost", geography: { country: "US", city: "Boston" } }), pool, CHECKED_AT);
     expect(result.status).not.toBe("DATA_AVAILABLE");
   });
@@ -302,14 +302,14 @@ describe("Index vs cost observation (still correctly distinguished after backfil
 
 describe("Source research register (Part 5)", () => {
   test("every record has a USE/REGISTER/REJECT decision and rationale", () => {
-    for (const record of E70_PHASE3_SOURCE_RESEARCH) {
+    for (const record of E88_PHASE3_SOURCE_RESEARCH) {
       expect(["USE", "REGISTER", "REJECT"]).toContain(record.decision);
       expect(record.rationale.length).toBeGreaterThan(0);
     }
   });
 
   test("RLB is USE; Turner & Townsend, StatCan BCPI, RSMeans, Altus are REGISTER; CMHC is REJECT", () => {
-    const byId = Object.fromEntries(E70_PHASE3_SOURCE_RESEARCH.map((r) => [r.sourceId, r.decision]));
+    const byId = Object.fromEntries(E88_PHASE3_SOURCE_RESEARCH.map((r) => [r.sourceId, r.decision]));
     expect(byId["rlb-north-america"]).toBe("USE");
     expect(byId["turner-townsend-north-america"]).toBe("REGISTER");
     expect(byId["statcan-bcpi"]).toBe("REGISTER");
@@ -319,7 +319,7 @@ describe("Source research register (Part 5)", () => {
   });
 
   test("no source record contains a numeric construction-cost figure (metadata only)", () => {
-    const serialized = JSON.stringify(E70_PHASE3_SOURCE_RESEARCH);
+    const serialized = JSON.stringify(E88_PHASE3_SOURCE_RESEARCH);
     expect(serialized).not.toMatch(/"low":\s*\d/);
     expect(serialized).not.toMatch(/"high":\s*\d/);
   });

@@ -1,12 +1,12 @@
 /**
- * InvestScape™ E68 Phase 8 — Source Lifecycle & Refresh Metadata.
+ * InvestScape™ E86 Phase 8 — Source Lifecycle & Refresh Metadata.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Part 3/8/18 of the Phase 8 specification. A source's health status is
  * operational metadata about the SOURCE (can we currently retrieve from it,
  * is its schema still recognized, is licensing settled) — it must NEVER be
  * used to invalidate observations already retrieved and validated. See
- * `docs/E68-phase8-production-monitoring-refresh.md` "Source lifecycle".
+ * `docs/E86-phase8-production-monitoring-refresh.md` "Source lifecycle".
  *
  * Non-goal: this module does not implement a scheduler, cron, or any network
  * I/O. It defines the contract a future scheduler would read/write.
@@ -14,7 +14,7 @@
 import type { CREGeography } from "../types";
 
 /**
- * Part 3 lifecycle states, reusing existing vocabulary where E68 already had
+ * Part 3 lifecycle states, reusing existing vocabulary where E86 already had
  * it (e.g. `CREDataGapReasonCode`'s SOURCE_TEMPORARILY_UNAVAILABLE /
  * SCHEMA_CHANGED / LICENSE_REQUIRED map onto TEMPORARILY_UNAVAILABLE /
  * SCHEMA_CHANGED / LICENSE_REVIEW below).
@@ -32,7 +32,7 @@ import type { CREGeography } from "../types";
  *                             source registry) or have changed unfavorably.
  *   REQUIRES_CONFIGURATION  — missing/invalid credentials, API key, or other
  *                             required configuration; not a network fault.
- *   RETIRED                 — E68 has deliberately stopped using this source
+ *   RETIRED                 — E86 has deliberately stopped using this source
  *                             (deprecated dataset, source shut down, etc.).
  */
 export type CRESourceHealthStatus =

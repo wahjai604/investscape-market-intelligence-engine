@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 8 — Freshness / Staleness Model.
+ * InvestScape™ E86 Phase 8 — Freshness / Staleness Model.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Parts 6, 7, 16. Deliberately holds NO hard-coded universal "N days is
@@ -8,7 +8,7 @@
  * "unknown"/"irregular" can only ever resolve to "historical" — never to
  * "live_current" or "stale", both of which require a stated cadence to
  * compare against. This is intentional: inventing a cadence the publisher
- * never committed to would be exactly the fabrication failure mode E68
+ * never committed to would be exactly the fabrication failure mode E86
  * exists to prevent.
  */
 import type { CRERefreshCadence } from "./source-health";

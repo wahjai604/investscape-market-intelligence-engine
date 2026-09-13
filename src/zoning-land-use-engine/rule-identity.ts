@@ -13,7 +13,7 @@
  *   3. an equal temporal window (`effectiveFrom`, `effectiveTo`,
  *      `effectiveDateBasis` all equal).
  *
- * This mirrors the known E70 defect (duplicate observations in
+ * This mirrors the known E88 defect (duplicate observations in
  * src/construction-cost-engine wrongly inflating confidence) that this phase
  * is explicitly instructed not to repeat: deduping happens BEFORE
  * qualification aggregation and BEFORE conflict detection, so a record

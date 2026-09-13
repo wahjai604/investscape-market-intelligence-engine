@@ -1,22 +1,22 @@
 /**
- * InvestScape™ E70 Phase 2 — Construction Cost Engine: DATA_GAP contract.
+ * InvestScape™ E88 Phase 2 — Construction Cost Engine: DATA_GAP contract.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Resolves E70 Phase 1 Open Design Decision 1 (docs/E70-phase1-technical-
+ * Resolves E88 Phase 1 Open Design Decision 1 (docs/E88-phase1-technical-
  * specification.md Section 22): soft-cost (and every other) unavailability
- * becomes a formal, E70-constructed gap record here, WITHOUT editing E68's
+ * becomes a formal, E88-constructed gap record here, WITHOUT editing E86's
  * `soft-cost.ts` — that file keeps returning its fixed
- * `SOFT_COST_DATA_NOT_AVAILABLE` status unchanged. E70 wraps the concept in
- * its own richer, per-request-shaped record instead of mutating E68.
+ * `SOFT_COST_DATA_NOT_AVAILABLE` status unchanged. E88 wraps the concept in
+ * its own richer, per-request-shaped record instead of mutating E86.
  *
- * These reason codes are net-new and scoped to E70's own concerns, exactly as
- * E69's `E69ExclusionReasonCode` is deliberately NOT a reuse of E68's
+ * These reason codes are net-new and scoped to E88's own concerns, exactly as
+ * E87's `E87ExclusionReasonCode` is deliberately NOT a reuse of E86's
  * `CREDataGapReasonCode` (Part 13 rationale in comparability-types.ts):
- * E68's eight codes describe a SOURCE's inability to publish something at
- * ingestion time; E69's codes describe why one observation doesn't fit one
+ * E86's eight codes describe a SOURCE's inability to publish something at
+ * ingestion time; E87's codes describe why one observation doesn't fit one
  * request; these codes describe why NO qualifying construction-cost evidence
  * exists for a request at all, including the hard/soft/total distinction
- * that is unique to construction cost and has no E68 or E69 analogue.
+ * that is unique to construction cost and has no E86 or E87 analogue.
  */
 import type { ConstructionCostRequest } from "./types";
 import type { ConstructionCostComparabilityCandidate } from "./comparability-types";
@@ -26,7 +26,7 @@ import type { ConstructionCostComparabilityCandidate } from "./comparability-typ
  * explicitly rather than collapsing them into one "no data" message.
  */
 export type CCDataGapReasonCode =
-  /** Soft-cost was requested; zero soft-cost observations exist anywhere for any geography/category (true today for every source in E68). */
+  /** Soft-cost was requested; zero soft-cost observations exist anywhere for any geography/category (true today for every source in E86). */
   | "NO_SOFT_COST_OBSERVATIONS_EXIST"
   /** The requested asset class/subtype is not covered by any source in the candidate pool at all (e.g. multifamily, industrial against RLB). */
   | "SOURCE_DOES_NOT_COVER_CATEGORY"
@@ -55,7 +55,7 @@ export const CC_DATA_GAP_REASON_LABELS: Readonly<Record<CCDataGapReasonCode, str
 };
 
 /**
- * The full E70 DATA_GAP record. Never contains a fabricated numeric
+ * The full E88 DATA_GAP record. Never contains a fabricated numeric
  * construction-cost benchmark (Phase 2 objective 10) — only the request, the
  * reason, and the full evidence trail considered before concluding no
  * benchmark exists.
@@ -67,14 +67,14 @@ export interface ConstructionCostDataGap {
   reason: string;
   /** Every candidate considered, whether excluded outright or filtered before comparability ran. Empty array is valid and means the pool itself was empty. */
   excludedCandidates: readonly ConstructionCostComparabilityCandidate[];
-  /** Source IDs actually checked before concluding the gap (E68 CRESource.sourceId values). */
+  /** Source IDs actually checked before concluding the gap (E86 CRESource.sourceId values). */
   sourcesChecked: readonly string[];
   checkedAt: string;
   /** What WOULD resolve this gap, only when genuinely true — never invented to sound helpful. */
   resolutionHint?: string;
 }
 
-/** Precise, non-generic user-facing message, mirroring E68's `formatDataGapMessage`. */
+/** Precise, non-generic user-facing message, mirroring E86's `formatDataGapMessage`. */
 export function formatConstructionCostGapMessage(gap: Pick<ConstructionCostDataGap, "reasonCode" | "reason" | "resolutionHint">): string {
   const label = CC_DATA_GAP_REASON_LABELS[gap.reasonCode];
   const hint = gap.resolutionHint ? ` ${gap.resolutionHint}` : "";

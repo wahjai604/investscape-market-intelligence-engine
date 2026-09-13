@@ -1,10 +1,10 @@
 /**
- * InvestScape™ E70 Phase 5 — Unified Benchmark Output.
+ * InvestScape™ E88 Phase 5 — Unified Benchmark Output.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * `evaluateConstructionCostBenchmark()` orchestrates Phase 2 (comparability/
  * pipeline) and Phase 4 (escalation) into ONE typed answer to: "what
- * construction-cost benchmark can E70 legitimately provide for this
+ * construction-cost benchmark can E88 legitimately provide for this
  * request, from what evidence, with what confidence, after what
  * normalization/escalation, and what is missing if it cannot provide one?"
  *
@@ -100,7 +100,7 @@ function sortedDeterministically<T extends ConstructionCostComparabilityCandidat
 
 /**
  * Phase 7 defect fix (see file header note at the call site and
- * docs/E70-phase7-production-hardening.md): collapse candidates whose
+ * docs/E88-phase7-production-hardening.md): collapse candidates whose
  * OBSERVATION IDENTITY is identical — same source, same citation locator,
  * same period, same published figure — to a single contributing
  * observation, so a duplicate entry in the caller-supplied pool cannot
@@ -160,7 +160,7 @@ function mapPipelineReasonToBenchmarkReason(
  * (Phase 2 evidence) and, optionally, an index pool (Phase 4 evidence, used
  * only when `request.targetPeriod` is set). `checkedAt`/`computedAt` must be
  * supplied by the caller — never `Date.now()` internally, matching every
- * prior E70 phase's determinism convention.
+ * prior E88 phase's determinism convention.
  */
 export function evaluateConstructionCostBenchmark(
   request: ConstructionCostBenchmarkRequest,
@@ -210,7 +210,7 @@ export function evaluateConstructionCostBenchmark(
   const topRank = Math.max(...result.included.map((c) => COMPARABILITY_RANK[c.comparability]));
   const topTierRaw = sortedDeterministically(result.included.filter((c) => COMPARABILITY_RANK[c.comparability] === topRank));
 
-  // --- Phase 7 defect fix: duplicate-observation collapse (see docs/E70-phase7-production-hardening.md). ---
+  // --- Phase 7 defect fix: duplicate-observation collapse (see docs/E88-phase7-production-hardening.md). ---
   // Two candidates whose OBSERVATION IDENTITY (source id + geography + subtype + period + citation
   // locator — the same key already used for deterministic ordering) is identical describe the same
   // underlying published fact (the citation locator alone already points at one specific report
@@ -458,7 +458,7 @@ function buildGap(
 }
 
 /**
- * Apply an explicit, E70-local user override on top of an already-computed
+ * Apply an explicit, E88-local user override on top of an already-computed
  * outcome. NEVER mutates the underlying outcome, NEVER rewrites a source
  * observation, and NEVER converts a DATA_GAP into fabricated source
  * evidence — the override is always its own clearly-labeled figure, and the

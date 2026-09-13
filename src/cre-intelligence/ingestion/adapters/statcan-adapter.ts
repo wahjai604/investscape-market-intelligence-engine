@@ -1,14 +1,14 @@
 /**
- * InvestScape™ E68 Phase 7 — Statistics Canada Web Data Service (WDS) adapter.
+ * InvestScape™ E86 Phase 7 — Statistics Canada Web Data Service (WDS) adapter.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Statistics Canada publishes the Building Construction Price Index (Table
  * 18-10-0135-01) through a documented, key-free public API — the Web Data
- * Service (see docs/E68-phase7-government-public-api-ingestion.md and
+ * Service (see docs/E86-phase7-government-public-api-ingestion.md and
  * ../public-source-registry.ts, sourceId "statcan-wds"). This is one of the
- * few government sources that genuinely publishes a direct E68 metric
+ * few government sources that genuinely publishes a direct E86 metric
  * (`construction_index`) rather than merely CRE-adjacent context, and it is
- * already registered in E68's benchmark source registry as `statcan-bcpi`
+ * already registered in E86's benchmark source registry as `statcan-bcpi`
  * with `access: "public_data"` / `license: "public"`. This adapter therefore
  * produces real `CREObservation`s, unlike the FRED/Census adapters.
  *

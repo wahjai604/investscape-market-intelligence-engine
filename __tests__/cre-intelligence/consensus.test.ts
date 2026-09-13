@@ -15,7 +15,7 @@ const base = (overrides: Partial<CREObservation>): CREObservation => ({
   ...overrides,
 });
 
-describe("E68 CRE intelligence consensus", () => {
+describe("E86 CRE intelligence consensus", () => {
   test("weights point estimates by explicit source quality", () => {
     const result = weightedConsensus([
       base({ value: 0.055, low: undefined, high: undefined, sourceQuality: 100, source: { sourceId: "a", sourceName: "A", sourceType: "brokerage" } }),

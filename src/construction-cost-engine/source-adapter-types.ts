@@ -1,20 +1,20 @@
 /**
- * InvestScape™ E70 Phase 6 — Source Adapter Architecture: core types.
+ * InvestScape™ E88 Phase 6 — Source Adapter Architecture: core types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E70 is a read-only consumer of E68 (src/cre-intelligence/), frozen at
- * v1.0, and does not modify E69 (src/cap-rate-engine/). Every E68 import
+ * E88 is a read-only consumer of E86 (src/cre-intelligence/), frozen at
+ * v1.0, and does not modify E87 (src/cap-rate-engine/). Every E86 import
  * below is a plain named type import. Nothing in this file performs
  * normalization, comparability scoring, escalation, or benchmark
  * aggregation — those remain Phase 2/4/5's exclusive responsibility. This
  * file exists purely to represent, for any current or future construction-
- * cost source, five DISTINCT concerns the task explicitly requires E70 to
+ * cost source, five DISTINCT concerns the task explicitly requires E88 to
  * keep separate:
  *
  *   1. source registration      — "we know this source exists"
- *   2. source access readiness  — "can E70 actually reach/read it right now"
+ *   2. source access readiness  — "can E88 actually reach/read it right now"
  *   3. licensing/redistribution — "what are we allowed to do with what we read"
- *   4. source adapter           — "how do we translate it into E70's shape"
+ *   4. source adapter           — "how do we translate it into E88's shape"
  *   5. analytical usability     — "can it actually enter a benchmark today"
  *
  * Registering a source (1) never implies access (2). Access (2) never
@@ -28,21 +28,21 @@ import type { CRECitedObservation } from "../cre-intelligence/types";
 
 /**
  * The metrics a source COULD plausibly contribute, per its own published
- * scope — never a claim that E70 has ingested observations for all of them.
- * Reuses E68's `CREMetric` vocabulary verbatim (no new metric vocabulary is
+ * scope — never a claim that E88 has ingested observations for all of them.
+ * Reuses E86's `CREMetric` vocabulary verbatim (no new metric vocabulary is
  * invented here).
  */
-export type E70SourceMetricScope = "hard_cost" | "soft_cost" | "construction_index" | "construction_cost_change";
+export type E88SourceMetricScope = "hard_cost" | "soft_cost" | "construction_index" | "construction_cost_change";
 
 /**
- * Whether E70 can currently REACH this source's data at all. Deliberately
+ * Whether E88 can currently REACH this source's data at all. Deliberately
  * distinct from licensing: a source can be perfectly accessible (a public
  * PDF, a free government API) while still being licensing-restricted for
  * redistribution, and a source can be fully licensed while still being
  * technically inaccessible (no ingestion pipeline built yet, an API
  * temporarily down, etc.).
  */
-export type E70SourceAccessStatus =
+export type E88SourceAccessStatus =
   | "AVAILABLE"
   | "REGISTERED"
   | "LICENSE_REQUIRED"
@@ -51,11 +51,11 @@ export type E70SourceAccessStatus =
   | "UNAVAILABLE";
 
 /**
- * What E70 is legally/contractually permitted to do with what it reads.
+ * What E88 is legally/contractually permitted to do with what it reads.
  * Deliberately distinct from access: "PUBLIC_REUSE" says nothing about
- * whether E70 has actually been able to reach the source yet.
+ * whether E88 has actually been able to reach the source yet.
  */
-export type E70SourceLicenseStatus =
+export type E88SourceLicenseStatus =
   | "PUBLIC_REUSE"
   | "INTERNAL_LICENSE_REQUIRED"
   | "REDISTRIBUTION_RESTRICTED"
@@ -63,13 +63,13 @@ export type E70SourceLicenseStatus =
   | "NOT_APPLICABLE";
 
 /**
- * Whether a source can currently contribute to an E70 benchmark at all, and
+ * Whether a source can currently contribute to an E88 benchmark at all, and
  * if so, with what restriction. ALWAYS derived by `computeAnalyticalReadiness`
  * from accessStatus + licenseStatus — never set as an independent, hand-
  * authored field on a source definition, so it cannot drift out of sync
  * with the facts that justify it.
  */
-export type E70AnalyticalReadiness = "READY" | "READY_WITH_RESTRICTIONS" | "NOT_READY";
+export type E88AnalyticalReadiness = "READY" | "READY_WITH_RESTRICTIONS" | "NOT_READY";
 
 /**
  * The visibility/redistribution model for a source's output. This directly
@@ -77,7 +77,7 @@ export type E70AnalyticalReadiness = "READY" | "READY_WITH_RESTRICTIONS" | "NOT_
  * user-visible raw output (B), and derived benchmark output (C) — each
  * tracked independently, never inferred from "the source is available."
  */
-export interface E70RedistributionPolicy {
+export interface E88RedistributionPolicy {
   /** May a raw source observation (a $/SF figure, a report table row) ever be shown to an end user verbatim? */
   rawObservationVisibility: "VISIBLE" | "RESTRICTED" | "NOT_APPLICABLE";
   /** May a benchmark DERIVED FROM this source (e.g. a Phase 5 aggregated range) be shown to an end user? */
@@ -93,12 +93,12 @@ export interface E70RedistributionPolicy {
 
 /**
  * Full identity + status metadata for one construction-cost-relevant source.
- * `sourceId` matches E68 `CRESource.sourceId` where the source already has
+ * `sourceId` matches E86 `CRESource.sourceId` where the source already has
  * one (e.g. "rlb-north-america") so provenance ties back cleanly; a source
- * with no E68 registry entry yet (there are none as of Phase 6) would still
+ * with no E86 registry entry yet (there are none as of Phase 6) would still
  * need one before contributing any real observation.
  */
-export interface E70SourceDefinition {
+export interface E88SourceDefinition {
   sourceId: string;
   publisher: string;
   productName: string;
@@ -106,12 +106,12 @@ export interface E70SourceDefinition {
   publicationDate?: string;
   geographyScope: string;
   buildingTypeScope: string;
-  metricScope: readonly E70SourceMetricScope[];
-  accessStatus: E70SourceAccessStatus;
-  licenseStatus: E70SourceLicenseStatus;
-  redistribution: E70RedistributionPolicy;
+  metricScope: readonly E88SourceMetricScope[];
+  accessStatus: E88SourceAccessStatus;
+  licenseStatus: E88SourceLicenseStatus;
+  redistribution: E88RedistributionPolicy;
   /**
-   * Whether E70 has actually ingested any observation from this source at
+   * Whether E88 has actually ingested any observation from this source at
    * all, independent of whether it COULD (readiness). Registering a source
    * and having real data for it are different facts — this field is the
    * one that keeps them from being conflated (task Section 12: "Registered
@@ -133,9 +133,9 @@ export interface E70SourceDefinition {
  *   - REDISTRIBUTION_RESTRICTED / INTERNAL_LICENSE_REQUIRED / LICENSE_UNKNOWN -> READY_WITH_RESTRICTIONS
  *     (usable for internal analysis and derived benchmark output; raw
  *     redistribution is a separate, more restrictive question answered by
- *     `E70RedistributionPolicy`, never inferred from readiness alone)
+ *     `E88RedistributionPolicy`, never inferred from readiness alone)
  */
-export function computeAnalyticalReadiness(definition: Pick<E70SourceDefinition, "accessStatus" | "licenseStatus">): E70AnalyticalReadiness {
+export function computeAnalyticalReadiness(definition: Pick<E88SourceDefinition, "accessStatus" | "licenseStatus">): E88AnalyticalReadiness {
   if (definition.accessStatus !== "AVAILABLE") return "NOT_READY";
   if (definition.licenseStatus === "PUBLIC_REUSE" || definition.licenseStatus === "NOT_APPLICABLE") return "READY";
   return "READY_WITH_RESTRICTIONS";
@@ -143,12 +143,12 @@ export function computeAnalyticalReadiness(definition: Pick<E70SourceDefinition,
 
 /**
  * One source-specific observation, wrapped for traceability back to the
- * adapter/source that produced it. `observation` is a real E68
+ * adapter/source that produced it. `observation` is a real E86
  * `CRECitedObservation` — an envelope never carries a fabricated or
  * partially-filled observation; if a source cannot honestly produce one,
- * the adapter returns no envelope for it at all (see `E70SourceAdapter`).
+ * the adapter returns no envelope for it at all (see `E88SourceAdapter`).
  */
-export interface E70SourceObservationEnvelope {
+export interface E88SourceObservationEnvelope {
   sourceId: string;
   observation: CRECitedObservation;
   /** Why this observation is being surfaced through this adapter, and any source-specific interpretation notes (e.g. a unit/table caveat) — never a place to hide an assumption silently. */
@@ -156,7 +156,7 @@ export interface E70SourceObservationEnvelope {
 }
 
 /**
- * A source-specific translator: raw/source-specific representation -> E70's
+ * A source-specific translator: raw/source-specific representation -> E88's
  * existing `CRECitedObservation` shape. An adapter NEVER performs
  * normalization (normalize.ts), comparability scoring (comparability.ts),
  * escalation (escalation.ts), or benchmark aggregation (benchmark.ts) — its
@@ -169,9 +169,9 @@ export interface E70SourceObservationEnvelope {
  * every one of which enforces this via the shared `gatedObservations` helper
  * rather than duplicating the check.
  */
-export interface E70SourceAdapter {
-  definition: E70SourceDefinition;
-  listObservations(): readonly E70SourceObservationEnvelope[];
+export interface E88SourceAdapter {
+  definition: E88SourceDefinition;
+  listObservations(): readonly E88SourceObservationEnvelope[];
 }
 
 /**
@@ -180,9 +180,9 @@ export interface E70SourceAdapter {
  * (and potentially inconsistently re-implemented) per adapter.
  */
 export function gatedObservations(
-  definition: E70SourceDefinition,
-  supplier: () => readonly E70SourceObservationEnvelope[],
-): readonly E70SourceObservationEnvelope[] {
+  definition: E88SourceDefinition,
+  supplier: () => readonly E88SourceObservationEnvelope[],
+): readonly E88SourceObservationEnvelope[] {
   if (!definition.ingested) return [];
   if (computeAnalyticalReadiness(definition) === "NOT_READY") return [];
   return supplier();

@@ -1,4 +1,4 @@
-# E68 Phase 4C — Independent Audit, Benchmark Qualification, Application Mapping
+# E86 Phase 4C — Independent Audit, Benchmark Qualification, Application Mapping
 
 Date **2026-09-11**. Implementation: `src/cre-intelligence/qualification.ts`,
 `src/cre-intelligence/data/cap-rate-benchmark-mapping.ts`.
@@ -238,7 +238,7 @@ one.
 
 ## Part E — Tests
 
-- All pre-existing E68 tests (Phases 1–4B) continue to pass unchanged.
+- All pre-existing E86 tests (Phases 1–4B) continue to pass unchanged.
 - New: `__tests__/cre-intelligence/benchmark-qualification.test.ts` — the
   "never" rules (adversarial, synthetic inputs), the floor-not-average
   confidence rule, the Houston worked example, the 35-row mapping table's
@@ -251,7 +251,7 @@ one.
 This phase performed no new source research and added no new observations —
 it audited and structured what already existed. Coverage, gaps, and the
 paid-source research table are unchanged from
-`docs/E68-cap-rate-data-coverage.md` §§1–19. In particular:
+`docs/E86-cap-rate-data-coverage.md` §§1–19. In particular:
 
 - Miami still has zero cap-rate observations.
 - Office, industrial and retail remain unsourced for every city, US and

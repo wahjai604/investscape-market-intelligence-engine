@@ -1,6 +1,6 @@
-# E68 Phase 8 — Production Monitoring, Refresh & Data Lifecycle
+# E86 Phase 8 — Production Monitoring, Refresh & Data Lifecycle
 
-© 2026 Lighthouse Research Ltd. This is the final major E68 implementation phase. It builds on
+© 2026 Lighthouse Research Ltd. This is the final major E86 implementation phase. It builds on
 Phases 1–7 (source registry, normalization, qualification, public-source ingestion pipeline) and
 does not modify any Phase 1–7 numeric data or commit history.
 
@@ -73,7 +73,7 @@ policy documented here, not a claim from any publisher.
 A `stale` result's `reason` explicitly says "Historical value preserved; not current for
 current-market use," never "invalid." `unavailable` presentation is used specifically when a
 source is currently unreachable, so a cached last-known value is never mislabeled as
-`live_current` merely because it is the newest value E68 has (Part 16).
+`live_current` merely because it is the newest value E86 has (Part 16).
 
 ## Refresh scheduling metadata — IMPLEMENTED NOW (contract only; ARCHITECTURALLY READY for a scheduler)
 
@@ -130,7 +130,7 @@ suppression: a correction is a new identity linked backward via
 
 `CREObservationLifecycleRecord.correction` records `{correctedByFingerprint, reason, detectedAt}`
 on the ORIGINAL record, and the original's `status` becomes `superseded` — never deleted, never
-mutated in place. **Known limitation**: E68 has no persistent observation store yet (Phases 1–7
+mutated in place. **Known limitation**: E86 has no persistent observation store yet (Phases 1–7
 are in-memory/data-file based); this phase defines the metadata shape a store must honor, but
 cannot itself prove no code path ever calls `Array.prototype.splice` on a historical data file.
 The remaining requirement is: when a real datastore is introduced, all writes to
@@ -163,7 +163,7 @@ can be populated from existing fields (`updateFrequency` -> `CRERefreshCadence`,
 `historicalBackfillCapable`) **except** health, which starts `ACTIVE` only for the three sources
 with implemented adapters (fred-api, statcan-wds, us-census-api) and should start
 `REQUIRES_CONFIGURATION` (no adapter/credentials wired) for the remaining 13 until an adapter is
-built — this phase does not fabricate an `ACTIVE` status for a source E68 has never actually
+built — this phase does not fabricate an `ACTIVE` status for a source E86 has never actually
 called. Paid sources (MSCI RCA, CoStar, Altus, RealPage) have no adapters and no public API
 credentials in this project; their correct Phase 8 health is `REQUIRES_CONFIGURATION` combined
 with `LICENSE_REVIEW` semantics — Phase 8 does not force a single-value model to represent both
@@ -224,18 +224,18 @@ Phase 1–7 tests continue to pass unmodified (352/352 total suite, up from 321 
 - Any UI offering "as of" language must use the observation's `citation.publicationDate` /
   `periodEnd`, never `citation.retrievedAt`, to describe what the number represents.
 
-## E68 scope freeze
+## E86 scope freeze
 
-E68 owns **data**: source discovery/classification, source adapters, acquisition, provenance,
+E86 owns **data**: source discovery/classification, source adapters, acquisition, provenance,
 normalization, validation, qualification, observed/derived/inferred/unsupported status, data-gap
 management, historical preservation, source health, refresh metadata, monitoring, staleness
 detection, and ingestion-failure handling, for commercial real estate and CRE-adjacent public
 data.
 
-E68 explicitly does **not** own: property valuation, investment underwriting, development
+E86 explicitly does **not** own: property valuation, investment underwriting, development
 feasibility, construction-cost calculation as a specialized engine, cap-rate calculation as a
 specialized engine, or investment recommendations. Those are the responsibility of future,
 separately-numbered engines (e.g. a future Commercial Cap Rate Engine, a future Commercial
-Construction Cost Engine) that would consume E68's `CREObservation`/`EconomicIndicatorObservation`
+Construction Cost Engine) that would consume E86's `CREObservation`/`EconomicIndicatorObservation`
 data as an input. No such engine is created in this phase; this document states the boundary only,
 per Part 22 of the Phase 8 specification.

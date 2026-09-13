@@ -1,9 +1,9 @@
 /**
- * InvestScape™ E68 Phase 4B — Canadian cap-rate provenance guarantees.
+ * InvestScape™ E86 Phase 4B — Canadian cap-rate provenance guarantees.
  *
  * Covers Part 11 of the Phase 4B specification: complete provenance for every
  * Canadian observation, rejection of invalid CREA/CMHC provenance, the legacy
- * audit's null conversion, coexistence of legacy and E68 records, normalization
+ * audit's null conversion, coexistence of legacy and E86 records, normalization
  * survival, exhaustive FRED/Zillow exclusion, duplicate-free observations, and
  * a guard against unsupported interpolation.
  */
@@ -81,10 +81,10 @@ describe("2. invalid CREA/CMHC provenance cannot validate a commercial cap rate"
 });
 
 describe("3. unsupported legacy Canadian values become null (documented, not just deleted)", () => {
-  // The ten legacy E30 values removed 2026-09-11, per docs/E68-cap-rate-data-coverage.md.
+  // The ten legacy E30 values removed 2026-09-11, per docs/E86-cap-rate-data-coverage.md.
   const removedLegacyValues = [5.2, 5.5, 4.6, 4.9, 5.0, 5.8, 5.9, 6.2, 4.3, 4.5];
 
-  test("no E68 Canadian observation reproduces a bare legacy value as a range boundary match-all", () => {
+  test("no E86 Canadian observation reproduces a bare legacy value as a range boundary match-all", () => {
     // Individual value collisions are expected (small number space); the real
     // guard is that Calgary/Winnipeg's legacy figures fall OUTSIDE the real
     // range entirely, proving they were never derived from this report.
@@ -108,7 +108,7 @@ describe("3. unsupported legacy Canadian values become null (documented, not jus
 });
 
 describe("4. legitimate replacement observations coexist with legacy audit records", () => {
-  test("Toronto and Vancouver have real E68 cap rates despite E30 nulling their legacy values", () => {
+  test("Toronto and Vancouver have real E86 cap rates despite E30 nulling their legacy values", () => {
     for (const city of ["Toronto", "Vancouver"]) {
       const forCity = CA_RATES.filter((o) => o.geography.city === city);
       expect(forCity.length).toBeGreaterThan(0);
@@ -118,7 +118,7 @@ describe("4. legitimate replacement observations coexist with legacy audit recor
     }
   });
 
-  test("E68 does not silently overwrite; it is a separate, independently cited layer", () => {
+  test("E86 does not silently overwrite; it is a separate, independently cited layer", () => {
     // Every CA observation must carry its own full citation regardless of
     // what E30 does or did with the same city.
     for (const obs of CA_RATES) {
@@ -149,7 +149,7 @@ describe("5. source-native classification survives normalization", () => {
   });
 });
 
-describe("6. no FRED/Zillow cap-rate records remain without legitimate provenance, anywhere in E68", () => {
+describe("6. no FRED/Zillow cap-rate records remain without legitimate provenance, anywhere in E86", () => {
   test("no US or CA cap-rate observation cites FRED or Zillow", () => {
     for (const obs of [...US_CAP_RATE_OBSERVATIONS, ...CA_RATES]) {
       const blob = [obs.source.sourceName, obs.citation.sourceName, obs.citation.reportTitle].join(" ");

@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E69 Phase 2 — Cap-Rate Comparability Layer: barrel.
+ * InvestScape™ E87 Phase 2 — Cap-Rate Comparability Layer: barrel.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  */
 export * from "./comparability-types";

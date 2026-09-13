@@ -1,8 +1,8 @@
-# E68 — CRE Source Registry and Normalization Policy
+# E86 — CRE Source Registry and Normalization Policy
 
 ## Purpose
 
-E68 normalizes commercial real-estate cap-rate and construction-cost observations from Canada and the United States. It records provenance and licensing status but does not copy or redistribute proprietary datasets.
+E86 normalizes commercial real-estate cap-rate and construction-cost observations from Canada and the United States. It records provenance and licensing status but does not copy or redistribute proprietary datasets.
 
 ## Source classes
 
@@ -30,7 +30,7 @@ Publicly visible research from a proprietary provider may be stored as source me
 
 ## Cap-rate canonical representation
 
-E68 stores cap rates internally as decimal fractions:
+E86 stores cap rates internally as decimal fractions:
 
 - `5.50%` → `0.055`
 - `6.25%` → `0.0625`
@@ -50,7 +50,7 @@ Per-SF and per-unit costs must identify CAD or USD. Soft-cost percentages are st
 
 ## Confidence policy
 
-Source quality is an explicit input from the source registry or caller. E68 does not infer quality solely from a publisher name. Consensus weighting uses explicit source quality and preserves the union of published low/high bounds.
+Source quality is an explicit input from the source registry or caller. E86 does not infer quality solely from a publisher name. Consensus weighting uses explicit source quality and preserves the union of published low/high bounds.
 
 Confidence should be expanded in later phases to include:
 
@@ -78,7 +78,7 @@ Source URLs are references for discovery and provenance. Automated retrieval and
 
 ## Phase 4 — sources actually used (2026-09-10)
 
-Registry entries describe sources E68 *may* draw on. This section records what
+Registry entries describe sources E86 *may* draw on. This section records what
 was actually retrieved and populated.
 
 ### Used
@@ -110,7 +110,7 @@ When several sources cover the same observation, prefer in order:
 5. Government index
 6. Secondary aggregation
 
-This ranking orders *preference*, not overwriting. E68 retains every underlying
+This ranking orders *preference*, not overwriting. E86 retains every underlying
 observation; consensus is computed later by `weightedConsensus()` /
 `capRateConsensus()`. One source never silently replaces another.
 

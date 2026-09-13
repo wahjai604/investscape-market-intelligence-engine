@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 — CRE Intelligence consensus helpers.
+ * InvestScape™ E86 — CRE Intelligence consensus helpers.
  *
  * Deterministic normalization only. No source-specific reliability is inferred
  * from a publisher name; callers supply sourceQuality explicitly.

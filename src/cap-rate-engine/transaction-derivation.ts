@@ -1,11 +1,11 @@
 /**
- * InvestScape™ E69 Phase 4 — Transaction-Derived Cap Rate Calculation.
+ * InvestScape™ E87 Phase 4 — Transaction-Derived Cap Rate Calculation.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Calculates capRate = NOI / purchasePrice ONLY when a transaction's inputs
  * are sufficient, comparable, and legitimately establish both figures.
  * Otherwise returns a DATA_GAP with an explicit reason code and explanation.
- * See docs/E69-phase4-transaction-derived.md.
+ * See docs/E87-phase4-transaction-derived.md.
  *
  * THIS FILE DOES NOT: estimate NOI, infer NOI from rent, invent an expense
  * ratio, assume occupancy, treat financing costs as operating expenses, use
@@ -13,7 +13,7 @@
  * across multiple transactions (Phase 3's job).
  */
 import type { CRECitedObservation, CREDerivedTransaction } from "../cre-intelligence/types";
-import type { E69CandidateInput } from "./comparability-types";
+import type { E87CandidateInput } from "./comparability-types";
 import {
   DEFAULT_RECONCILIATION_POLICY,
   NOI_ANNUALIZATION_FACTOR,
@@ -312,7 +312,7 @@ export function deriveTransactionCapRate(
  * transaction's DATA_GAP never affects another's SUCCESS, and no
  * aggregation/consensus is performed across the batch — that remains Phase
  * 3's job, only if these results are later fed through Phase 2/3's own
- * contracts (see `toE69CandidateInput` below).
+ * contracts (see `toE87CandidateInput` below).
  */
 export function deriveTransactionCapRateBatch(
   inputs: readonly CRETransactionInput[],
@@ -324,24 +324,24 @@ export function deriveTransactionCapRateBatch(
 /**
  * Convert a successful Phase 4 derived observation into the exact shape
  * Phase 2's `evaluateCandidate`/`evaluateComparability` already consume
- * (`E69CandidateInput`, wrapping a `CRECitedObservation`), so a
+ * (`E87CandidateInput`, wrapping a `CRECitedObservation`), so a
  * transaction-derived cap rate can flow into the existing comparability and
  * (from there) Phase 3 benchmark contracts without a parallel engine.
  *
  * `capRateType` on the resulting observation is always `"derived_transaction"`
- * — E68's own vocabulary for "computed by E68 as NOI / price from explicitly
+ * — E86's own vocabulary for "computed by E86 as NOI / price from explicitly
  * disclosed figures" (see CAP_RATE_FAMILY in cre-intelligence/types.ts) —
  * regardless of any publisher-stated `capRateType`, which is preserved
  * separately on `observation.capRateType`/`observation.audit.reconciliation`
- * and never overwritten. `dataStatus` is set to `"derived"` per E68's own
+ * and never overwritten. `dataStatus` is set to `"derived"` per E86's own
  * `assertObservationStatus` contract (requires `derivedFrom` or
  * capRateType "derived_transaction" — both are satisfied here).
  *
  * `freshness` is left undefined: Phase 4 does not assess freshness itself
- * (E69's documented hard dependency on E68/Phase-8's `assessFreshness`); a
+ * (E87's documented hard dependency on E86/Phase-8's `assessFreshness`); a
  * caller who has computed it may attach it before passing this into Phase 2.
  */
-export function toE69CandidateInput(observation: CRETransactionDerivedObservation): E69CandidateInput {
+export function toE87CandidateInput(observation: CRETransactionDerivedObservation): E87CandidateInput {
   const a = observation.audit;
   const cited: CRECitedObservation = {
     metric: "cap_rate",

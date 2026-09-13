@@ -1,16 +1,16 @@
 /**
- * InvestScape™ E70 Phase 5 — Unified Benchmark Output adversarial test suite.
+ * InvestScape™ E88 Phase 5 — Unified Benchmark Output adversarial test suite.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Covers scenarios A-Z from the Phase 5 task instructions plus additional
- * determinism/immutability cases. Uses real E68/E70 data
- * (e70ConstructionCostPool(), CC_KNOWN_INDEX_OBSERVATIONS) for end-to-end
+ * determinism/immutability cases. Uses real E86/E88 data
+ * (e88ConstructionCostPool(), CC_KNOWN_INDEX_OBSERVATIONS) for end-to-end
  * cases and synthetic fixtures (clearly constructed inline) for edge cases
  * the real dataset cannot exercise, matching the convention already used in
  * pipeline.test.ts / comparability.test.ts / escalation.test.ts.
  */
 import { evaluateConstructionCostBenchmark, applyUserOverride } from "../../src/construction-cost-engine/benchmark";
-import { e70ConstructionCostPool } from "../../src/construction-cost-engine/data";
+import { e88ConstructionCostPool } from "../../src/construction-cost-engine/data";
 import { CC_KNOWN_INDEX_OBSERVATIONS } from "../../src/construction-cost-engine/data/index-series";
 import type { ConstructionCostBenchmarkRequest } from "../../src/construction-cost-engine/benchmark-types";
 import type { ConstructionCostCandidateInput } from "../../src/construction-cost-engine/types";
@@ -29,7 +29,7 @@ function baseRequest(overrides: Partial<ConstructionCostBenchmarkRequest> = {}):
 }
 
 function fullPool(): ConstructionCostCandidateInput[] {
-  return e70ConstructionCostPool();
+  return e88ConstructionCostPool();
 }
 
 function obs(overrides: Partial<CRECitedObservation> = {}): CRECitedObservation {

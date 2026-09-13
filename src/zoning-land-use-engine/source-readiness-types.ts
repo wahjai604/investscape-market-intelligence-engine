@@ -3,14 +3,14 @@
  * readiness / licensing type scaffolding.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Mirrors E70's five-axis separation of concerns IN SPIRIT ONLY
+ * Mirrors E88's five-axis separation of concerns IN SPIRIT ONLY
  * (src/construction-cost-engine/source-adapter-types.ts) — independently
  * re-typed here for E85's own domain, with no import from
  * construction-cost-engine (Phase 2 correction 13/14). TYPE-LEVEL CONTRACT
  * ONLY: no adapter implementation, no real production source is
  * registered here, no network code.
  *
- * Five distinct concerns, kept separate exactly as E70 keeps them separate:
+ * Five distinct concerns, kept separate exactly as E88 keeps them separate:
  *   1. registration     — "we know this source exists"
  *   2. access readiness  — "can E85 actually reach/read it right now"
  *   3. licensing/redistribution — "what are we allowed to do with what we read"
@@ -24,7 +24,7 @@ export type E85SourceLicenseStatus = "PUBLIC_REUSE" | "INTERNAL_LICENSE_REQUIRED
 
 export type E85SourceAdapterReadiness = "NOT_BUILT" | "PLANNED" | "BUILT_UNVERIFIED" | "BUILT_VERIFIED";
 
-/** DERIVED, never asserted independently — computed deterministically from access + license, mirroring E70's `computeAnalyticalReadiness` philosophy so it can never drift out of sync with the facts that justify it. */
+/** DERIVED, never asserted independently — computed deterministically from access + license, mirroring E88's `computeAnalyticalReadiness` philosophy so it can never drift out of sync with the facts that justify it. */
 export type E85SourceAnalyticalReadiness = "READY" | "BLOCKED_BY_ACCESS" | "BLOCKED_BY_LICENSE" | "BLOCKED_BY_ADAPTER";
 
 export interface E85SourceReadiness {

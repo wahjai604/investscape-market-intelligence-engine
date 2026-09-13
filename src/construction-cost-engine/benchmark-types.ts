@@ -1,15 +1,15 @@
 /**
- * InvestScape™ E70 Phase 5 — Unified Benchmark Output: core types.
+ * InvestScape™ E88 Phase 5 — Unified Benchmark Output: core types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E70 is a read-only consumer of E68 (src/cre-intelligence/), frozen at v1.0,
- * and does not modify E69 (src/cap-rate-engine/). Every E68 import below is a
- * plain named type import from E68 source. Every Phase 2-4 import is a plain
- * named import from E70's own prior phases — nothing here reimplements
+ * E88 is a read-only consumer of E86 (src/cre-intelligence/), frozen at v1.0,
+ * and does not modify E87 (src/cap-rate-engine/). Every E86 import below is a
+ * plain named type import from E86 source. Every Phase 2-4 import is a plain
+ * named import from E88's own prior phases — nothing here reimplements
  * comparability, normalization, or escalation; benchmark.ts (Section below)
  * orchestrates those existing engines instead.
  *
- * This is the E70 architectural analogue of E69's unified benchmark result —
+ * This is the E88 architectural analogue of E87's unified benchmark result —
  * built independently, not by importing anything from src/cap-rate-engine/.
  */
 import type { CREAssetClass, CREGeography } from "../cre-intelligence/types";
@@ -23,7 +23,7 @@ import type { CCIndexRelationship, CCPeriod, EscalationDataGapReasonCode, Escala
 
 /**
  * A benchmark request is Phase 2's `ConstructionCostRequest` plus the
- * Phase 4 escalation dimension (optional) and an optional E70-local user
+ * Phase 4 escalation dimension (optional) and an optional E88-local user
  * override. Nothing here widens Phase 2's own semantics — `targetPeriod`
  * absent means "answer as of whatever period the best evidence itself
  * covers," never a silent escalation and never a silent no-escalation
@@ -43,8 +43,8 @@ export interface ConstructionCostBenchmarkRequest extends ConstructionCostReques
 /**
  * Reused across all three confidence components (Section: Confidence Model)
  * so they combine by a single floor rule without a unit mismatch. Modeled
- * directly on E69's four-tier confidence vocabulary (independently
- * re-implemented here, not imported — E70 does not depend on
+ * directly on E87's four-tier confidence vocabulary (independently
+ * re-implemented here, not imported — E88 does not depend on
  * src/cap-rate-engine/ at all).
  */
 export type CCConfidenceTier = "high" | "moderate" | "low" | "very_low";
@@ -147,7 +147,7 @@ export interface CCBenchmarkAuditTrail {
 }
 
 // ---------------------------------------------------------------------------
-// User override (E70-local; see benchmark.ts header for why this is not E69's)
+// User override (E88-local; see benchmark.ts header for why this is not E87's)
 // ---------------------------------------------------------------------------
 
 /**
@@ -155,9 +155,9 @@ export interface CCBenchmarkAuditTrail {
  * a source observation, NEVER converts a DATA_GAP into fabricated source
  * evidence — the override is its own clearly-labeled thing, layered ON TOP
  * of (never destructive to) whatever the engine actually computed, exactly
- * mirroring the "layered on top of, never destructive to" precedent E69
+ * mirroring the "layered on top of, never destructive to" precedent E87
  * documents for its own override contract (Phase 1 spec Section 5) — but
- * defined independently here, in E70, at E70's own field shapes.
+ * defined independently here, in E88, at E88's own field shapes.
  */
 export interface CCUserOverride {
   overriddenValue: CCBenchmarkCostFigure;
@@ -203,7 +203,7 @@ export interface ConstructionCostBenchmarkResult {
 // ---------------------------------------------------------------------------
 
 /**
- * E70's OWN output-level taxonomy — deliberately NOT a reuse of E68's
+ * E88's OWN output-level taxonomy — deliberately NOT a reuse of E86's
  * `CREDataGapReasonCode` (a different question: "why doesn't a source
  * publish this at all") nor a flat re-export of Phase 2's `CCDataGapReasonCode`
  * or Phase 4's `EscalationDataGapReasonCode` (both preserved verbatim in the

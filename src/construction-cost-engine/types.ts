@@ -1,18 +1,18 @@
 /**
- * InvestScape™ E70 Phase 2 — Construction Cost Engine: core types.
+ * InvestScape™ E88 Phase 2 — Construction Cost Engine: core types.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * E70 is a read-only consumer of E68 (src/cre-intelligence/), frozen at v1.0,
- * and does not modify E69 (src/cap-rate-engine/). Every E68 import below is a
- * plain named type import; nothing here requires editing an E68 or E69 file.
+ * E88 is a read-only consumer of E86 (src/cre-intelligence/), frozen at v1.0,
+ * and does not modify E87 (src/cap-rate-engine/). Every E86 import below is a
+ * plain named type import; nothing here requires editing an E86 or E87 file.
  *
- * E68 types are reused ONLY where they are genuinely foundational
+ * E86 types are reused ONLY where they are genuinely foundational
  * (CREGeography, CRELocationType, CREAssetClass, CRECitedObservation,
- * CRESource) — exactly the same reuse boundary E69 already drew in its own
+ * CRESource) — exactly the same reuse boundary E87 already drew in its own
  * comparability-types.ts. Everything construction-cost-specific (currency,
  * unit/area basis, hard/soft/total representation, the request/candidate/
- * comparability contracts) is defined here, E70-owned, because E68 has no
- * equivalent semantics for them (E68's `CostBasis` has no $/m² or
+ * comparability contracts) is defined here, E88-owned, because E86 has no
+ * equivalent semantics for them (E86's `CostBasis` has no $/m² or
  * total-development-cost concept at all — see Phase 1 spec Section 9).
  */
 import type {
@@ -33,9 +33,9 @@ export type CCCurrency = "USD" | "CAD";
 
 /**
  * Unit/area basis a construction-cost figure can be expressed in. Extends
- * E68's `CostBasis` (which has no $/m² concept) with the metric equivalent,
+ * E86's `CostBasis` (which has no $/m² concept) with the metric equivalent,
  * per Phase 1 Section 9's normalization model. "index" and
- * "percent_of_hard_cost" are carried through unchanged from E68 so a
+ * "percent_of_hard_cost" are carried through unchanged from E86 so a
  * construction_index / construction_cost_change observation can still be
  * represented and explicitly excluded from cost-benchmarking (Section 6.3:
  * these are never dollar figures).
@@ -46,7 +46,7 @@ export type CCUnitBasis = "per_sf" | "per_sm" | "per_unit" | "percent_of_hard_co
  * The hard/soft/total distinction that governs the Phase 1 Decision 5 gating
  * rule. "total_cost" exists as a REQUEST concept even though no observation
  * in this codebase has ever stated it as a metric — see Phase 1 Section 9:
- * "a 'total development cost' figure does not exist as an E68/E70 metric and
+ * "a 'total development cost' figure does not exist as an E86/E88 metric and
  * should not be synthesized by adding [hard + soft] without an explicit
  * soft-cost source."
  */
@@ -62,9 +62,9 @@ export const SQ_FT_PER_SQ_M = 1 / SQ_M_PER_SQ_FT;
  * The requested construction-cost benchmark identity. Every field the
  * request leaves undefined WIDENS the candidate pool on that dimension — it
  * never causes a silent narrowing or a guessed value (identical principle to
- * E69's `E69ComparabilityRequest`).
+ * E87's `E87ComparabilityRequest`).
  *
- * `costRepresentation` is REQUIRED (unlike E69's optional `capRateType`)
+ * `costRepresentation` is REQUIRED (unlike E87's optional `capRateType`)
  * because Phase 1 Decision 5 depends on the caller stating up front whether
  * hard cost, soft cost, or total cost was actually asked for — the gating
  * logic in pipeline.ts cannot honestly run against an unstated representation.
@@ -73,22 +73,22 @@ export interface ConstructionCostRequest {
   geography: CREGeography;
   locationType?: CRELocationType;
   assetClass: CREAssetClass;
-  /** Canonical (E70) subtype, per taxonomy.ts — never a raw publisher-native string. */
+  /** Canonical (E88) subtype, per taxonomy.ts — never a raw publisher-native string. */
   canonicalSubtype?: CanonicalConstructionSubtype;
   costRepresentation: CCCostRepresentation;
   unitBasis?: CCUnitBasis;
   currency?: CCCurrency;
   effectivePeriod?: { start: string; end: string };
-  /** Hard freshness gate, applied identically to E69's `minFreshness` semantics. */
+  /** Hard freshness gate, applied identically to E87's `minFreshness` semantics. */
   minFreshness?: CREPresentationFreshness;
   asOf?: string;
 }
 
 /**
- * Per-observation input to the comparability engine. E70 never recomputes
- * freshness itself — the same hard E68 dependency E69 already documents.
+ * Per-observation input to the comparability engine. E88 never recomputes
+ * freshness itself — the same hard E86 dependency E87 already documents.
  * `freshness` should be the `CREPresentationFreshness` a caller already
- * computed via E68's `assessFreshness` for this observation's backing source.
+ * computed via E86's `assessFreshness` for this observation's backing source.
  * Undefined is treated honestly as "not assessed," never guessed.
  */
 export interface ConstructionCostCandidateInput {
@@ -111,8 +111,8 @@ export interface NormalizationTransformation {
 }
 
 /**
- * A construction-cost observation after E70's normalization pass. `original`
- * is the E68 `CRECitedObservation` carried through verbatim — normalization
+ * A construction-cost observation after E88's normalization pass. `original`
+ * is the E86 `CRECitedObservation` carried through verbatim — normalization
  * never mutates it, and every derived field below can be traced back to it
  * via `transformations`.
  */

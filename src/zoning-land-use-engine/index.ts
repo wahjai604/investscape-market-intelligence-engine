@@ -25,7 +25,7 @@
  * and `result-status` (the one explicit result-status precedence function).
  * Still no source adapters, no network code, no GIS computation, no
  * database code. E85 has NO direct runtime dependency on
- * E68/E69/E70/calc-engine/economic-engine/tax-engine — every export below is
+ * E86/E87/E88/calc-engine/economic-engine/tax-engine — every export below is
  * defined fresh in this module.
  */
 export * from "./jurisdiction-types";

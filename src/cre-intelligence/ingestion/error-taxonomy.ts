@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 8 — Structured Error Classification.
+ * InvestScape™ E86 Phase 8 — Structured Error Classification.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Part 10 of the Phase 8 specification. Reuses `SourceAdapterErrorCode`
@@ -16,7 +16,7 @@ export const ERROR_TAXONOMY_LABELS: Readonly<Record<SourceAdapterErrorCode, stri
   NETWORK_ERROR: "The source could not be reached over the network.",
   RATE_LIMITED: "The source rejected the request due to rate limiting.",
   SCHEMA_CHANGED: "The source's response no longer matches the shape the adapter recognizes.",
-  VALIDATION_FAILED: "A response was retrieved and parsed but failed E68 validation.",
+  VALIDATION_FAILED: "A response was retrieved and parsed but failed E86 validation.",
   GEOGRAPHY_NOT_COVERED: "The source does not publish data for the requested geography.",
   NOT_FOUND: "The requested series/dataset/identifier does not exist at the source.",
   AUTHENTICATION_ERROR: "The request was rejected because credentials were missing or invalid.",
@@ -48,7 +48,7 @@ export function classifyThrown(err: unknown): { code: SourceAdapterErrorCode; me
   return { code: "UNKNOWN_ERROR", message: String(err) };
 }
 
-/** Errors that describe a fault in E68 talking to the source (retry may help), vs. a durable/data fault. */
+/** Errors that describe a fault in E86 talking to the source (retry may help), vs. a durable/data fault. */
 export const TRANSIENT_ERROR_CODES: readonly SourceAdapterErrorCode[] = ["NETWORK_ERROR", "RATE_LIMITED", "SOURCE_UNAVAILABLE"];
 
 export function isTransientError(code: SourceAdapterErrorCode): boolean {

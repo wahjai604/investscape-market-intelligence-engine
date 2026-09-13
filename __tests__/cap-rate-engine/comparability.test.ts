@@ -1,13 +1,13 @@
 /**
- * InvestScape™ E69 Phase 2 — Cap-Rate Comparability Layer tests.
+ * InvestScape™ E87 Phase 2 — Cap-Rate Comparability Layer tests.
  *
  * Adversarial style mirroring __tests__/cre-intelligence/benchmark-qualification.test.ts:
  * every case is exercised end to end (evaluateCandidate/evaluateComparability),
- * not merely named. E68 fixtures are constructed inline (synthetic) so every
+ * not merely named. E86 fixtures are constructed inline (synthetic) so every
  * dimension's failure mode can actually be triggered.
  */
 import { evaluateCandidate, evaluateComparability } from "../../src/cap-rate-engine/comparability";
-import type { E69CandidateInput, E69ComparabilityRequest } from "../../src/cap-rate-engine/comparability-types";
+import type { E87CandidateInput, E87ComparabilityRequest } from "../../src/cap-rate-engine/comparability-types";
 import type { CRECitedObservation } from "../../src/cre-intelligence/types";
 
 function obs(overrides: Partial<CRECitedObservation> = {}): CRECitedObservation {
@@ -35,7 +35,7 @@ function obs(overrides: Partial<CRECitedObservation> = {}): CRECitedObservation 
   };
 }
 
-function baseRequest(overrides: Partial<E69ComparabilityRequest> = {}): E69ComparabilityRequest {
+function baseRequest(overrides: Partial<E87ComparabilityRequest> = {}): E87ComparabilityRequest {
   return {
     geography: { country: "US", city: "Houston" },
     assetClass: "multifamily",
@@ -43,7 +43,7 @@ function baseRequest(overrides: Partial<E69ComparabilityRequest> = {}): E69Compa
   };
 }
 
-function candidate(o: CRECitedObservation, freshness?: E69CandidateInput["freshness"]): E69CandidateInput {
+function candidate(o: CRECitedObservation, freshness?: E87CandidateInput["freshness"]): E87CandidateInput {
   return { observation: o, freshness };
 }
 

@@ -1,4 +1,4 @@
-# E68 Phase 6 — Paid/Commercial CRE Data Source Analysis (Research Only)
+# E86 Phase 6 — Paid/Commercial CRE Data Source Analysis (Research Only)
 
 Research date **2026-09-11**. This phase is **analysis only**: no purchases, accounts,
 sales contacts, payments, contracts, scraping, or paywall/bot-protection bypass were
@@ -9,10 +9,10 @@ terms could not be found, this document says so explicitly rather than guessing:
 `PRICING NOT PUBLIC — SALES QUOTE REQUIRED`.
 
 This document builds on, and does not duplicate the primary research already recorded in:
-- `E68-cap-rate-data-coverage.md` (§18, §11) — CBRE, CoStar, MSCI/RCA, Altus, RealPage already
+- `E86-cap-rate-data-coverage.md` (§18, §11) — CBRE, CoStar, MSCI/RCA, Altus, RealPage already
   researched there in detail; Phase 6 references those findings and extends to the remaining
   named sources plus construction-cost specialists and automation/licensing classification.
-- `e68-source-registry.md` — existing registry entries and redistribution policy.
+- `e86-source-registry.md` — existing registry entries and redistribution policy.
 
 ---
 
@@ -23,24 +23,24 @@ not publicly documented, `PNP` = PRICING NOT PUBLIC — SALES QUOTE REQUIRED.
 
 | Source | Publisher | Product | Canada | US | Asset classes | Cap rates | Transactions | NOI | Construction cost | API | Bulk export | Redistribution | Pricing | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| CBRE | CBRE | U.S. Cap Rate Survey / Canada Cap Rates & Investment Insights | Y | Y | Office, industrial, retail, multifamily, hotel, seniors housing | Y (survey estimates) | N (survey, not transaction ledger) | N | N (not a construction-cost product) | U — none documented | U | Report gated, terms not published | PNP | cbre.com/insights (checked 2026-09-10/11, see E68-cap-rate-data-coverage.md §3, §18) |
+| CBRE | CBRE | U.S. Cap Rate Survey / Canada Cap Rates & Investment Insights | Y | Y | Office, industrial, retail, multifamily, hotel, seniors housing | Y (survey estimates) | N (survey, not transaction ledger) | N | N (not a construction-cost product) | U — none documented | U | Report gated, terms not published | PNP | cbre.com/insights (checked 2026-09-10/11, see E86-cap-rate-data-coverage.md §3, §18) |
 | CoStar | CoStar Group | CoStar Market Analytics / Property Professional | U (limited) | Y | All commercial classes | Y | Y | Partial (rent/occupancy; NOI not confirmed as a standard field) | Limited | N — ToS prohibits automated extraction/scraping; no self-serve API found | N confirmed publicly | Proprietary, redistribution prohibited | PNP | costar.com/products/market-analytics; confirmed via cap-rate-data-coverage.md §18 (checked 2026-09-11) |
 | MSCI / RCA | MSCI | Real Capital Analytics | Y | Y | All commercial classes | Y (transaction-derived) | Y | Partial — RCA discloses price; NOI disclosure not confirmed as universal | N | Y — MSCI documents API/data-delivery incl. Snowflake integration | Y (enterprise) | Proprietary, license-negotiated | PNP | msci.com/data-and-analytics/real-estate/real-capital-analytics (per cap-rate-data-coverage.md §18) |
 | Altus Group | Altus Group | Altus Insite / ARGUS / Reonomy (acquired July 2026) | Y (primary) | Y (via Reonomy) | Cap rates, valuation, hard/soft cost, construction index | Y | Partial (Reonomy has property/ownership data) | U | Y | Y — Reonomy offers enterprise API (per Altus product pages) | U | Subscription, proprietary | PNP | altusgroup.com (per cap-rate-data-coverage.md §18) |
-| RealPage | RealPage Inc. | RealPage Analytics (multifamily) | N confirmed | Y | Multifamily only | Y (per E68 registry note) | U | U | N | U — not confirmed publicly for cap-rate data | U | Subscription | PNP | realpage.com/analytics (per source-registry.ts, existing) |
+| RealPage | RealPage Inc. | RealPage Analytics (multifamily) | N confirmed | Y | Multifamily only | Y (per E86 registry note) | U | U | N | U — not confirmed publicly for cap-rate data | U | Subscription | PNP | realpage.com/analytics (per source-registry.ts, existing) |
 | Green Street | Green Street Advisors | Commercial Property Price Index (CPPI), U.S. Market Data & Deals | N (US-focused) | Y | 9 sectors, top 50 US markets + 334 tertiary markets, 4 core sectors | Y — cap-rate and asset-value time series described on product page | Y — Sales Comps / Rent Comps databases described | U | N | U — not documented publicly | U | Subscription, institutional | PNP | greenstreet.com/resources/pricing-index/, info.greenstreet.com/u.s.-market-data-deals-overview (checked 2026-09-11) |
 | Trepp | Trepp, LLC | TreppData Feed / CMBS property-level data | N confirmed | Y (CMBS-collateralized properties only) | Properties within CMBS pools, cross-sector | N (no direct market cap-rate product found) | Y (loan/property-level, securitized loans) | Y — TreppData Feed cites operating-expense and property-level financial detail for CMBS properties, which implies NOI-adjacent data | N | U — feed/platform-based, no public REST API doc found | U | Proprietary, licensed | PNP | cherre.com/vendors/trepp/, businesswire release (checked 2026-09-11); scope limited to securitized (CMBS) properties only, not a general market cap-rate survey |
 | Yardi Matrix | Yardi Systems | Yardi Matrix | N confirmed | Y (188+ metros) | Multifamily, affordable housing, student housing, self-storage, office, industrial | U — market data/rent/occupancy confirmed; explicit numerical cap-rate product not confirmed in public pages | U | Y — "market financial information including income, expenses, capital expenditures" described | N | U — not documented publicly | U | Subscription | PNP | yardimatrix.com/property-types/multifamily/, yardi.com/product/matrix (checked 2026-09-11) |
 | CommercialEdge | Yardi (CommercialEdge) | CommercialEdge listing/property platform | N confirmed | Y | Office, industrial, retail | N — not confirmed | Partial (listing-based, not confirmed as transaction ledger) | N | N | Y — API exists, integrates with PropTech providers (per SelectHub summary) | U | Subscription | Starts ~$250/month for base platform (SelectHub/SourceForge, 2026); API pricing itself not separately published | selecthub.com/p/real-estate-asset-management-software/commercialedge (checked 2026-09-11) |
 | PropertyShark | Yardi (PropertyShark) | PropertyShark property records | N | Y (major metros) | Property records, ownership, sales, permits | N | Y (sales/deed records) | N | N | N — no official API; third-party scraping-based "APIs" exist but are not PropertyShark's own product | U | Subscription-tier ($59.95–$169.95/mo Pro/Elite/Platinum, group custom) | Listed | credaily.com/reviews/propertyshark-review, softwarefinder.com/property-management-software/propertyshark (checked 2026-09-11) |
-| Placer.ai | Placer Labs | Placer.ai location intelligence | U | Y | Retail/CRE foot-traffic overlay, not a cap-rate/cost product | N | N | N | N | Y — dashboard, API, data feeds described | U | Subscription | Estimated $5,000–$30,000/yr per third-party benchmarking (not Placer's own published rate card) | plumlending.com/insights/placer-ai-review, softwarefinder.com/analytics-software/placer-ai (checked 2026-09-11); NOTE: this is a foot-traffic/location-intelligence product, not a cap-rate or construction-cost source — included per the task's "any other material sources" instruction but out of scope for E68's core benchmark metrics |
+| Placer.ai | Placer Labs | Placer.ai location intelligence | U | Y | Retail/CRE foot-traffic overlay, not a cap-rate/cost product | N | N | N | N | Y — dashboard, API, data feeds described | U | Subscription | Estimated $5,000–$30,000/yr per third-party benchmarking (not Placer's own published rate card) | plumlending.com/insights/placer-ai-review, softwarefinder.com/analytics-software/placer-ai (checked 2026-09-11); NOTE: this is a foot-traffic/location-intelligence product, not a cap-rate or construction-cost source — included per the task's "any other material sources" instruction but out of scope for E86's core benchmark metrics |
 | LightBox | LightBox | LightBox Data / SpatialStream API / LightBox Property | Y (per general marketing; not itemized) | Y | Parcel/property records, zoning, building characteristics | N | N | N | N | Y — SpatialStream API documented, "6B+ server hits/month" | U | "Flexible licensing," terms not itemized | PNP | lightboxre.com/data/lightbox-apis/, lightboxre.com/product/spatialstream-real-estate-api (checked 2026-09-11) |
 | Moody's Analytics CRE (formerly REIS) | Moody's Analytics | Moody's Analytics CRE / MA CRE API | U (US-focused per sources found) | Y | 10 major CRE sectors, 275+ markets, 3,000+ submarkets | Y — "rents and cap rates" explicitly named among covered indicators | Y — sales transactions mentioned | U | N | Y — documented API (MA CRE API / Data Buffet with API, scheduled baskets, Excel add-in) | Y (Data Buffet baskets) | Subscription, proprietary | PNP | moodyscre.com/products/mca-api/, cre.moodysanalytics.com/capabilities/data/, hub.moodysanalytics.com/products (checked 2026-09-11) |
 | JLL | JLL | JLL Research / Capital Markets insights | Y | Y | All commercial classes | Mixed — see cap-rate-data-coverage.md (`NOT_FOUND` for the 5 US priority cities as of Phase 4B) | U | N | N | N (research is report/PDF form) | N | Free reports = `public_report`, not redistributable | Free (public reports); underlying data proprietary | jll.com/en-us/insights (per cap-rate-data-coverage.md §12) |
-| Cushman & Wakefield | C&W | Canadian Cap Rate & Capital Markets Report / MarketBeat | Y (confirmed, used by E68) | Y (mixed — see coverage doc) | Multifamily confirmed numerically for Canada; office/industrial/retail unlabeled trend lines only | Y (Canada multifamily); partial (US) | N | N | N | N | N | Free reports = `public_report` | Free | Already an E68 source; see cap-rate-data-coverage.md §13 |
+| Cushman & Wakefield | C&W | Canadian Cap Rate & Capital Markets Report / MarketBeat | Y (confirmed, used by E86) | Y (mixed — see coverage doc) | Multifamily confirmed numerically for Canada; office/industrial/retail unlabeled trend lines only | Y (Canada multifamily); partial (US) | N | N | N | N | N | Free reports = `public_report` | Free | Already an E86 source; see cap-rate-data-coverage.md §13 |
 | Colliers | Colliers International | Canada Cap Rate Report | Y (confirmed to exist, `FOUND_BUT_INACCESSIBLE`) | Y (limited, `FOUND_BUT_INSUFFICIENT`/`NOT_FOUND` per city) | Multifamily, office, industrial, retail (per report scope, unverified due to bot-protection) | Believed Y, unverified | U | N | N | N | N | Free reports (unverified due to access block) | Free | cap-rate-data-coverage.md §13 |
-| Newmark | Newmark Group | Metro multifamily market reports | N (not found for Canada) | Y (already an E68 source, Houston) | Multifamily (class-split for Houston) | Y | Y (transaction tables, no NOI) | N | N | N | N | Free reports = `public_report` | Free | Already an E68 source |
-| Marcus & Millichap | Marcus & Millichap | Research reports / market snapshots | N | Y | Multifamily, industrial, retail, office (sector research) | Mixed — endpoint outage encountered (per registry §"Checked, yielded nothing usable") | U | N | N | N | N | Free reports | Free | e68-source-registry.md |
+| Newmark | Newmark Group | Metro multifamily market reports | N (not found for Canada) | Y (already an E86 source, Houston) | Multifamily (class-split for Houston) | Y | Y (transaction tables, no NOI) | N | N | N | N | Free reports = `public_report` | Free | Already an E86 source |
+| Marcus & Millichap | Marcus & Millichap | Research reports / market snapshots | N | Y | Multifamily, industrial, retail, office (sector research) | Mixed — endpoint outage encountered (per registry §"Checked, yielded nothing usable") | U | N | N | N | N | Free reports | Free | e86-source-registry.md |
 | Avison Young | Avison Young | US/Canada research | Y (believed, `FOUND_BUT_INACCESSIBLE`) | Y (believed, `FOUND_BUT_INACCESSIBLE`) | All commercial classes (unverified due to bot-protection) | Believed Y, unverified | U | N | N | N | N | Free reports (unverified) | Free | cap-rate-data-coverage.md §12/§13 |
 
 ---
@@ -65,7 +65,7 @@ statements ("market intelligence," "cap rates increased"):
   indicators across 275+ markets and 3,000+ submarkets (cre.moodysanalytics.com/capabilities/data,
   checked 2026-09-11). Documented numeric product.
 - **CoStar** — widely cited as the underlying data source behind free brokerage cap-rate
-  charts already in E68 (Kidder Mathews, Matthews — see cap-rate-data-coverage.md §2).
+  charts already in E86 (Kidder Mathews, Matthews — see cap-rate-data-coverage.md §2).
   This is strong indirect evidence CoStar itself carries cap-rate data, even though CoStar's
   own product pages were not independently confirmed with a sample figure.
 - **Yardi Matrix, Trepp, CommercialEdge, PropertyShark, LightBox, Placer.ai** — **no
@@ -80,7 +80,7 @@ survey is documented to split by sector, class, and stabilized/value-add. Moody'
 claims submarket-level granularity (3,000+ submarkets). Green Street's product page cites
 market-grade and sector-level granularity across ~50 top US markets plus 334 tertiary
 markets. None of these segmentation claims were independently verified with a sample row
-(all gated). CBRE's granularity is the best-documented against E68's actual gap list
+(all gated). CBRE's granularity is the best-documented against E86's actual gap list
 (office/industrial/retail by class and CBD/suburban), consistent with the existing
 recommendation in cap-rate-data-coverage.md §11.
 
@@ -88,22 +88,22 @@ recommendation in cap-rate-data-coverage.md §11.
 
 ## PART 3 — Transaction cap rates: price + NOI
 
-E68's existing research (cap-rate-data-coverage.md §6) already established that no free
+E86's existing research (cap-rate-data-coverage.md §6) already established that no free
 source discloses both price and NOI for a comparable sale. For paid sources:
 
 | Source | Price disclosed | NOI/income disclosed | Can legitimately derive cap rate | Publisher-supplied cap rate directly |
 | --- | --- | --- | --- | --- |
 | MSCI/RCA | Y (core transaction database) | Not confirmed as universal field in public docs | Unconfirmed — plausible given "transaction-derived" framing but not verified from a public sample | Y — RCA publishes cap-rate series directly, per MSCI's own product description |
-| Trepp | Y (loan-collateral property data) | Y (property-level operating expense/income fields, per TreppData Feed description) | **Most likely candidate for E68-derived cap rates among the sources checked** — but scope is limited to CMBS-collateralized properties, not a general market sample | N confirmed — no market cap-rate survey found |
-| CoStar | Y (property records) | Not confirmed as standard field | Unconfirmed | Y — implied by brokerage republication of CoStar-credited averages (already used indirectly by E68) |
+| Trepp | Y (loan-collateral property data) | Y (property-level operating expense/income fields, per TreppData Feed description) | **Most likely candidate for E86-derived cap rates among the sources checked** — but scope is limited to CMBS-collateralized properties, not a general market sample | N confirmed — no market cap-rate survey found |
+| CoStar | Y (property records) | Not confirmed as standard field | Unconfirmed | Y — implied by brokerage republication of CoStar-credited averages (already used indirectly by E86) |
 | Green Street | Y (Sales Comps database) | Not confirmed | Unconfirmed | Y — "cap rate and asset value time series" is direct |
 | Moody's CRE | Y (sales transactions mentioned) | Not confirmed | Unconfirmed | Y — cap rates explicitly named as a tracked indicator |
 | CBRE | N (survey, not a transaction ledger) | N | N — not applicable, survey methodology not transaction-by-transaction | Y (survey estimate, not derived) |
 
 **Nothing was calculated.** No sample cap rate was derived from any paid source in this
 phase; every "Y" above is a documented product capability, not a computed value. This
-distinction — publisher-supplied vs. E68-derived — must be preserved if any of these
-sources are later licensed: `CREDerivedTransaction` (already defined in E68's schema per
+distinction — publisher-supplied vs. E86-derived — must be preserved if any of these
+sources are later licensed: `CREDerivedTransaction` (already defined in E86's schema per
 cap-rate-data-coverage.md §6) requires price, NOI, and both their sources plus methodology,
 independent of whether the underlying subscription calls its own output a "cap rate."
 
@@ -113,7 +113,7 @@ independent of whether the underlying subscription calls its own output a "cap r
 
 | Source | Hard cost | Soft cost | Total dev. cost | Replacement cost | $/SF | $/unit | Regional index | Building-type specificity |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| RLB North America | Y (already an E68 source, 53 observations) | Partial | N confirmed | N | Y | Partial | Y | Y — by building type, already in use |
+| RLB North America | Y (already an E86 source, 53 observations) | Partial | N confirmed | N | Y | Partial | Y | Y — by building type, already in use |
 | Turner & Townsend | Y (documented, per cap-rate-data-coverage.md §7 — city $/ft² figures) | N (professional fees generally separated, per registry notes) | N | N | Y | N | Y | Undocumented basis for Austin/Phoenix figures (already flagged `FOUND_BUT_INSUFFICIENT` — no stated building type/hard-vs-total basis) |
 | RSMeans (Gordian) | Y — core product, "92,000+ unit line items including equipment, material and labor" | Partial (via assemblies/systems costing, not a distinct headline product) | Partial (via full project estimate builds) | Y (used for insurance replacement-cost estimating in practice) | Y | U | Y (location-specific, ~city-level cost factors) | Y — extensive building-type and assembly-level detail; the most granular of any source reviewed |
 | Marshall & Swift / CoreLogic (SwiftEstimator) | Y — core product (replacement-cost focus) | U | N (replacement-cost, not full development-cost, focus) | Y — explicitly "the gold standard in property valuation" replacement-cost data, "2,629 locations nationwide" | Y | U | Y | Y — residential, commercial, industrial, agricultural |
@@ -121,11 +121,11 @@ independent of whether the underlying subscription calls its own output a "cap r
 | Altus Group | Y (per existing registry: "hard_cost, soft_cost, construction_index") | Y | U | U | U | U | Y | Y (Canada-focused) |
 | CBRE / JLL / Cushman & Wakefield | Partial — periodic "cost to build" commentary in market reports | N confirmed as distinct product | N | N | Partial | N | N | Weak — these are brokerage research notes, not dedicated cost databases |
 
-**Filling E68's specific gaps** (multifamily, industrial, office, retail, townhouse, SFR,
+**Filling E86's specific gaps** (multifamily, industrial, office, retail, townhouse, SFR,
 high-rise, low-rise, Class A/B office; Houston construction-cost absence; soft costs):
 
 - **RSMeans/Gordian is the strongest candidate for soft-cost and building-type granularity**
-  E68 currently lacks — RLB and Turner & Townsend are both hard-cost/$/SF oriented with
+  E86 currently lacks — RLB and Turner & Townsend are both hard-cost/$/SF oriented with
   soft costs generally excluded or unstated.
 - **Houston gap**: neither RLB nor Turner & Townsend cover Houston (independently confirmed
   by two consultancies per cap-rate-data-coverage.md §7). RSMeans' location-factor model is
@@ -133,7 +133,7 @@ high-rise, low-rise, Class A/B office; Houston construction-cost absence; soft c
   plausibly include a Houston factor — but this was not verified against an actual Houston
   line item in this phase (behind a paid tier).
 - **Marshall & Swift/CoreLogic** is replacement-cost-focused (appraisal/insurance use case)
-  rather than development-cost-focused, so it is a partial fit for E68's "replacement cost"
+  rather than development-cost-focused, so it is a partial fit for E86's "replacement cost"
   dimension but not a fit for "total development cost."
 
 ---
@@ -183,10 +183,10 @@ public pages did not settle the question and an actual contract would need to be
 | Moody's Analytics CRE | REQUIRES LICENSE REVIEW | REQUIRES LICENSE REVIEW | N | REQUIRES LICENSE REVIEW | N | REQUIRES LICENSE REVIEW | Y |
 | RSMeans/Gordian | REQUIRES LICENSE REVIEW | REQUIRES LICENSE REVIEW | N (per-seat licensing typical of cost-data products) | REQUIRES LICENSE REVIEW | N | REQUIRES LICENSE REVIEW | Y |
 | Marshall & Swift/CoreLogic | REQUIRES LICENSE REVIEW | REQUIRES LICENSE REVIEW | N | REQUIRES LICENSE REVIEW | N | REQUIRES LICENSE REVIEW | Y |
-| Free brokerage reports (CBRE Canada, C&W, Newmark, Kidder Mathews, Matthews, Colliers, JLL, Avison Young, M&M) | Y (already E68 practice) | Y (already E68 practice — stored as cited observations) | N — `public_report` is explicitly not redistributable per `isRedistributable()` in source-registry.ts | Y (as a cited figure, not a copy of the report) | N | Y | Y |
+| Free brokerage reports (CBRE Canada, C&W, Newmark, Kidder Mathews, Matthews, Colliers, JLL, Avison Young, M&M) | Y (already E86 practice) | Y (already E86 practice — stored as cited observations) | N — `public_report` is explicitly not redistributable per `isRedistributable()` in source-registry.ts | Y (as a cited figure, not a copy of the report) | N | Y | Y |
 | Statistics Canada / US Census / BLS / CMHC (government) | Y | Y | Y | Y | Y — `isRedistributable()` returns true only for this class | Y | Y |
 
-**Key finding, consistent with E68's existing `isRedistributable()` design**: not one paid
+**Key finding, consistent with E86's existing `isRedistributable()` design**: not one paid
 source reviewed grants redistribution of raw data absent a specific license clause, and
 none of the public marketing pages reviewed publish that clause. API access (a technical
 capability) and redistribution rights (a legal permission) are always separate questions —
@@ -212,7 +212,7 @@ Per the task's explicit instruction, no pricing is invented. Public pricing foun
 documented for any source in this table. All marked `PRICING NOT PUBLIC — SALES QUOTE
 REQUIRED`.
 
-**E68 gaps solved per source** (qualitative, cross-referenced to
+**E86 gaps solved per source** (qualitative, cross-referenced to
 cap-rate-data-coverage.md §5/§17 gap list):
 
 | Source | Miami cap rates | Office/industrial/retail cap rates | Multifamily depth | Houston construction cost | Soft costs | Transaction-derived cap rates |
@@ -243,10 +243,10 @@ evidence is too thin to respectably rank a dimension, this section says
 | Category | Answer | Basis |
 | --- | --- | --- |
 | BEST OVERALL | INSUFFICIENT PUBLIC INFORMATION — candidates CBRE, MSCI/RCA, Moody's Analytics CRE | All three combine broad geography, multi-sector cap rates, and (for MSCI/Moody's) documented APIs, but none was verified with sample data |
-| BEST CAP-RATE SOURCE | CBRE U.S. Cap Rate Survey (qualitative lead) | Only source in this review whose public description explicitly names sector × class × stabilized/value-add segmentation matching E68's exact gap list |
+| BEST CAP-RATE SOURCE | CBRE U.S. Cap Rate Survey (qualitative lead) | Only source in this review whose public description explicitly names sector × class × stabilized/value-add segmentation matching E86's exact gap list |
 | BEST TRANSACTION SOURCE | MSCI/RCA | Longest-established transaction-level database of the sources reviewed; explicit "transaction-derived" framing |
 | BEST CONSTRUCTION-COST SOURCE | RSMeans (Gordian) | Only source with unit-line-item granularity (92,000+ items) and published, if partial, pricing |
-| BEST CANADIAN SOURCE | Altus Group | Canada-headquartered, Canada-primary coverage across cap rate + cost; already E68's top Canadian recommendation per cap-rate-data-coverage.md §11 |
+| BEST CANADIAN SOURCE | Altus Group | Canada-headquartered, Canada-primary coverage across cap rate + cost; already E86's top Canadian recommendation per cap-rate-data-coverage.md §11 |
 | BEST US SOURCE | INSUFFICIENT PUBLIC INFORMATION — CBRE and MSCI/RCA tied on public evidence | Both have the strongest documented US coverage; neither was verified with sample data |
 | BEST API/AUTOMATION SOURCE | Moody's Analytics CRE | Only cap-rate-bearing source with a named, documented API product (MA CRE API) plus a public API hub |
 | BEST LOW-COST OPTION | RSMeans Data Online (Core plan) | Only source in this entire matrix with a **confirmed public price under $500/year** |
@@ -256,7 +256,7 @@ evidence is too thin to respectably rank a dimension, this section says
 
 ## PART 9 — Free vs. paid gap analysis
 
-| Benchmark | Available free (current E68) | Available paid | Best paid source | Granularity | Currentness | Automation | License status |
+| Benchmark | Available free (current E86) | Available paid | Best paid source | Granularity | Currentness | Automation | License status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Cap rate — multifamily, Houston/Phoenix/Seattle/Austin | Y (35 observations total, class split for Houston) | Y | CBRE, CoStar | Better (uniform methodology) | Quarterly (paid) vs. mixed quarterly free | REPORT_PDF (free) vs. mixed (paid) | Free = `public_report`, not redistributable; paid = `REQUIRES LICENSE REVIEW` |
 | Cap rate — Miami, all classes | N (confirmed gap) | Y (believed) | CBRE, CoStar | Unknown | Unknown | Unknown | `REQUIRES LICENSE REVIEW` |
@@ -269,7 +269,7 @@ evidence is too thin to respectably rank a dimension, this section says
 | Construction cost — US, $/SF, hard cost | Y (RLB, 53 observations, no Houston) | Y | RSMeans | Location-factor, city-level | Updated regularly (unconfirmed cadence) | BULK_EXPORT/API_BY_CONTRACT | Free = `public_report`; paid = `REQUIRES LICENSE REVIEW` |
 | Construction cost — Houston, US | N (confirmed gap, 2 consultancies checked) | Likely (RSMeans nationwide location factors) | RSMeans | Unconfirmed for Houston specifically | Unconfirmed | BULK_EXPORT | `REQUIRES LICENSE REVIEW` |
 | Construction cost — soft costs | N (RLB/T&T largely exclude soft cost) | Y | RSMeans (assemblies), Altus | Line-item (RSMeans) | Unconfirmed | Mixed | `REQUIRES LICENSE REVIEW` |
-| Construction cost — Canada | N (no Canadian construction-cost E68 source found in this review) | Y | Altus, Statistics Canada BCPI (already free/public) | Index-level (StatCan, free); line-item (Altus, paid, unconfirmed) | Quarterly (StatCan) | public_data (StatCan) / API_BY_CONTRACT (Altus) | StatCan = fully redistributable (government); Altus = `REQUIRES LICENSE REVIEW` |
+| Construction cost — Canada | N (no Canadian construction-cost E86 source found in this review) | Y | Altus, Statistics Canada BCPI (already free/public) | Index-level (StatCan, free); line-item (Altus, paid, unconfirmed) | Quarterly (StatCan) | public_data (StatCan) / API_BY_CONTRACT (Altus) | StatCan = fully redistributable (government); Altus = `REQUIRES LICENSE REVIEW` |
 
 ---
 
@@ -295,13 +295,13 @@ Confirmed for this entire phase:
 
 ---
 
-## PART 11 — E68 architecture recommendation
+## PART 11 — E86 architecture recommendation
 
 Target shape (not implemented):
 
 ```
 Public Sources ─┐
-                 ├─▶ E68 Ingestion ─▶ Normalization ─▶ Qualification ─▶ Consensus ─▶ Benchmark ─▶ InvestScape
+                 ├─▶ E86 Ingestion ─▶ Normalization ─▶ Qualification ─▶ Consensus ─▶ Benchmark ─▶ InvestScape
 Paid Sources ───▶ Paid Source Adapter ─┘
 ```
 
@@ -313,9 +313,9 @@ research, not just repetition of the task's suggestion:
    engineering time to a data contract (fields, update cadence, licensing constraints) that
    cannot be confirmed until a real contract is read — every "REQUIRES LICENSE REVIEW" cell
    in Part 6 is a design unknown, not just a legal one.
-2. **The redistribution question dominates the adapter shape.** E68's existing
+2. **The redistribution question dominates the adapter shape.** E86's existing
    `isRedistributable()` function is narrow by design (government + `public_data` +
-   `public_data_terms` + `license: public`). Every paid source reviewed would enter E68 as
+   `public_data_terms` + `license: public`). Every paid source reviewed would enter E86 as
    non-redistributable, meaning a paid-source adapter's output could feed the *consensus/
    benchmark* layer but must never flow to any redistribution-flagged code path. That
    constraint is already expressible in the existing type system (`CRELicenseClass`,
@@ -342,19 +342,19 @@ licensed, its registry entry (not a new architecture layer) is what changes.
 If, e.g., CBRE and MSCI/RCA both publish a Houston Class A cap rate for the same quarter
 and disagree, research suggests several established approaches:
 
-- **Source weighting** — E68 already has this concept (`defaultQuality` in
+- **Source weighting** — E86 already has this concept (`defaultQuality` in
   `CRESourceDefinition`, `sourceQuality` per observation, e.g. Newmark scored 75 vs. Kidder
   Mathews 90 for methodology reasons documented in cap-rate-data-coverage.md §2). This is
   the natural extension point for paid sources: assign a `defaultQuality` reflecting
   methodology (transaction-derived > survey estimate, per the existing source hierarchy in
-  e68-source-registry.md).
+  e86-source-registry.md).
 - **Median / range-band consensus** — appropriate when 3+ independent sources exist for the
   same cell, to avoid a single outlier (e.g., a stale or slow-to-update source) dominating.
-  E68's `capRateConsensus()`/`weightedConsensus()` (already implemented, per
-  e68-source-registry.md's "Source hierarchy" note) already preserves the union of
+  E86's `capRateConsensus()`/`weightedConsensus()` (already implemented, per
+  e86-source-registry.md's "Source hierarchy" note) already preserves the union of
   published low/high bounds rather than collapsing to one number — this is the right
   existing behavior to extend, not replace.
-- **Recency weighting** — relevant given the dated-vs-labeled-period contradiction E68
+- **Recency weighting** — relevant given the dated-vs-labeled-period contradiction E86
   already found in a free source (Newmark's Houston chart, cap-rate-data-coverage.md §2:
   "updated December 2024" footnote vs. "2Q25" label). Paid sources are not immune to this
   kind of internal inconsistency; recency should be judged from the *as-of date the
@@ -379,7 +379,7 @@ consensus-engine code was modified in this phase.
 **CANADA ADVANTAGE**
 - Altus Group is Canada-headquartered and Canada-primary — the only source in this review
   with a clear "Canada-first" orientation across both cap rate and construction cost.
-- Free Canadian multifamily cap-rate coverage (Cushman & Wakefield Canada, already in E68)
+- Free Canadian multifamily cap-rate coverage (Cushman & Wakefield Canada, already in E86)
   is broader by city count (10 cities) than any single free US source.
 
 **CANADA GAP**
@@ -421,12 +421,12 @@ of the three had Canada-specific numeric content independently verified in this 
 | Source | Primary Value | Canada | USA | Cap Rates | Transactions | Construction | API | Licensing | Cost | Recommendation |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | CBRE | Broadest documented cap-rate segmentation (sector×class×stabilized) | Y | Y | Y | N | N | N | REQUIRES LICENSE REVIEW | PNP | TIER 1 |
-| MSCI/RCA | Transaction-derived cap rates, top of E68's own source hierarchy | Y | Y | Y | Y | N | Y (contract) | REQUIRES LICENSE REVIEW | PNP | TIER 1 |
+| MSCI/RCA | Transaction-derived cap rates, top of E86's own source hierarchy | Y | Y | Y | Y | N | Y (contract) | REQUIRES LICENSE REVIEW | PNP | TIER 1 |
 | Altus Group | Best Canadian coverage, cap rate + construction cost combined | Y | Partial | Y | Partial | Y | Y (Reonomy) | REQUIRES LICENSE REVIEW | PNP | TIER 1 |
 | RSMeans (Gordian) | Only granular, partly-priced construction-cost database reviewed | Y (NA-wide) | Y | N | N | Y | Y | REQUIRES LICENSE REVIEW | Partially public (~$396–$5,973/yr) | TIER 1 |
 | Green Street | Documented cap-rate + sales-comps time series, broad US coverage | N | Y | Y | Y | N | U | REQUIRES LICENSE REVIEW | PNP | TIER 2 |
 | Moody's Analytics CRE | Best-documented API among cap-rate sources | U | Y | Y | Y | N | Y | REQUIRES LICENSE REVIEW | PNP | TIER 2 |
-| CoStar | De-facto source behind existing free E68 figures; would open Miami | U | Y | Y | Y (unconfirmed NOI) | N | N (ToS prohibits) | N (redistribution prohibited) | PNP | TIER 2 |
+| CoStar | De-facto source behind existing free E86 figures; would open Miami | U | Y | Y | Y (unconfirmed NOI) | N | N (ToS prohibits) | N (redistribution prohibited) | PNP | TIER 2 |
 | Trepp | Only source with documented property-level NOI-adjacent data | N | Y (CMBS scope only) | N | Y | N | U | REQUIRES LICENSE REVIEW | PNP | TIER 3 |
 | Marshall & Swift/CoreLogic | Replacement-cost specialist, complements RSMeans | U | Y | N | N | Y (replacement cost) | U | REQUIRES LICENSE REVIEW | PNP | TIER 3 |
 | RealPage | Multifamily-only, narrowest scope of reviewed subscription sources | N | Y | Y (unconfirmed) | U | N | U | REQUIRES LICENSE REVIEW | PNP | TIER 3 |
@@ -442,16 +442,16 @@ of the three had Canada-specific numeric content independently verified in this 
 **TIER 2 (useful if budget permits):** Green Street, Moody's Analytics CRE, CoStar.
 **TIER 3 (niche/specialized):** Trepp, Marshall & Swift/CoreLogic, RealPage, Yardi Matrix.
 **TIER 4 (not justified now):** CommercialEdge, PropertyShark, Placer.ai, LightBox, Dodge
-Construction Network — none of these publish the cap-rate or construction-cost data E68
+Construction Network — none of these publish the cap-rate or construction-cost data E86
 actually needs; they solve adjacent problems (listings, foot traffic, parcel records, bid
-tracking) that are out of E68's current scope.
+tracking) that are out of E86's current scope.
 
 ---
 
 ## PART 15 — Scenarios
 
 **SCENARIO A — $0 budget.**
-Coverage: exactly today's free E68 state (35 cap-rate observations, 53 construction-cost
+Coverage: exactly today's free E86 state (35 cap-rate observations, 53 construction-cost
 observations, 88 total; 4 of 5 US priority cities have multifamily cap rates; 10 Canadian
 cities have multifamily high/low-rise cap rates). Remaining gaps: Miami (total gap),
 office/industrial/retail everywhere, Houston construction cost, soft costs, transaction-
@@ -459,11 +459,11 @@ derived cap rates. Next free step (already identified, not yet executed): manual
 non-automated) retrieval of CBRE Canada / Colliers Canada / Avison Young reports currently
 blocked only by bot-protection, not by a real paywall — a person opening the page in an
 ordinary browser could plausibly retrieve reports believed to exist. Automation: none
-beyond what E68 already does. Licensing: unchanged, fully within `public_report` terms
+beyond what E86 already does. Licensing: unchanged, fully within `public_report` terms
 already handled.
 
 **SCENARIO B — low/moderate budget.**
-Minimum combination judged from this research to materially improve E68: **RSMeans Data
+Minimum combination judged from this research to materially improve E86: **RSMeans Data
 Online (Core or Complete plan, ~$396–$1,019/yr, confirmed public price)** for
 construction-cost granularity and potential Houston coverage, alone. This is the only
 source in the entire matrix with a confirmed sub-$2,000/year price and a documented,
@@ -490,7 +490,7 @@ re-confirmation once (if) a contract is actually reviewed. API/automation: MSCI/
 RSMeans both have documented API/bulk paths; CBRE's survey remains REPORT_PDF only.
 Licensing: all three require a real contract read before any redistribution or
 display-of-underlying-value decision can be made (Part 6). Expected improvement over
-current E68: substantial on paper, unverifiable in degree without the actual data.
+current E86: substantial on paper, unverifiable in degree without the actual data.
 
 ---
 
@@ -506,7 +506,7 @@ current E68: substantial on paper, unverifiable in degree without the actual dat
 3. **Sources with transaction cap-rate data (price+NOI potential)**: MSCI/RCA (most
    plausible), Trepp (CMBS scope only) — neither independently confirmed with sample data.
 4. **Sources with construction-cost data**: RSMeans/Gordian, Marshall & Swift/CoreLogic,
-   Altus Group, RLB (existing E68 source), Turner & Townsend (existing, flagged
+   Altus Group, RLB (existing E86 source), Turner & Townsend (existing, flagged
    insufficient).
 5. **Sources with soft-cost data**: RSMeans (assemblies), Altus Group (documented field);
    none independently confirmed with a sample value.
@@ -515,7 +515,7 @@ current E68: substantial on paper, unverifiable in degree without the actual dat
    (platform-based).
 7. **Sources with commercial-use clarity**: none — every paid source is
    `REQUIRES LICENSE REVIEW`; only government sources (StatCan, Census, BLS, CMHC) and
-   E68's existing free brokerage reports have settled licensing.
+   E86's existing free brokerage reports have settled licensing.
 8. **Sources with redistribution clarity**: only government/public-data sources (per
    `isRedistributable()`); every paid source reviewed is presumptively non-redistributable.
 9. **Best Canadian source**: Altus Group.
@@ -528,7 +528,7 @@ current E68: substantial on paper, unverifiable in degree without the actual dat
     (~$400–$1,000/yr, confirmed public price).
 16. **Best professional combination**: CBRE Cap Rate Survey + MSCI/RCA + RSMeans Complete
     Plus (cost not fully quantifiable — 2 of 3 components have no public price).
-17. **Current free-data coverage summary**: 88 total E68 observations (35 cap-rate, 53
+17. **Current free-data coverage summary**: 88 total E86 observations (35 cap-rate, 53
     construction-cost); 4 of 5 US priority cities and 10 Canadian cities have multifamily
     cap rates; zero office/industrial/retail cap rates anywhere; Houston has no
     construction-cost coverage.

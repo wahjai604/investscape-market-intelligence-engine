@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E70 Phase 3 — Coverage Matrix.
+ * InvestScape™ E88 Phase 3 — Coverage Matrix.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Answers, for a geography x building-type x subtype x hard/soft/total x

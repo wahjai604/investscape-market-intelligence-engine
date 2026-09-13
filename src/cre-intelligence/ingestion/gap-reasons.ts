@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 7 — structured data-gap reason codes.
+ * InvestScape™ E86 Phase 7 — structured data-gap reason codes.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Part 11 of the Phase 7 specification: a human-readable `CREDataGap.reason`
@@ -27,26 +27,26 @@ export type CREDataGapReasonCode =
   | "GRANULARITY_NOT_AVAILABLE"
   /** A source is known to exist but has no public API or downloadable dataset. */
   | "API_OR_DOWNLOAD_UNAVAILABLE"
-  /** The data exists but only under a paid license E68 has not obtained. */
+  /** The data exists but only under a paid license E86 has not obtained. */
   | "LICENSE_REQUIRED"
   /** The source is normally available but could not be reached at retrieval time. */
   | "SOURCE_TEMPORARILY_UNAVAILABLE"
   /** The source's published schema/format changed in a way the adapter does not
    *  recognize, so parsing was deliberately refused rather than guessed at. */
   | "SCHEMA_CHANGED"
-  /** A response was retrieved and parsed but failed E68 validation (out of
+  /** A response was retrieved and parsed but failed E86 validation (out of
    *  range, internally inconsistent, missing a required field) and was
    *  discarded rather than stored. */
   | "VALIDATION_FAILED";
 
 export const CRE_DATA_GAP_REASON_LABELS: Readonly<Record<CREDataGapReasonCode, string>> = {
-  METRIC_NOT_PUBLISHED: "This metric is not published by any public/government source E68 has checked.",
+  METRIC_NOT_PUBLISHED: "This metric is not published by any public/government source E86 has checked.",
   GEOGRAPHY_NOT_COVERED: "The source publishes this metric, but not for the requested geography.",
   GRANULARITY_NOT_AVAILABLE: "The source publishes this metric only at a coarser geographic granularity than requested.",
   API_OR_DOWNLOAD_UNAVAILABLE: "A source is known to exist but has no public API or downloadable dataset.",
-  LICENSE_REQUIRED: "This data exists but only under a paid license E68 has not obtained.",
+  LICENSE_REQUIRED: "This data exists but only under a paid license E86 has not obtained.",
   SOURCE_TEMPORARILY_UNAVAILABLE: "The source is normally available but could not be reached at retrieval time.",
-  SCHEMA_CHANGED: "The source's published schema/format changed in a way E68's adapter does not recognize.",
+  SCHEMA_CHANGED: "The source's published schema/format changed in a way E86's adapter does not recognize.",
   VALIDATION_FAILED: "A response was retrieved but failed validation and was discarded rather than stored.",
 };
 

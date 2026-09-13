@@ -1,14 +1,14 @@
 /**
- * InvestScape™ E69 Phase 3 — Consensus & Benchmark Selection tests.
+ * InvestScape™ E87 Phase 3 — Consensus & Benchmark Selection tests.
  *
  * Adversarial style mirroring Phase 2's own test suite: every scenario is
  * exercised end to end through `evaluateComparability` (Phase 2, unmodified)
  * piped into `buildCapRateBenchmark` (Phase 3), never by calling Phase 3
- * internals directly with hand-built E69ComparabilityResult objects, so the
+ * internals directly with hand-built E87ComparabilityResult objects, so the
  * two phases are proven to compose correctly.
  */
 import { evaluateComparability } from "../../src/cap-rate-engine/comparability";
-import type { E69CandidateInput, E69ComparabilityRequest } from "../../src/cap-rate-engine/comparability-types";
+import type { E87CandidateInput, E87ComparabilityRequest } from "../../src/cap-rate-engine/comparability-types";
 import { buildCapRateBenchmark } from "../../src/cap-rate-engine/benchmark-consensus";
 import type { CRECitedObservation, CRESourceType } from "../../src/cre-intelligence/types";
 
@@ -41,7 +41,7 @@ function source(sourceId: string, sourceName: string, sourceType: CRESourceType)
   return { sourceId, sourceName, sourceType };
 }
 
-function baseRequest(overrides: Partial<E69ComparabilityRequest> = {}): E69ComparabilityRequest {
+function baseRequest(overrides: Partial<E87ComparabilityRequest> = {}): E87ComparabilityRequest {
   return {
     geography: { country: "US", city: "Houston" },
     assetClass: "multifamily",
@@ -50,12 +50,12 @@ function baseRequest(overrides: Partial<E69ComparabilityRequest> = {}): E69Compa
   };
 }
 
-function candidate(o: CRECitedObservation, freshness?: E69CandidateInput["freshness"]): E69CandidateInput {
+function candidate(o: CRECitedObservation, freshness?: E87CandidateInput["freshness"]): E87CandidateInput {
   return { observation: o, freshness };
 }
 
 /** Convenience: build the Phase 3 result straight from a request + candidate pool. */
-function run(request: E69ComparabilityRequest, pool: E69CandidateInput[]) {
+function run(request: E87ComparabilityRequest, pool: E87CandidateInput[]) {
   return buildCapRateBenchmark(evaluateComparability(request, pool));
 }
 

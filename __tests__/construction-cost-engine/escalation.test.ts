@@ -1,10 +1,10 @@
 /**
- * InvestScape™ E70 Phase 4 — Escalation / Index Integration adversarial test suite.
+ * InvestScape™ E88 Phase 4 — Escalation / Index Integration adversarial test suite.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Covers the 35 scenarios required by the Phase 4 task instructions, plus
  * additional cases the implementation exposed. Uses a mix of:
- *   - Real E68/E70 data (US_HARD_COST_OBSERVATIONS, RLB city/national index,
+ *   - Real E86/E88 data (US_HARD_COST_OBSERVATIONS, RLB city/national index,
  *     RLB_BACKFILL_HARD_COST_OBSERVATIONS) for end-to-end integration cases.
  *   - Synthetic fixtures (clearly constructed inline, never presented as real
  *     citations) for edge cases the real dataset cannot exercise (duplicate/

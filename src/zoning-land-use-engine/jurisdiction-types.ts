@@ -3,7 +3,7 @@
  * parcel contracts.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
- * Deliberately independent of E68's `CREGeography` (market/submarket-level,
+ * Deliberately independent of E86's `CREGeography` (market/submarket-level,
  * src/cre-intelligence/types.ts) — that model answers "which market is this
  * comparable in," not "which regulatory authority governs this parcel."
  * E85 defines its own jurisdiction shape fresh, with no import from

@@ -1,10 +1,10 @@
 /**
- * InvestScape™ E70 Phase 6 — Source Adapter Architecture adversarial test suite.
+ * InvestScape™ E88 Phase 6 — Source Adapter Architecture adversarial test suite.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  */
-import { computeAnalyticalReadiness, gatedObservations, type E70SourceDefinition } from "../../src/construction-cost-engine/source-adapter-types";
+import { computeAnalyticalReadiness, gatedObservations, type E88SourceDefinition } from "../../src/construction-cost-engine/source-adapter-types";
 import {
-  E70_SOURCE_REGISTRY,
+  E88_SOURCE_REGISTRY,
   RLB_SOURCE_DEFINITION,
   TURNER_TOWNSEND_SOURCE_DEFINITION,
   RSMEANS_SOURCE_DEFINITION,
@@ -13,12 +13,12 @@ import {
   CMHC_SOURCE_DEFINITION,
   buildSourceReadinessMatrix,
   findSourceDefinition,
-} from "../../src/construction-cost-engine/source-registry-e70";
+} from "../../src/construction-cost-engine/source-registry-e88";
 import { RLB_ADAPTER } from "../../src/construction-cost-engine/adapters/rlb-adapter";
-import { E70_DEFERRED_ADAPTERS, TURNER_TOWNSEND_ADAPTER, RSMEANS_ADAPTER, STATCAN_BCPI_ADAPTER } from "../../src/construction-cost-engine/adapters/deferred-adapters";
+import { E88_DEFERRED_ADAPTERS, TURNER_TOWNSEND_ADAPTER, RSMEANS_ADAPTER, STATCAN_BCPI_ADAPTER } from "../../src/construction-cost-engine/adapters/deferred-adapters";
 import { explainSourceUnavailability } from "../../src/construction-cost-engine/source-gap";
 import { RLB_SECOND_TABLE_VERIFICATION } from "../../src/construction-cost-engine/second-table-verification";
-import { e70ConstructionCostPool } from "../../src/construction-cost-engine/data";
+import { e88ConstructionCostPool } from "../../src/construction-cost-engine/data";
 import { evaluateComparability } from "../../src/construction-cost-engine/comparability";
 import { evaluateConstructionCostBenchmark } from "../../src/construction-cost-engine/benchmark";
 import { CC_KNOWN_INDEX_OBSERVATIONS } from "../../src/construction-cost-engine/data/index-series";
@@ -72,7 +72,7 @@ describe("Access", () => {
   });
 
   test("a deferred source cannot enter a benchmark: RSMeans adapter contributes zero observations to a real pool", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const rsmeansContribution = RSMEANS_ADAPTER.listObservations();
     expect(rsmeansContribution).toHaveLength(0);
     // Sanity: the pool itself is unaffected by RSMeans's non-contribution.
@@ -101,14 +101,14 @@ describe("Adapter isolation", () => {
   });
 
   test("no deferred adapter ever silently creates a missing value: every deferred adapter returns []", () => {
-    for (const adapter of E70_DEFERRED_ADAPTERS) {
+    for (const adapter of E88_DEFERRED_ADAPTERS) {
       expect(adapter.listObservations()).toEqual([]);
     }
   });
 
   test("gatedObservations refuses to call its supplier at all when the source is not ingested", () => {
     let called = false;
-    const fakeDefinition: E70SourceDefinition = { ...TURNER_TOWNSEND_SOURCE_DEFINITION, ingested: false };
+    const fakeDefinition: E88SourceDefinition = { ...TURNER_TOWNSEND_SOURCE_DEFINITION, ingested: false };
     const result = gatedObservations(fakeDefinition, () => {
       called = true;
       return [];
@@ -120,7 +120,7 @@ describe("Adapter isolation", () => {
 
 describe("Provenance", () => {
   test("source identity survives adapter -> normalized -> comparability -> benchmark -> final provenance", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const request: ConstructionCostRequest = { geography: { country: "US", city: "Seattle" }, assetClass: "office", canonicalSubtype: "office_premium", costRepresentation: "hard_cost" };
     const outcome = evaluateConstructionCostBenchmark(request, pool, CC_KNOWN_INDEX_OBSERVATIONS, CHECKED_AT);
     expect(outcome.status).toBe("success");
@@ -131,7 +131,7 @@ describe("Provenance", () => {
 
 describe("RLB", () => {
   test("existing RLB observations remain unchanged when wrapped by the adapter", () => {
-    const pool = e70ConstructionCostPool();
+    const pool = e88ConstructionCostPool();
     const seattleFromPool = pool.find((c) => c.observation.geography.city === "Seattle" && c.observation.propertySubtype === "office_prime")!.observation;
     const seattleFromAdapter = RLB_ADAPTER.listObservations().find((e) => e.observation.geography.city === "Seattle" && e.observation.propertySubtype === "office_prime")!.observation;
     expect(seattleFromAdapter).toEqual(seattleFromPool);
@@ -161,7 +161,7 @@ describe("Determinism", () => {
   });
 
   test("computeAnalyticalReadiness is a pure function of access+license status", () => {
-    for (const def of E70_SOURCE_REGISTRY) {
+    for (const def of E88_SOURCE_REGISTRY) {
       const a = computeAnalyticalReadiness(def);
       const b = computeAnalyticalReadiness(def);
       expect(a).toBe(b);
@@ -169,24 +169,24 @@ describe("Determinism", () => {
   });
 
   test("findSourceDefinition is deterministic and order-independent", () => {
-    const shuffled = [...E70_SOURCE_REGISTRY].reverse();
-    expect(findSourceDefinition("rlb-north-america", shuffled)).toEqual(findSourceDefinition("rlb-north-america", E70_SOURCE_REGISTRY));
+    const shuffled = [...E88_SOURCE_REGISTRY].reverse();
+    expect(findSourceDefinition("rlb-north-america", shuffled)).toEqual(findSourceDefinition("rlb-north-america", E88_SOURCE_REGISTRY));
   });
 });
 
 describe("Boundary protection", () => {
-  test("no adapter or registry file imports from src/cap-rate-engine (E69)", () => {
-    // Structural guarantee already enforced by every E70 file's header convention;
+  test("no adapter or registry file imports from src/cap-rate-engine (E87)", () => {
+    // Structural guarantee already enforced by every E88 file's header convention;
     // exercised here by confirming the registry/adapters modules load without
-    // requiring anything from E69's module graph (a broken boundary would
+    // requiring anything from E87's module graph (a broken boundary would
     // surface as an import-time error in this test file itself).
-    expect(E70_SOURCE_REGISTRY.length).toBeGreaterThan(0);
+    expect(E88_SOURCE_REGISTRY.length).toBeGreaterThan(0);
   });
 
   test("evaluating source readiness does not mutate the registry", () => {
-    const before = JSON.parse(JSON.stringify(E70_SOURCE_REGISTRY));
+    const before = JSON.parse(JSON.stringify(E88_SOURCE_REGISTRY));
     buildSourceReadinessMatrix();
-    expect(JSON.parse(JSON.stringify(E70_SOURCE_REGISTRY))).toEqual(before);
+    expect(JSON.parse(JSON.stringify(E88_SOURCE_REGISTRY))).toEqual(before);
   });
 });
 
@@ -213,7 +213,7 @@ describe("Source-level DATA_GAP explanation", () => {
 describe("Existing Phase 2-5 tests remain green (sanity)", () => {
   test("a plain benchmark evaluation using the standard pool still succeeds unaffected by Phase 6 additions", () => {
     const request: ConstructionCostRequest = { geography: { country: "US", city: "Seattle" }, assetClass: "office", canonicalSubtype: "office_premium", costRepresentation: "hard_cost" };
-    const outcome = evaluateConstructionCostBenchmark(request, e70ConstructionCostPool(), CC_KNOWN_INDEX_OBSERVATIONS, CHECKED_AT);
+    const outcome = evaluateConstructionCostBenchmark(request, e88ConstructionCostPool(), CC_KNOWN_INDEX_OBSERVATIONS, CHECKED_AT);
     expect(outcome.status).toBe("success");
   });
 });

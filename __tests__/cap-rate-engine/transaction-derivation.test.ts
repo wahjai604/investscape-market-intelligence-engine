@@ -1,16 +1,16 @@
 /**
- * InvestScape™ E69 Phase 4 — Transaction-Derived Cap Rate tests.
+ * InvestScape™ E87 Phase 4 — Transaction-Derived Cap Rate tests.
  *
  * Adversarial style mirroring comparability.test.ts / benchmark-consensus.test.ts:
  * every scenario is exercised end to end through deriveTransactionCapRate /
- * deriveTransactionCapRateBatch / toE69CandidateInput, not merely named.
+ * deriveTransactionCapRateBatch / toE87CandidateInput, not merely named.
  */
 import {
   capRateDifferenceBps,
   classifyReconciliationTier,
   deriveTransactionCapRate,
   deriveTransactionCapRateBatch,
-  toE69CandidateInput,
+  toE87CandidateInput,
 } from "../../src/cap-rate-engine/transaction-derivation";
 import { evaluateComparability } from "../../src/cap-rate-engine/comparability";
 import { buildCapRateBenchmark } from "../../src/cap-rate-engine/benchmark-consensus";
@@ -530,11 +530,11 @@ describe("12. Transaction remains marked DERIVED", () => {
 });
 
 describe("13. Phase 2/3 integration", () => {
-  test("toE69CandidateInput produces a shape Phase 2 accepts and includes", () => {
+  test("toE87CandidateInput produces a shape Phase 2 accepts and includes", () => {
     const derived = deriveTransactionCapRate(baseInput(), { now: FIXED_NOW });
     expect(derived.status).toBe("success");
     if (derived.status !== "success") return;
-    const candidateInput = toE69CandidateInput(derived.observation);
+    const candidateInput = toE87CandidateInput(derived.observation);
     expect(candidateInput.observation.dataStatus).toBe("derived");
     expect(candidateInput.observation.capRateType).toBe("derived_transaction");
 
@@ -549,7 +549,7 @@ describe("13. Phase 2/3 integration", () => {
     const derived = deriveTransactionCapRate(baseInput(), { now: FIXED_NOW });
     expect(derived.status).toBe("success");
     if (derived.status !== "success") return;
-    const candidateInput = toE69CandidateInput(derived.observation);
+    const candidateInput = toE87CandidateInput(derived.observation);
     const comparability = evaluateComparability(
       { geography: { country: "US", city: "Houston" }, assetClass: "multifamily", capRateType: "derived_transaction" },
       [candidateInput],

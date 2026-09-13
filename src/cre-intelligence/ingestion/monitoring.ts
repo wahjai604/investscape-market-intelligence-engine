@@ -1,5 +1,5 @@
 /**
- * InvestScape™ E68 Phase 8 — Monitoring / Health Summary.
+ * InvestScape™ E86 Phase 8 — Monitoring / Health Summary.
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Part 15 of the Phase 8 specification: a typed, machine-readable health
