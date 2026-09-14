@@ -223,6 +223,56 @@ export const PARCEL_IN_UNMAPPED_RB_C = (): E85ParcelSpatialReference =>
     "refburgh-parcel-c",
   );
 
+/**
+ * A parcel straddling base zones A and B — the split-parcel case.
+ *
+ * Both are BASE_ZONE, so they compete for one slot and Phase 7 refuses to pick
+ * between them. Used by Phase 9 to prove an ambiguity survives orchestration
+ * rather than being settled by area, centroid or array order.
+ */
+export const PARCEL_STRADDLING_A_AND_B = (): E85ParcelSpatialReference =>
+  refburghParcel(
+    {
+      type: "POLYGON",
+      crs: REFERENCE_CRS,
+      exterior: [
+        [90, 20],
+        [110, 20],
+        [110, 40],
+        [90, 40],
+      ],
+    },
+    "refburgh-parcel-split",
+  );
+
+/**
+ * A parcel inside base zone B whose eastern edge lies exactly on zone C's
+ * western edge — contact, and no shared area whatsoever.
+ *
+ * Zone C is the unmapped one, which makes this the sharpest form of the
+ * boundary question: the cheapest possible reading is "zero overlap, therefore
+ * irrelevant", and that reading is wrong. Whether abutting an instrument brings
+ * it into force is a rule of the jurisdiction, not a property of the shapes.
+ */
+export const PARCEL_TOUCHING_UNMAPPED_C = (): E85ParcelSpatialReference =>
+  refburghParcel(
+    {
+      type: "POLYGON",
+      crs: REFERENCE_CRS,
+      exterior: [
+        [150, 20],
+        [200, 20],
+        [200, 40],
+        [150, 40],
+      ],
+    },
+    "refburgh-parcel-touching",
+  );
+
+/** An OVERLAY feature whose designation this source's policy does not map. Geometry is fine; what it imposes is unknown. */
+export const RECORD_UNMAPPED_OVERLAY = (): E85RawSpatialFeatureRecord =>
+  rawRecord({ featureRef: "dp-unmapped", zoneCode: "DP-UNKNOWN", layerKind: "OVERLAY", geometry: rawRect(0, 0, 100, 100), objectRef: 4009 });
+
 /** Recursively freezes an object graph, so any attempt to mutate an input throws in strict mode. */
 export function deepFreezeSnapshot<T>(value: T): T {
   if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;

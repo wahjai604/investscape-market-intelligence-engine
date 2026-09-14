@@ -505,3 +505,112 @@ describe("scope protection — no architectural/financial fields in evaluator ou
     }
   });
 });
+
+describe("E85 scope protection — Phase 9 orchestrates, and does nothing else", () => {
+  /**
+   * Phase 9 sits above every other layer, which makes it the easiest place in
+   * the engine to accidentally rebuild one of them. It has the applicable
+   * packs in hand, so ranking them is one line away; it has the effective
+   * rules, so reading an FSR off them is one more; it has a parcel and a layer,
+   * so "just nudge this geometry" becomes reachable for the first time since
+   * Phase 8. These tests exist because orchestration code is where those
+   * shortcuts would look most reasonable.
+   */
+  const DECISION_FILES = [
+    "decision-package-types.ts",
+    "decision-rule-pack-resolution.ts",
+    "decision-materiality.ts",
+    "decision-status.ts",
+    "decision-trace.ts",
+    "decision-orchestrator.ts",
+  ];
+
+  test("the Phase 9 decision files all exist and are discovered", () => {
+    for (const file of DECISION_FILES) expect(ALL_FILES).toContain(file);
+  });
+
+  test.each(DECISION_FILES)("%s performs no acquisition", (file) => {
+    // Phase 9 orchestrates evidence already in memory. Phase 8's RESULT is its
+    // input; the moment this layer fetches or reads a file, the whole pipeline
+    // stops being reproducible offline.
+    const content = executableCodeOf(file);
+    for (const term of [/\bfetch\b/, /\baxios\b/i, /XMLHttpRequest/, /child_process/, /\brequire\s*\(/, /\bimport\s*\(/, /readFile/i, /writeFile/i, /https?:\/\//, /arcgis/i, /\bwfs\b/i, /\bwms\b/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each(DECISION_FILES)("%s touches no geometry and no coordinate system", (file) => {
+    // Phase 9 READS Phase 7's conclusions about geometry. It never computes,
+    // repairs or reprojects any itself — the temptation being to "resolve" an
+    // UNDETERMINED relation by measuring something directly.
+    const content = executableCodeOf(file);
+    for (const term of [/\bturf\b/i, /\bjsts\b/i, /\bproj4\b/i, /postgis/i, /\bgdal\b/i, /geocod/i, /\breproject\b/i, /toWgs84/i, /transformCoordinates/i, /\bsimplify\s*\(/i, /\bbuffer\s*\(/i, /makeValid/i, /repairGeometry/i, /\bconvexHull\b/i, /\bcentroid\b/i, /boundingBox\s*\(/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each(DECISION_FILES)("%s evaluates no regulatory rule", (file) => {
+    // Phase 4 owns evaluation. Phase 9 may LABEL a Phase 4 result complete or
+    // partial; it may never produce one of its own.
+    const content = codeOf(file);
+    for (const field of ["maxFsr", "maxHeightMetres", "maxStoreys", "setbacksMetres", "minSpacesPerUse", "maxRegulatoryGfaSqm", "maxSiteCoverageFraction", "explicitMaxGfaSqm"]) {
+      expect({ file, field, found: content.includes(field) }).toEqual({ file, field, found: false });
+    }
+  });
+
+  test.each(DECISION_FILES)("%s decides no legal precedence", (file) => {
+    // Phase 9 may READ Phase 6's precedence output and pass a caller's
+    // relations through untouched — that is why `precedenceRelations` and
+    // `precedenceProblems` are permitted here. What must never appear is
+    // vocabulary for MAKING the decision: nothing in orchestration may conclude
+    // that one instrument beats another.
+    const content = codeOf(file);
+    for (const term of [/winsOver/i, /\bsupersedes\b/i, /precedenceWeight/i, /mostRestrictive/i, /\bbeatsPack\b/i, /rankPacks/i, /\bstrongerThan\b/i, /\bpreferPack\b/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each(DECISION_FILES)("%s reads no clock", (file) => {
+    const content = codeOf(file);
+    expect({ file, usesClock: /new Date\(\)|Date\.now\(\)/.test(content) }).toEqual({ file, usesClock: false });
+  });
+
+  test.each(DECISION_FILES)("%s names no municipality and no publisher's schema", (file) => {
+    // Orchestration is generic or it is a special case pretending to be a layer.
+    const content = codeOf(file);
+    for (const term of [/vancouver/i, /\bR1-1\b/, /\bCD-1\b/, /Director of Planning/i, /\bOBJECTID\b/, /ZONING_CD/, /ZONE_CD/, /LYR_KIND/, /FEATURE_REF/, /refburgh/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test("no earlier phase imports Phase 9 — the dependency runs one way", () => {
+    // Phase 9 may call Phases 8, 7, 6 and 4. The reverse would let an
+    // orchestration concern leak into a layer whose whole value is that it
+    // answers one question and refuses the rest.
+    const earlier = ALL_FILES.filter((f) => !f.startsWith("decision-") && f !== "index.ts");
+    for (const file of earlier) {
+      const content = codeOf(file);
+      expect({ file, importsPhase9: /from\s+["'][^"']*\/?decision-/.test(content) }).toEqual({ file, importsPhase9: false });
+    }
+  });
+
+  test("Phase 9 reaches the phases it orchestrates, and only through their public entry points", () => {
+    const orchestrator = codeOf("decision-orchestrator.ts");
+    for (const entry of ["resolveE85SpatialApplicability", "composeE85RulePacks", "evaluateZoningAndLandUse"]) {
+      expect({ entry, found: orchestrator.includes(entry) }).toEqual({ entry, found: true });
+    }
+    // It does not reach past them into a phase's internals.
+    for (const internal of ["density-evaluation", "dimensional-evaluation", "use-evaluation", "precedence-resolution", "conflict-detection", "geometry-relations", "geometry-primitives"]) {
+      expect({ internal, imported: new RegExp(`from\\s+["'][^"']*${internal}`).test(orchestrator) }).toEqual({ internal, imported: false });
+    }
+  });
+
+  test("Phase 9 adds no external dependency", () => {
+    for (const file of DECISION_FILES) {
+      const imports = [...codeOf(file).matchAll(/from\s+["']([^"']+)["']/g)].map((m) => m[1]);
+      for (const specifier of imports) {
+        expect({ file, specifier, relative: specifier.startsWith(".") }).toEqual({ file, specifier, relative: true });
+      }
+    }
+  });
+});

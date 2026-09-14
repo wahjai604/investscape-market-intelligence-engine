@@ -121,4 +121,17 @@ export * from "./spatial-source-findings";
 export * from "./spatial-source-adapter-contract";
 export * from "./spatial-source-adapter-registry";
 
+// Phase 9 - decision orchestration. Sits ABOVE every other phase and answers the
+// question none of them may: given this layer and this parcel, can this answer
+// be relied on? It runs 8 -> 7 -> 6 -> 4, keeps each result whole, and adds only
+// MATERIALITY - whether an upstream problem bears on THIS parcel. It ranks no
+// instrument and computes no rule; a clean status is earned against material
+// blockers, never inferred from a successful calculation.
+export * from "./decision-package-types";
+export * from "./decision-rule-pack-resolution";
+export * from "./decision-materiality";
+export * from "./decision-status";
+export * from "./decision-trace";
+export * from "./decision-orchestrator";
+
 export * as adapters from "./adapters";
