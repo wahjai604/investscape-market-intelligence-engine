@@ -89,9 +89,14 @@ describe("scope protection — Phase 5 performs no runtime acquisition", () => {
     for (const file of ALL_FILES) {
       // Phase 4's evaluators legitimately stamp `resolvedAt`/`checkedAt` at
       // evaluation time; Phase 5's adapter/registry layer must not, or a
-      // bundle could not be reproducible.
-      const isPhase5 = /^(adapters\/|source-registry|source-fact|source-adapter|normalization-|normalized-|adapter-registry|source-readiness-assessment)/.test(file);
-      if (!isPhase5) continue;
+      // bundle could not be reproducible. Phase 6's composition layer inherits
+      // the same rule — a composed pack that embedded the wall clock could not
+      // be compared across runs, and order-independence tests would be
+      // meaningless.
+      const isClockFree =
+        /^(adapters\/|source-registry|source-fact|source-adapter|normalization-|normalized-|adapter-registry|source-readiness-assessment)/.test(file) ||
+        /^(composition-|precedence-|rule-concept-identity|rule-pack-composer)/.test(file);
+      if (!isClockFree) continue;
       const content = codeOf(file);
       expect({ file, usesClock: /new Date\(\)|Date\.now\(\)/.test(content) }).toEqual({ file, usesClock: false });
     }
@@ -116,6 +121,44 @@ describe("scope protection — jurisdiction code stays out of E85 core", () => {
       if (file === "index.ts") continue; // the public barrel deliberately re-exports adapters under a namespace
       const content = codeOf(file);
       expect({ file, importsAdapter: /from\s+["'][^"']*adapters/.test(content) }).toEqual({ file, importsAdapter: false });
+    }
+  });
+
+  /**
+   * PHASE 6: the composition layer decides legal precedence, which makes it the
+   * single most dangerous place for a municipality's hierarchy to take root —
+   * one "in this city the agreement wins" special case and every other city
+   * gets a confidently wrong answer. So the composer is held to the same
+   * jurisdiction-neutrality standard as the Phase 4 evaluator.
+   */
+  const COMPOSITION_FILES = ["composition-types.ts", "composition-findings.ts", "precedence-types.ts", "precedence-resolution.ts", "rule-concept-identity.ts", "rule-pack-composer.ts"];
+
+  test("the Phase 6 composition files all exist and are discovered", () => {
+    for (const file of COMPOSITION_FILES) expect(ALL_FILES).toContain(file);
+  });
+
+  test.each(COMPOSITION_FILES)("%s contains no municipal vocabulary", (file) => {
+    const content = codeOf(file);
+    for (const term of [/vancouver/i, /\bR1-1\b/, /\bCD-1\b/, /\bHA-1\b/, /\bRM-5\b/, /Director of Planning/i, /Outright Approval/i, /Heritage By-?law/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each(COMPOSITION_FILES)("%s does not import an adapter or the Phase 4 evaluator", (file) => {
+    const content = codeOf(file);
+    // Composition sits BETWEEN the adapters and the evaluator and must depend on
+    // neither: reaching into an adapter would let one municipality's vocabulary
+    // shape precedence, and reaching into the evaluator would collapse the
+    // composition/evaluation boundary this phase establishes.
+    expect({ file, importsAdapter: /from\s+["'][^"']*adapters/.test(content) }).toEqual({ file, importsAdapter: false });
+    expect({ file, importsEvaluator: /from\s+["'][^"']*\/evaluator["']/.test(content) }).toEqual({ file, importsEvaluator: false });
+  });
+
+  test("no Phase 4 evaluator file imports the composition layer — composition is upstream, and Phase 4 stays unaware of it", () => {
+    const phase4 = ["evaluator.ts", "use-evaluation.ts", "density-evaluation.ts", "dimensional-evaluation.ts", "parking-amenity-evaluation.ts", "overlay-evaluation.ts", "envelope-assembly.ts", "result-status.ts", "applicability.ts"];
+    for (const file of phase4) {
+      const content = codeOf(file);
+      expect({ file, importsComposition: /from\s+["'][^"']*(composition|precedence|rule-pack-composer|rule-concept-identity)/.test(content) }).toEqual({ file, importsComposition: false });
     }
   });
 

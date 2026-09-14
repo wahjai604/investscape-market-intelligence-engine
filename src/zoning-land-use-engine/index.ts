@@ -84,4 +84,17 @@ export * from "./normalization-finding-types";
 export * from "./normalized-bundle-types";
 export * from "./source-adapter-contract";
 export * from "./adapter-registry";
+
+// Phase 6 — multi-source rule-pack composition. Sits BETWEEN Phase 5 and Phase
+// 4: it takes independently-normalized bundles and produces one effective rule
+// set that `evaluateZoningAndLandUse` consumes unchanged and unaware. Legal
+// precedence comes only from explicitly-stated, provenance-carrying relations —
+// composition roles are descriptive labels and confer no hierarchy.
+export * from "./rule-concept-identity";
+export * from "./precedence-types";
+export * from "./precedence-resolution";
+export * from "./composition-findings";
+export * from "./composition-types";
+export * from "./rule-pack-composer";
+
 export * as adapters from "./adapters";
