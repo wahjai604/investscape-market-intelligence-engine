@@ -349,6 +349,7 @@ describe("scope protection — jurisdiction code stays out of E85 core", () => {
     "adapters/spatial/vancouver/index.ts",
     "adapters/spatial/vancouver/vancouver-zoning-source.ts",
     "adapters/spatial/vancouver/vancouver-zoning-adapter.ts",
+    "adapters/spatial/vancouver/vancouver-legal-linkage.ts",
   ];
 
   test("the Phase 8 spatial source files all exist and are discovered", () => {
@@ -539,6 +540,106 @@ describe("E85 Phase 10 scope protection — Vancouver's schema stays in Vancouve
       expect({ file, imports: /adapters\/spatial\/vancouver/.test(codeOf(file)) }).toEqual({ file, imports: false });
     }
   });
+});
+
+/**
+ * E85 Phase 11 made the first spatial→legal join. The risk it introduces is
+ * specific: a pack identity that looks authoritative but was actually spun out
+ * of a map label, and a generic core that quietly learns which by-law governs
+ * which district. These pin both shut.
+ */
+describe("E85 Phase 11 scope protection — the spatial→legal join stays where it belongs", () => {
+  const LINKAGE_FILE = "adapters/spatial/vancouver/vancouver-legal-linkage.ts";
+  const VANCOUVER_SPATIAL_FILES_P11 = ALL_FILES.filter((f) => f.startsWith("adapters/spatial/vancouver/"));
+  /** Generic Phase 8 core — re-stated here rather than reached for, since the Phase 8 block scopes its own copy. */
+  const PHASE8_CORE = ["spatial-source-snapshot-types.ts", "spatial-source-findings.ts", "spatial-source-adapter-contract.ts", "spatial-source-adapter-registry.ts"];
+
+  test("the linkage module exists and is discovered", () => {
+    expect(ALL_FILES).toContain(LINKAGE_FILE);
+  });
+
+  test("Phase 7 does not import the legal linkage, and does not learn a legal instrument", () => {
+    // Phase 7 answers which instruments reach a parcel. Which by-law those
+    // instruments ARE is a question it must never be able to ask.
+    const phase7 = ["spatial-applicability.ts", "spatial-applicability-types.ts", "spatial-dataset-types.ts", "spatial-dataset-registry.ts", "geometry-relations.ts", "geometry-validation.ts", "spatial-types.ts"];
+    for (const file of phase7) {
+      const content = codeOf(file);
+      expect({ file, imports: /legal-linkage|adapters\//.test(content) }).toEqual({ file, imports: false });
+      expect({ file, namesBylaw: /zoning-development-bylaw|district-schedule/.test(content) }).toEqual({ file, namesBylaw: false });
+    }
+  });
+
+  test("generic Phase 8 core does not import the Vancouver legal linkage", () => {
+    for (const file of PHASE8_CORE) {
+      expect({ file, imports: /legal-linkage|adapters\//.test(codeOf(file)) }).toEqual({ file, imports: false });
+    }
+  });
+
+  test("no generic core file ACTS on a Vancouver legal instrument", () => {
+    // Comments and string literals are stripped, so this tests the OPERATION
+    // rather than the word — the same discipline the rest of this file uses.
+    // `buildE85SourceId`'s error message legitimately prints a fully-formed
+    // sourceId as an EXAMPLE of the required shape; that is the contract
+    // documenting itself, not generic core knowing which by-law governs R1-1.
+    // A blanket scan would fail that file and push toward deleting the one
+    // sentence that makes a malformed id actionable.
+    const generic = ALL_FILES.filter((f) => !f.startsWith("adapters/"));
+    for (const file of generic) {
+      const content = executableCodeOf(file);
+      for (const term of [/zoning-development-bylaw-3575/, /district-schedule-r1-1/, /\b3575\b/]) {
+        expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+      }
+    }
+  });
+
+  test("generic pack identity is derived from source identity, never from a zone designation", () => {
+    // The whole point of the Phase 11 identity helper. A label resembling a
+    // schedule title is a naming convention, not evidence.
+    const composition = codeOf("composition-types.ts");
+    const helper = composition.slice(composition.indexOf("export function e85RulePackIdFromSource"), composition.indexOf("export function canonicalRulePackFromBundle"));
+    expect(helper).toContain("sourceId");
+    expect(helper).not.toContain("zoneDesignation");
+  });
+
+  test("no generic core file converts a designation into a pack id", () => {
+    const generic = ALL_FILES.filter((f) => !f.startsWith("adapters/"));
+    for (const file of generic) {
+      const content = executableCodeOf(file);
+      for (const term of [/packId\s*[:=]\s*[\w.]*zoneDesignation/, /packId\s*[:=]\s*`[^`]*zoneDesignation/]) {
+        expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+      }
+    }
+  });
+
+  test("the linkage module performs no acquisition, reads no clock, and touches no geometry", () => {
+    const content = executableCodeOf(LINKAGE_FILE);
+    for (const term of [/\bfetch\b/, /\baxios\b/i, /XMLHttpRequest/, /child_process/, /\brequire\s*\(/, /\bimport\s*\(/, /\bfs\b/, /readFile/i, /writeFile/i, /https?:\/\//, /new Date\(\)/, /Date\.now\(\)/]) {
+      expect({ term: term.source, found: term.test(content) }).toEqual({ term: term.source, found: false });
+    }
+    for (const term of [/reproject/i, /\btransform\s*\(/i, /snapTo/i, /makeValid/i, /repairGeometry/i, /\bbuffer\s*\(/i, /geometry/i]) {
+      expect({ term: term.source, found: term.test(content) }).toEqual({ term: term.source, found: false });
+    }
+  });
+
+  test("the linkage module states no regulatory rule and no precedence", () => {
+    const content = codeOf(LINKAGE_FILE);
+    for (const field of ["maxFsr", "maxHeightMetres", "maxStoreys", "setbacksMetres", "maxSiteCoverageFraction"]) {
+      expect({ field, found: content.includes(field) }).toEqual({ field, found: false });
+    }
+    for (const term of [/winsOver/i, /\bsupersedes\b/i, /precedenceWeight/i, /mostRestrictive/i, /rankPacks/i]) {
+      expect({ term: term.source, found: term.test(content) }).toEqual({ term: term.source, found: false });
+    }
+  });
+
+  test("no CD-1 linkage is constructed in any Vancouver module", () => {
+    for (const file of VANCOUVER_SPATIAL_FILES_P11) {
+      const content = executableCodeOf(file);
+      for (const term of [/cd1Number[^;\n]{0,80}packId/, /packId[^;\n]{0,80}cd1Number/, /rulePackIds[^;\n]{0,80}cd_?1/i]) {
+        expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+      }
+    }
+  });
+
 });
 
 describe("scope protection — no architectural/financial fields in evaluator output", () => {

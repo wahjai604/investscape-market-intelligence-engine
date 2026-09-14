@@ -28,6 +28,11 @@ import type { E85Provenance } from "./provenance-types";
 import type { E85SourceReadinessAssessment } from "./source-readiness-assessment";
 import type { E85ManualReviewRecord } from "./manual-review-types";
 import type { E85CompositionFinding } from "./composition-findings";
+// Phase 11A: the ONLY value import here, and it is a pure predicate over a
+// string. Pack identity is derived from source identity, so the grammar that
+// makes source identity well-formed is the grammar pack identity relies on;
+// re-stating it locally would create a second copy free to drift from the first.
+import { isValidE85SourceId } from "./source-registry-types";
 
 /**
  * One independently-normalized body of rules offered for composition.
@@ -85,6 +90,114 @@ export function rulePackFromBundle(bundle: E85NormalizedRuleBundle, packId: stri
     readiness: bundle.readiness,
     normalizedAt: bundle.normalizedAt,
   };
+}
+
+/**
+ * PHASE 11 ADDITION — the separator between an instrument's identity and the
+ * version of it a pack was normalized from.
+ *
+ * PHASE 11A CORRECTION — WHERE THE UNAMBIGUITY ACTUALLY COMES FROM. An earlier
+ * note here claimed this character "never appears inside either part". Only
+ * half of that is true, and the half that is false matters. `sourceId` is
+ * constrained by `SOURCE_ID_PATTERN` to lower-case slugs joined by `-`, `.` and
+ * `:`, enforced both by `buildE85SourceId` (which throws) and by
+ * `createE85SourceRegistry` (which reports `MALFORMED_SOURCE_ID` and refuses to
+ * build) — so `@` genuinely cannot occur in it. `sourceVersionId`, by contrast,
+ * is a publisher's own label and carries NO grammar, no regex and no
+ * validation anywhere in E85: a version legitimately called `"2026-06@council"`
+ * is contract-valid today.
+ *
+ * The serialization is nonetheless injective, and it is worth stating why,
+ * because the reason is a one-sided constraint rather than a two-sided one.
+ * Given `s1@v1 === s2@v2` where neither `s1` nor `s2` may contain `@`, the text
+ * before the FIRST `@` is simultaneously `s1` and `s2`, so `s1 === s2` and
+ * therefore `v1 === v2`. A version containing separators cannot impersonate a
+ * different source, because it can never reach the left of the first one.
+ *
+ * That proof holds only while the `sourceId` side is actually checked, which is
+ * why `e85RulePackIdFromSource` now verifies it at the point of use instead of
+ * trusting that every caller arrived through the registry.
+ */
+export const E85_RULE_PACK_ID_VERSION_SEPARATOR = "@";
+
+/**
+ * PHASE 11 ADDITION — a deterministic `packId` derived from the identity a pack
+ * already carries.
+ *
+ * WHY THIS EXISTS. `packId` is documented above as identity "within one
+ * composition", and every caller until now invented one. That was fine while
+ * packs were assembled by hand, and stops being fine the moment something
+ * OUTSIDE the composition — a spatial layer saying "the instrument governing
+ * this ground is that one" — has to name a pack it did not build. Two parties
+ * can only agree on a name they can both derive, and the only thing both hold
+ * is the pack's authoritative source identity.
+ *
+ * WHAT IT IS DERIVED FROM, AND WHAT IT IS NOT. Strictly `sourceId` +
+ * `sourceVersionId`: the registered identity of the instrument and the exact
+ * version it was read from. It is NOT derived from `zoneDesignation`, from a
+ * display label, or from anything a map prints. A zoning layer's label and a
+ * by-law's identity resemble each other by convention, not by evidence, and an
+ * identifier built from the resemblance would silently bind a parcel to rules
+ * nobody showed governed it.
+ *
+ * WHAT THE SHAPE BUYS. `sourceId` is already jurisdiction-scoped by
+ * construction (`buildE85SourceId` prefixes it with the jurisdiction), so two
+ * municipalities with an identically-named district get different pack ids for
+ * free. Appending the version distinguishes the NORMALIZED PACK INSTANCE from
+ * the ENDURING INSTRUMENT: `…:district-schedule-r1-1` names the schedule across
+ * time, and `…:district-schedule-r1-1@2026-06-consolidation` names the one
+ * consolidation these rules were read from. A superseded or amended
+ * consolidation therefore yields a DIFFERENT pack id rather than quietly
+ * overwriting the one composition already knows.
+ *
+ * No UUID, no array index, no timestamp, and no hash: an identity a reviewer
+ * cannot read is one nobody will check.
+ */
+export function e85RulePackIdFromSource(identity: Pick<E85RulePack, "sourceId" | "sourceVersionId">): string {
+  const { sourceId, sourceVersionId } = identity;
+  if (sourceId.trim() === "") {
+    // A programmer defect, not uncertainty in municipal data: a pack with no
+    // source identity cannot be named by anything except an invention.
+    throw new Error("Cannot derive an E85 rule-pack id from an empty sourceId. Pack identity is derived from registered source identity, never manufactured.");
+  }
+  if (!isValidE85SourceId(sourceId)) {
+    // PHASE 11A GATE. The injectivity argument on the separator constant above
+    // depends entirely on `sourceId` being unable to contain the separator, and
+    // this signature accepts a bare `string` that no registry has necessarily
+    // vetted. Checking here converts "safe provided the caller came through the
+    // registry" into "safe", and does it where the identity is minted rather
+    // than hoping it was done earlier.
+    //
+    // Deliberately a throw, for the same reason the empty case is: a pack whose
+    // source identity is malformed is a hard-coded defect in a registry entry or
+    // a hand-built pack, not an uncertainty in municipal data that a typed
+    // result should carry forward.
+    throw new Error(
+      `Cannot derive an E85 rule-pack id from sourceId "${sourceId}": it is not a valid E85 source identity ` +
+        `(expected lower-case colon-separated slugs, "<jurisdiction>:<document>[:<schedule>]" — see buildE85SourceId). A source identity outside that ` +
+        `grammar could contain the "${E85_RULE_PACK_ID_VERSION_SEPARATOR}" version separator, which would let two different instrument/version pairs ` +
+        `serialize to the same pack id.`,
+    );
+  }
+  // An absent, empty or whitespace-only version is the same fact — no version
+  // was identified — and collapses to the enduring instrument identity. That
+  // can never be confused with an explicit version, because a versioned id
+  // always contains the separator and a `sourceId` never can. No placeholder
+  // version is invented to fill the space; see Phase 5A.
+  return sourceVersionId === undefined || sourceVersionId.trim() === "" ? sourceId : `${sourceId}${E85_RULE_PACK_ID_VERSION_SEPARATOR}${sourceVersionId}`;
+}
+
+/**
+ * PHASE 11 ADDITION — `rulePackFromBundle` with the id derived rather than
+ * supplied, for callers that want the canonical identity instead of one of
+ * their own choosing.
+ *
+ * `role` is still the caller's to state, unchanged and for the unchanged
+ * reason: a bundle knows what it says, not how it ranks against other
+ * instruments.
+ */
+export function canonicalRulePackFromBundle(bundle: E85NormalizedRuleBundle, role: E85CompositionRole): E85RulePack {
+  return rulePackFromBundle(bundle, e85RulePackIdFromSource({ sourceId: bundle.sourceId, sourceVersionId: bundle.sourceVersionId }), role);
 }
 
 /** One pack's claim about one concept, reduced to what an audit record needs. */

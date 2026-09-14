@@ -9,3 +9,9 @@
  */
 export * from "./vancouver-zoning-source";
 export * from "./vancouver-zoning-adapter";
+
+// Phase 11 — the spatial→legal join. Kept in its own module because it is the
+// one place that knows BOTH this publisher's district labels and this
+// jurisdiction's registered legal instruments, and neither the spatial adapter
+// nor generic Phase 8 has any business knowing the other half.
+export * from "./vancouver-legal-linkage";
