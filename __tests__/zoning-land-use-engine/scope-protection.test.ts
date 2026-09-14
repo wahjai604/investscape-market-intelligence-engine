@@ -94,11 +94,19 @@ describe("scope protection — Phase 5 performs no runtime acquisition", () => {
     { name: "pdf parser", pattern: /\bpdf(?:js|parse|lib|reader)\b/i },
     { name: "OCR", pattern: /\b(?:tesseract|ocr)\b/i },
     { name: "browser automation", pattern: /\b(?:puppeteer|playwright|selenium)\b/i },
-    { name: "GIS geometry library", pattern: /\b(?:turf|geojson|proj4|jsts)\b/i },
+    { name: "GIS geometry library", pattern: /\b(?:turf|proj4|jsts)\b/i },
     // PHASE 7: the spatial layer is the obvious place for a geometry
     // dependency or a spatial database to appear. E85 implements the minimum
     // predicates itself and stays dependency-free.
-    { name: "spatial database", pattern: /\b(?:postgis|st_intersects|st_contains|st_within|shapefile|geopandas|gdal|ogr2ogr)\b/i },
+    { name: "spatial database", pattern: /\b(?:postgis|st_intersects|st_contains|st_within|geopandas|gdal|ogr2ogr)\b/i },
+    // PHASE 8: "geojson" and "shapefile" are the two banned words that are also
+    // FORMAT NAMES, and a source-provenance type must be able to say which
+    // format a snapshot arrived in — `E85SpatialSourceSystem` names both. The
+    // ban is on DEPENDING on a parser for them, which always shows up as an
+    // import or a require (the repo carries zero dependencies, separately
+    // verified), so these two are matched in import position only. The bare-word
+    // bans above are kept for names that can never be a mere format label.
+    { name: "format parser dependency", pattern: /(?:from|require\s*\()\s*["'][^"']*\b(?:geojson|shapefile|shp|wkt|wkb)\b/i },
     { name: "geocoding", pattern: /\b(?:geocode|geocoder|nominatim)\b/i },
     { name: "dynamic execution", pattern: /\beval\s*\(|new\s+Function\s*\(/ },
   ];
@@ -322,6 +330,103 @@ describe("scope protection — jurisdiction code stays out of E85 core", () => {
       for (const term of [/\bproj4\b/i, /\breproject\b/i, /toWgs84/i, /transformCoordinates/i, /\bgeodesic\b/i]) {
         expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
       }
+    }
+  });
+
+  /**
+   * PHASE 8: the spatial SOURCE layer. It sits at the boundary with the outside
+   * world, which makes it the one place where acquisition code, a GIS
+   * dependency or a quiet geometry "fix" would most plausibly appear — and a
+   * cleaned boundary is the most dangerous of the three, because it produces a
+   * confident answer about a shape nobody published.
+   */
+  const SPATIAL_SOURCE_FILES = ["spatial-source-snapshot-types.ts", "spatial-source-findings.ts", "spatial-source-adapter-contract.ts", "spatial-source-adapter-registry.ts"];
+  const SPATIAL_ADAPTER_FILES = ["adapters/spatial/index.ts", "adapters/spatial/reference/index.ts", "adapters/spatial/reference/reference-zoning-source.ts", "adapters/spatial/reference/reference-zoning-adapter.ts"];
+
+  test("the Phase 8 spatial source files all exist and are discovered", () => {
+    for (const file of [...SPATIAL_SOURCE_FILES, ...SPATIAL_ADAPTER_FILES]) expect(ALL_FILES).toContain(file);
+  });
+
+  test.each([...SPATIAL_SOURCE_FILES, ...SPATIAL_ADAPTER_FILES])("%s performs no acquisition", (file) => {
+    // Phase 8 normalizes a snapshot the caller already holds. How those bytes
+    // were obtained is outside E85 entirely, and the moment this layer fetches,
+    // "reproducible offline normalization" stops being true.
+    const content = executableCodeOf(file);
+    for (const term of [/\bfetch\b/, /\baxios\b/i, /XMLHttpRequest/, /child_process/, /\brequire\s*\(/, /\bimport\s*\(/, /\bfs\b/, /readFile/i, /writeFile/i, /https?:\/\//]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each([...SPATIAL_SOURCE_FILES, ...SPATIAL_ADAPTER_FILES])("%s uses no GIS library and no coordinate transform", (file) => {
+    const content = executableCodeOf(file);
+    for (const term of [/\bturf\b/i, /\bjsts\b/i, /\bproj4\b/i, /postgis/i, /st_intersects/i, /ogr2ogr/i, /\bgdal\b/i, /geocod/i, /\breproject\b/i, /toWgs84/i, /transformCoordinates/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each([...SPATIAL_SOURCE_FILES, ...SPATIAL_ADAPTER_FILES])("%s performs no geometry repair", (file) => {
+    // The Phase 8 invariant that matters most. An adapter that snapped, closed,
+    // simplified or buffered a boundary so it passed Phase 7's gate would be
+    // substituting a shape nobody enacted, at the exact moment nobody is
+    // watching.
+    const content = executableCodeOf(file);
+    for (const term of [/\bsnapTo/i, /\bsimplify\s*\(/i, /\bbuffer\s*\(/i, /\bdissolve\b/i, /\bunion\s*\(/i, /makeValid/i, /repairGeometry/i, /\bconvexHull\b/i, /boundingBox\s*\(/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each([...SPATIAL_SOURCE_FILES, ...SPATIAL_ADAPTER_FILES])("%s reads no clock", (file) => {
+    const content = codeOf(file);
+    expect({ file, usesClock: /new Date\(\)|Date\.now\(\)/.test(content) }).toEqual({ file, usesClock: false });
+  });
+
+  test.each(SPATIAL_SOURCE_FILES)("%s contains no source-specific field names — generic core stays generic", (file) => {
+    // The property the adapter architecture exists to deliver: adding a
+    // publisher means adding a directory, not editing core. The moment core
+    // names one publisher's attribute, every other publisher is a special case.
+    const content = codeOf(file);
+    for (const term of [/vancouver/i, /\bOBJECTID\b/, /\bGlobalID\b/, /ZONING_CD/, /ZONE_NAME/, /ZONE_CD/, /LYR_KIND/, /FEATURE_REF/]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each([...SPATIAL_SOURCE_FILES, ...SPATIAL_ADAPTER_FILES])("%s evaluates no regulatory rule", (file) => {
+    const content = codeOf(file);
+    for (const field of ["maxFsr", "maxHeightMetres", "maxStoreys", "setbacksMetres", "minSpacesPerUse", "maxRegulatoryGfaSqm", "maxSiteCoverageFraction"]) {
+      expect({ file, field, found: content.includes(field) }).toEqual({ file, field, found: false });
+    }
+  });
+
+  test.each([...SPATIAL_SOURCE_FILES, ...SPATIAL_ADAPTER_FILES])("%s decides no legal precedence", (file) => {
+    const content = codeOf(file);
+    for (const term of [/\bpriority\b/i, /\bprecedence\b/i, /winsOver/i, /\bsupersedes\b/i, /\boverrides\b/i, /precedenceWeight/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test("no Phase 7 file imports Phase 8 — the dependency runs one way", () => {
+    // Phase 8 may import Phase 7's validation and types; the reverse would put
+    // one publisher's schema within reach of the generic applicability layer.
+    for (const file of SPATIAL_FILES) {
+      const content = codeOf(file);
+      expect({ file, importsPhase8: /from\s+["'][^"']*(spatial-source-|adapters)/.test(content) }).toEqual({ file, importsPhase8: false });
+    }
+  });
+
+  test("no Phase 6 or Phase 4 file imports Phase 8 either", () => {
+    for (const file of [...COMPOSITION_FILES, "evaluator.ts", "envelope-assembly.ts", "applicability.ts"]) {
+      const content = codeOf(file);
+      expect({ file, importsPhase8: /from\s+["'][^"']*spatial-source-/.test(content) }).toEqual({ file, importsPhase8: false });
+    }
+  });
+
+  test("Phase 8 reuses Phase 7's geometry gate rather than carrying topology rules of its own", () => {
+    const adapter = codeOf("adapters/spatial/reference/reference-zoning-adapter.ts");
+    expect(/validateE85Geometry/.test(adapter)).toBe(true);
+    // No private notion of validity: the words topology validation owns appear
+    // in exactly one place in the engine, and it is not here.
+    for (const term of [/selfIntersect/i, /ringSimplicity/i, /e85SegmentsIntersect/, /e85RingWindsAround/]) {
+      expect({ term: term.source, found: term.test(adapter) }).toEqual({ term: term.source, found: false });
     }
   });
 

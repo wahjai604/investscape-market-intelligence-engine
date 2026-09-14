@@ -112,4 +112,13 @@ export * from "./spatial-findings";
 export * from "./spatial-applicability-types";
 export * from "./spatial-applicability";
 
+// Phase 8 — spatial source adapters. Sits UPSTREAM of Phase 7 and answers a
+// different question again: applicability asks which instruments reach a
+// parcel, this asks how an authoritative layer becomes instruments at all.
+// Acquisition remains outside E85 entirely; a snapshot is its RESULT.
+export * from "./spatial-source-snapshot-types";
+export * from "./spatial-source-findings";
+export * from "./spatial-source-adapter-contract";
+export * from "./spatial-source-adapter-registry";
+
 export * as adapters from "./adapters";

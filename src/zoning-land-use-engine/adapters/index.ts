@@ -13,3 +13,8 @@
  * architecture exists to deliver.
  */
 export * as vancouver from "./vancouver";
+
+// Phase 8 — spatial source adapters. Same rule, different input: these read
+// authoritative GIS payloads rather than regulatory documents, and their
+// source-specific knowledge is confined here exactly as a document adapter's is.
+export * as spatial from "./spatial";

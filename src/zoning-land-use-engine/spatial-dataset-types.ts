@@ -172,6 +172,20 @@ export interface E85SpatialProvenance {
   publisher?: string;
   jurisdictionId: string;
   crs: E85Crs;
+  /**
+   * PHASE 8 CONTRACT ADDITION: identity of the spatial source adapter that
+   * normalized this feature, and that adapter's own version.
+   *
+   * The same release read by adapter v1 and v2 may legitimately yield different
+   * features as field mapping improves, so "where exactly did this feature come
+   * from?" is not fully answerable from the dataset locator alone. Mirrors the
+   * `adapterId`/`adapterVersion` pair Phase 5 added to `E85Provenance` for
+   * documents, for the identical reason, and projects into those fields via
+   * `spatialProvenanceToE85Provenance`. Optional and additive only — no Phase 7
+   * fixture sets it.
+   */
+  adapterId?: string;
+  adapterVersion?: string;
   /** ISO 8601 timestamp this feature was observed/retrieved, when supplied. Never defaulted to now — an unobserved timestamp stays absent. */
   observedAt?: string;
   /** Convenience URL for the feature or its layer. Never identity. */
@@ -200,6 +214,11 @@ export function spatialProvenanceToE85Provenance(spatial: E85SpatialProvenance, 
       gisFeatureId: spatial.featureId,
       ...(geometryRef === undefined ? {} : { geometryRef }),
     },
+    // The Phase 5 adapter-identity fields already exist on E85Provenance for
+    // exactly this purpose, so a spatially-sourced fact and a document-sourced
+    // fact answer "which adapter produced this?" in one vocabulary.
+    ...(spatial.adapterId === undefined ? {} : { adapterId: spatial.adapterId }),
+    ...(spatial.adapterVersion === undefined ? {} : { adapterVersion: spatial.adapterVersion }),
     ...(spatial.url === undefined ? {} : { url: spatial.url }),
     ...(spatial.observedAt === undefined ? {} : { retrievedAt: spatial.observedAt }),
     ...(spatial.interpretationNote === undefined ? {} : { interpretationNote: spatial.interpretationNote }),
