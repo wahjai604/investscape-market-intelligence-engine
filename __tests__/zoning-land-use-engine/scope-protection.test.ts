@@ -35,6 +35,26 @@ function codeOf(file: string): string {
   return stripComments(fs.readFileSync(path.join(ENGINE_DIR, file), "utf8"));
 }
 
+/**
+ * Strips string literals too, for checks that look for an OPERATION rather than
+ * a word.
+ *
+ * The same incentive argument as `stripComments`, one level further in. A gap's
+ * `resolutionHint` telling a caller to "reproject one geometry upstream, then
+ * resupply" is E85 refusing to transform coordinates and saying where the work
+ * belongs — the disclaimer, not the offence. A blanket scan would fail that file
+ * and push toward deleting the very sentence that makes the refusal actionable.
+ *
+ * Template interpolations are KEPT, so `${transformCoordinates(x)}` would still
+ * be caught: an expression inside a template is code, whatever surrounds it.
+ */
+function executableCodeOf(file: string): string {
+  return codeOf(file)
+    .replace(/`(?:[^`\\]|\\.)*`/g, (literal) => (literal.match(/\$\{[^}]*\}/g) ?? []).join(" "))
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/'(?:[^'\\]|\\.)*'/g, "''");
+}
+
 /** Every .ts file under the engine, at any depth, as a path relative to the engine root. */
 function engineFiles(dir: string = ENGINE_DIR, prefix = ""): string[] {
   const out: string[] = [];
@@ -75,6 +95,11 @@ describe("scope protection — Phase 5 performs no runtime acquisition", () => {
     { name: "OCR", pattern: /\b(?:tesseract|ocr)\b/i },
     { name: "browser automation", pattern: /\b(?:puppeteer|playwright|selenium)\b/i },
     { name: "GIS geometry library", pattern: /\b(?:turf|geojson|proj4|jsts)\b/i },
+    // PHASE 7: the spatial layer is the obvious place for a geometry
+    // dependency or a spatial database to appear. E85 implements the minimum
+    // predicates itself and stays dependency-free.
+    { name: "spatial database", pattern: /\b(?:postgis|st_intersects|st_contains|st_within|shapefile|geopandas|gdal|ogr2ogr)\b/i },
+    { name: "geocoding", pattern: /\b(?:geocode|geocoder|nominatim)\b/i },
     { name: "dynamic execution", pattern: /\beval\s*\(|new\s+Function\s*\(/ },
   ];
 
@@ -92,10 +117,13 @@ describe("scope protection — Phase 5 performs no runtime acquisition", () => {
       // bundle could not be reproducible. Phase 6's composition layer inherits
       // the same rule — a composed pack that embedded the wall clock could not
       // be compared across runs, and order-independence tests would be
-      // meaningless.
+      // meaningless. Phase 7 inherits it in turn: a spatial applicability
+      // result stamped with the wall clock could not be diffed between runs,
+      // which is exactly how an order-dependence bug hides.
       const isClockFree =
         /^(adapters\/|source-registry|source-fact|source-adapter|normalization-|normalized-|adapter-registry|source-readiness-assessment)/.test(file) ||
-        /^(composition-|precedence-|rule-concept-identity|rule-pack-composer)/.test(file);
+        /^(composition-|precedence-|rule-concept-identity|rule-pack-composer)/.test(file) ||
+        /^(spatial-|geometry-)/.test(file);
       if (!isClockFree) continue;
       const content = codeOf(file);
       expect({ file, usesClock: /new Date\(\)|Date\.now\(\)/.test(content) }).toEqual({ file, usesClock: false });
@@ -159,6 +187,153 @@ describe("scope protection — jurisdiction code stays out of E85 core", () => {
     for (const file of phase4) {
       const content = codeOf(file);
       expect({ file, importsComposition: /from\s+["'][^"']*(composition|precedence|rule-pack-composer|rule-concept-identity)/.test(content) }).toEqual({ file, importsComposition: false });
+    }
+  });
+
+  /**
+   * PHASE 7: the spatial layer decides which instruments are in play, which
+   * makes it the second most dangerous place for a hierarchy to take root —
+   * "the site-specific polygon is drawn on top, so it must win" is an easy
+   * inference to make from a map and a wrong one to make in law. So Phase 7 is
+   * held to the same neutrality standard as the composer, and additionally
+   * fenced off from the layer that does decide precedence.
+   */
+  const SPATIAL_FILES = [
+    "spatial-types.ts",
+    "geometry-primitives.ts",
+    "geometry-validation.ts",
+    "geometry-relations.ts",
+    "spatial-dataset-types.ts",
+    "spatial-dataset-registry.ts",
+    "spatial-findings.ts",
+    "spatial-applicability-types.ts",
+    "spatial-applicability.ts",
+  ];
+
+  test("the Phase 7 spatial files all exist and are discovered", () => {
+    for (const file of SPATIAL_FILES) expect(ALL_FILES).toContain(file);
+  });
+
+  test.each(SPATIAL_FILES)("%s contains no municipal vocabulary", (file) => {
+    const content = codeOf(file);
+    for (const term of [/vancouver/i, /\bR1-1\b/, /\bCD-1\b/, /\bHA-1\b/, /\bRM-5\b/, /Director of Planning/i, /Outright Approval/i, /Heritage By-?law/i]) {
+      expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+    }
+  });
+
+  test.each(SPATIAL_FILES)("%s does not import the composition layer — geometry names candidates, it never ranks them", (file) => {
+    const content = codeOf(file);
+    // Phase 7 sits UPSTREAM of Phase 6. Reaching into precedence from the
+    // spatial layer would put "which instrument wins" within reach of whatever
+    // found the instruments, which is the one coupling this architecture exists
+    // to prevent.
+    expect({ file, importsComposition: /from\s+["'][^"']*(composition-|precedence-|rule-pack-composer|rule-concept-identity)/.test(content) }).toEqual({ file, importsComposition: false });
+  });
+
+  test.each(SPATIAL_FILES)("%s does not import an adapter or the Phase 4 evaluator", (file) => {
+    const content = codeOf(file);
+    expect({ file, importsAdapter: /from\s+["'][^"']*adapters/.test(content) }).toEqual({ file, importsAdapter: false });
+    expect({ file, importsEvaluator: /from\s+["'][^"']*\/evaluator["']/.test(content) }).toEqual({ file, importsEvaluator: false });
+  });
+
+  test.each(SPATIAL_FILES)("%s computes no regulatory rule value — Phase 7 carries identities only", (file) => {
+    const content = codeOf(file);
+    // Naming a rule field in code (rather than in prose) would mean the spatial
+    // layer had started holding regulatory content, which is Phase 4's job
+    // acting on Phase 6's output.
+    for (const field of ["maxFsr", "maxHeightMetres", "maxStoreys", "setbacksMetres", "minSpacesPerUse", "maxRegulatoryGfaSqm", "maxSiteCoverageFraction", "conditionalBonus"]) {
+      expect({ file, field, found: content.includes(field) }).toEqual({ file, field, found: false });
+    }
+  });
+
+  test("no Phase 6 composition file imports the spatial layer — the dependency runs one way", () => {
+    for (const file of COMPOSITION_FILES) {
+      const content = codeOf(file);
+      expect({ file, importsSpatial: /from\s+["'][^"']*(spatial-|geometry-)/.test(content) }).toEqual({ file, importsSpatial: false });
+    }
+  });
+
+  test("no Phase 4 evaluator file imports the spatial layer", () => {
+    const phase4 = ["evaluator.ts", "use-evaluation.ts", "density-evaluation.ts", "dimensional-evaluation.ts", "parking-amenity-evaluation.ts", "overlay-evaluation.ts", "envelope-assembly.ts", "result-status.ts", "applicability.ts"];
+    for (const file of phase4) {
+      const content = codeOf(file);
+      expect({ file, importsSpatial: /from\s+["'][^"']*(spatial-|geometry-)/.test(content) }).toEqual({ file, importsSpatial: false });
+    }
+  });
+
+  test("every public geometry predicate validates before it measures", () => {
+    // The structural half of the Phase 7A topology gate. Phase 7's arithmetic is
+    // defined for a narrow polygon profile; a shape outside it that reaches a
+    // predicate comes back with a confident CONTAINS or DISJOINT that nobody can
+    // justify, and an unjustifiable answer is worse than a refusal because only
+    // the refusal is visible. A behavioural proof lives in spatial-topology.test.ts;
+    // this catches a NEW exported predicate added later without the guard.
+    const content = codeOf("geometry-relations.ts");
+    const exported = content.match(/export function (e85[A-Za-z]+)\(/g) ?? [];
+    const measuring = exported.map((m) => m.replace(/^export function /, "").replace(/\($/, "")).filter((name) => /Relation$|LocatePoint/.test(name));
+    expect(measuring.sort()).toEqual(["e85GeometryRelation", "e85LocatePointInPolygon", "e85PolygonRelation"]);
+    for (const name of measuring) {
+      // Each public entry point's body must consult the profile gate before it
+      // reaches the unchecked arithmetic.
+      const body = content.slice(content.indexOf(`export function ${name}(`));
+      const guardIndex = body.indexOf("isSupported");
+      const workIndex = Math.min(...["locateUnchecked", "polygonRelationUnchecked"].map((call) => (body.indexOf(call) === -1 ? Number.MAX_SAFE_INTEGER : body.indexOf(call))));
+      expect({ name, guarded: guardIndex !== -1 && guardIndex < workIndex }).toEqual({ name, guarded: true });
+    }
+  });
+
+  test("no spatial file anywhere exports an unguarded way to obtain a relation", () => {
+    // The test above proves the gate for the three predicates in
+    // geometry-relations.ts, matching them BY NAME. This one closes the two
+    // gaps that leaves: a relation-returning predicate added to a DIFFERENT
+    // spatial file, or one in the same file named without "Relation" or
+    // "LocatePoint". It matches by RETURN TYPE instead, so the only way to
+    // introduce a new path to a CONTAINS/INTERSECTS/BOUNDARY_TOUCH/DISJOINT is
+    // to fail this test and be forced to justify it.
+    const guarded = ["e85GeometryRelation", "e85LocatePointInPolygon", "e85PolygonRelation"];
+    const classifiers: string[] = [];
+    for (const file of SPATIAL_FILES) {
+      const content = codeOf(file);
+      for (const match of content.matchAll(/export function (e85[A-Za-z0-9]+)\([^)]*\)\s*:\s*(E85SpatialRelation|E85PointLocation)\b/g)) {
+        classifiers.push(match[1]);
+      }
+    }
+    expect(classifiers.sort()).toEqual(guarded);
+  });
+
+  test("the profile gate has exactly one definition, so the gate and the arithmetic cannot disagree", () => {
+    // Relations must consult the same validator the applicability layer does,
+    // rather than carrying a private idea of what is supported.
+    const relations = codeOf("geometry-relations.ts");
+    expect(/from\s+["']\.\/geometry-validation["']/.test(relations)).toBe(true);
+    expect(/validateE85GeometryShape/.test(relations)).toBe(true);
+    // And the validator must not import the relations it guards, or the gate
+    // would depend on the thing it is gating.
+    expect(/from\s+["']\.\/geometry-relations["']/.test(codeOf("geometry-validation.ts"))).toBe(false);
+  });
+
+  test("the spatial layer performs no coordinate transformation", () => {
+    // A reprojection hidden in a predicate would silently move a boundary, and
+    // is the one operation Phase 7's exact-CRS contract exists to forbid.
+    // Checked against executable code: telling a CALLER to reproject upstream is
+    // how E85 states the refusal, and must not be mistaken for performing one.
+    for (const file of SPATIAL_FILES) {
+      const content = executableCodeOf(file);
+      for (const term of [/\bproj4\b/i, /\breproject\b/i, /toWgs84/i, /transformCoordinates/i, /\bgeodesic\b/i]) {
+        expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+      }
+    }
+  });
+
+  test("the spatial layer declares exactly one tolerance constant, rather than scattering epsilons", () => {
+    // A hidden 1e-9 in three predicates is three different boundary policies
+    // nobody agreed to. Literal epsilons are allowed only where the single
+    // exported default is defined.
+    for (const file of SPATIAL_FILES) {
+      const content = codeOf(file);
+      const literals = content.match(/\b\d+(?:\.\d+)?e-\d+\b/g) ?? [];
+      const allowed = file === "spatial-types.ts" ? 1 : 0;
+      expect({ file, epsilonLiterals: literals.length }).toEqual({ file, epsilonLiterals: allowed });
     }
   });
 

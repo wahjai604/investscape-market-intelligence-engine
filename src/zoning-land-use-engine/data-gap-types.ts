@@ -46,6 +46,16 @@
  *                             jurisdiction/zone at all.
  *    Reporting coverage as non-existence sends a caller to re-establish a fact
  *    they already hold, which is why these stay distinct.
+ *  - PHASE 7 ADDITION — `SPATIAL_REFERENCE_MISMATCH`. The only code this phase
+ *    adds, and only because nothing existing states the fact honestly. When a
+ *    parcel and a regulatory layer declare different coordinate reference
+ *    systems and no transform has been performed, E85 refuses the comparison —
+ *    but the geometry is emphatically NOT unavailable, so reporting
+ *    `GEOMETRY_UNAVAILABLE` would send a caller to re-obtain shapes they are
+ *    already holding, the same wrong-errand failure that keeps
+ *    `ZONING_NOT_FOUND` and `RULE_NOT_STRUCTURED` distinct above. What is
+ *    missing is a stated basis for treating two coordinate systems as
+ *    comparable, and the resolution is a transform, not an acquisition.
  *  - Added `SOURCE_LICENSING_RESTRICTED`: a source-readiness axis
  *    (correction 13) may mark a source as legally inaccessible to E85 for a
  *    given request even though the source itself exists and is otherwise
@@ -68,7 +78,8 @@ export type E85DataGapReasonCode =
   | "EFFECTIVE_DATE_UNKNOWN"
   | "JURISDICTION_UNSUPPORTED"
   | "REQUIRED_SITE_DIMENSION_MISSING"
-  | "SOURCE_LICENSING_RESTRICTED";
+  | "SOURCE_LICENSING_RESTRICTED"
+  | "SPATIAL_REFERENCE_MISMATCH";
 
 export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, string>> = {
   PARCEL_NOT_IDENTIFIED: "The parcel/site could not be identified from the information supplied.",
@@ -85,6 +96,7 @@ export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, s
   JURISDICTION_UNSUPPORTED: "This jurisdiction is not yet covered by any E85 source.",
   REQUIRED_SITE_DIMENSION_MISSING: "A site dimension required to evaluate this rule was not supplied and could not be resolved from other evidence.",
   SOURCE_LICENSING_RESTRICTED: "A source that would answer this request is known to exist but is not licensed/accessible for this use.",
+  SPATIAL_REFERENCE_MISMATCH: "Geometries that needed to be compared declare different coordinate reference systems, and no transform between them has been performed.",
 };
 
 /**

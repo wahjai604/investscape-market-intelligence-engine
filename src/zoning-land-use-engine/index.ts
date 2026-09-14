@@ -97,4 +97,19 @@ export * from "./composition-findings";
 export * from "./composition-types";
 export * from "./rule-pack-composer";
 
+// Phase 7 — spatial applicability. Sits UPSTREAM of Phase 6 and answers a
+// different question: composition asks how already-applicable instruments
+// interact, this asks which instruments are in play at all. Geometry names the
+// candidates; it never ranks them, and Phase 7 deliberately does not import
+// Phase 6 so that it cannot start to.
+export * from "./spatial-types";
+export * from "./geometry-primitives";
+export * from "./geometry-validation";
+export * from "./geometry-relations";
+export * from "./spatial-dataset-types";
+export * from "./spatial-dataset-registry";
+export * from "./spatial-findings";
+export * from "./spatial-applicability-types";
+export * from "./spatial-applicability";
+
 export * as adapters from "./adapters";
