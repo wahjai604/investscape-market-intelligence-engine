@@ -341,7 +341,15 @@ describe("scope protection — jurisdiction code stays out of E85 core", () => {
    * confident answer about a shape nobody published.
    */
   const SPATIAL_SOURCE_FILES = ["spatial-source-snapshot-types.ts", "spatial-source-findings.ts", "spatial-source-adapter-contract.ts", "spatial-source-adapter-registry.ts"];
-  const SPATIAL_ADAPTER_FILES = ["adapters/spatial/index.ts", "adapters/spatial/reference/index.ts", "adapters/spatial/reference/reference-zoning-source.ts", "adapters/spatial/reference/reference-zoning-adapter.ts"];
+  const SPATIAL_ADAPTER_FILES = [
+    "adapters/spatial/index.ts",
+    "adapters/spatial/reference/index.ts",
+    "adapters/spatial/reference/reference-zoning-source.ts",
+    "adapters/spatial/reference/reference-zoning-adapter.ts",
+    "adapters/spatial/vancouver/index.ts",
+    "adapters/spatial/vancouver/vancouver-zoning-source.ts",
+    "adapters/spatial/vancouver/vancouver-zoning-adapter.ts",
+  ];
 
   test("the Phase 8 spatial source files all exist and are discovered", () => {
     for (const file of [...SPATIAL_SOURCE_FILES, ...SPATIAL_ADAPTER_FILES]) expect(ALL_FILES).toContain(file);
@@ -450,6 +458,85 @@ describe("scope protection — jurisdiction code stays out of E85 core", () => {
       // An adapter reaching back into the evaluator would collapse the
       // adaptation/evaluation boundary Phase 5 exists to establish.
       expect({ file, importsEvaluator: /from\s+["'][^"']*\/evaluator["']/.test(content) }).toEqual({ file, importsEvaluator: false });
+    }
+  });
+});
+
+/**
+ * E85 Phase 10 added the first adapter for a REAL publisher. The architecture's
+ * central claim — that adding a municipality means adding a directory — is only
+ * worth anything if it survives contact with one, so these checks pin the City
+ * of Vancouver's schema inside its own directory and nowhere else.
+ */
+describe("E85 Phase 10 scope protection — Vancouver's schema stays in Vancouver's adapter", () => {
+  const VANCOUVER_RAW_FIELDS = ["object_id", "zoning_classification", "zoning_category", "zoning_district", "cd_1_number", "geo_point_2d"];
+
+  /** The Vancouver adapter's own files — the ONLY files permitted to name this publisher's schema. */
+  const VANCOUVER_SPATIAL_FILES = ALL_FILES.filter((f) => f.startsWith("adapters/spatial/vancouver/"));
+
+  test("the Vancouver spatial adapter files all exist and are discovered", () => {
+    expect(VANCOUVER_SPATIAL_FILES.length).toBeGreaterThan(0);
+    for (const file of VANCOUVER_SPATIAL_FILES) expect(ALL_FILES).toContain(file);
+  });
+
+  test("no file outside the Vancouver spatial adapter names its raw fields", () => {
+    // The property the adapter architecture exists to deliver. The moment
+    // Phase 7, generic Phase 8, or Phase 9 knows this publisher spells its
+    // identifier `object_id`, every other publisher becomes a special case.
+    const outside = ALL_FILES.filter((f) => !f.startsWith("adapters/spatial/vancouver/"));
+    for (const file of outside) {
+      const content = codeOf(file);
+      for (const field of VANCOUVER_RAW_FIELDS) {
+        expect({ file, field, found: content.includes(field) }).toEqual({ file, field, found: false });
+      }
+    }
+  });
+
+  test("no Vancouver district label leaks into any generic file", () => {
+    const outside = ALL_FILES.filter((f) => !f.startsWith("adapters/"));
+    for (const file of outside) {
+      const content = codeOf(file);
+      for (const term of [/\bR1-1\b/, /\bC-2C\b/, /\bRM-5\b/, /\bCD-1\b/, /Comprehensive Development/i, /Residential Inclusive/i]) {
+        expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+      }
+    }
+  });
+
+  test("the Vancouver adapter performs no coordinate transformation", () => {
+    // E85 compares CRS by exact string and never converts. An adapter that
+    // reprojected would place a parcel in a system nobody declared.
+    for (const file of VANCOUVER_SPATIAL_FILES) {
+      const content = executableCodeOf(file);
+      for (const term of [/reproject/i, /\btransform\s*\(/i, /proj4/i, /toWgs84/i, /toEpsg/i, /\bconvertCrs/i]) {
+        expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+      }
+    }
+  });
+
+  test("the Vancouver adapter repairs no geometry", () => {
+    for (const file of VANCOUVER_SPATIAL_FILES) {
+      const content = executableCodeOf(file);
+      for (const term of [/\bsnapTo/i, /\bsimplify\s*\(/i, /\bbuffer\s*\(/i, /\bdissolve\b/i, /makeValid/i, /repairGeometry/i, /\bconvexHull\b/i, /dropHole/i, /\bflatten\s*\(/i]) {
+        expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+      }
+    }
+  });
+
+  test("the Vancouver adapter derives no rule-pack identity from a label", () => {
+    // A pack id must never be manufactured from a district's spelling. The
+    // only way one appears is an explicit, exact policy entry.
+    for (const file of VANCOUVER_SPATIAL_FILES) {
+      const content = executableCodeOf(file);
+      for (const term of [/toLowerCase\s*\(\s*\)\s*\.\s*replace/, /packId\s*:\s*`/, /["'`]pack-["'`]\s*\+/, /startsWith\s*\(\s*["'`]CD/]) {
+        expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });
+      }
+    }
+  });
+
+  test("E85 core does not import the Vancouver adapter — a caller chooses its jurisdictions", () => {
+    const outside = ALL_FILES.filter((f) => !f.startsWith("adapters/"));
+    for (const file of outside) {
+      expect({ file, imports: /adapters\/spatial\/vancouver/.test(codeOf(file)) }).toEqual({ file, imports: false });
     }
   });
 });

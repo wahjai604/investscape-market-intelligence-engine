@@ -15,3 +15,8 @@
  * Adding a publisher means adding a directory here.
  */
 export * as reference from "./reference";
+
+// The first real publisher. Its presence alongside `reference` is the point:
+// the invented layer and the City of Vancouver's are read by the same generic
+// contracts, and neither adapter required a core file to change.
+export * as vancouver from "./vancouver";
