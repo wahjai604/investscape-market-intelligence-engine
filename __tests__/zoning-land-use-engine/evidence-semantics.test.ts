@@ -39,6 +39,7 @@ import {
   E85NormalizedRuleBundle,
   E85SourceDefinition,
   E85SourceVersion,
+  E85StructuredSourceFact,
   adapters,
 } from "../../src/zoning-land-use-engine";
 import { r11Document, EXTRACTED_AT } from "./fixtures/vancouver-r1-1-facts";
@@ -50,7 +51,26 @@ const {
   VANCOUVER_R1_1_VERSION_ID,
   VANCOUVER_R1_1_CONSOLIDATION_PERIOD,
   VANCOUVER_JURISDICTION_ID,
+  VANCOUVER_R1_1_ZONE,
 } = adapters.vancouver;
+
+/**
+ * PHASE 12C.4B: every current R1-1 fact (including use-005, the last
+ * holdout) is now individually dated, so the real pilot bundle can no longer
+ * demonstrate the bundle-level EFFECTIVE_DATE_UNKNOWN/SOURCE_VERSION_INCOMPLETE
+ * finding this adapter produces for a genuinely undated fact. This synthetic
+ * fact — never added to the production R1_1_FACTS array — exists only to keep
+ * that adapter-level demonstration alive without leaving a real R1-1 fact
+ * artificially undated for test convenience.
+ */
+const SYNTHETIC_UNDATED_FACT: E85StructuredSourceFact = {
+  factId: "synthetic-undated-fact",
+  family: "USE",
+  zoneDesignation: VANCOUVER_R1_1_ZONE,
+  sourceTerm: "Outright Approval Use",
+  sourceUseTerm: "Single Detached House",
+  locator: { section: "2.1", page: 3 },
+};
 
 function registries() {
   const sources = createE85SourceRegistry([VANCOUVER_R1_1_SOURCE]);
@@ -198,8 +218,18 @@ describe("E85 Phase 5A — the publication stamp is still reported, honestly lab
 });
 
 describe("E85 Phase 5A — temporal uncertainty survives into the bundle and downstream", () => {
+  // PHASE 12C.4B: every current R1-1 fact is now individually dated (use-005
+  // was the last one — see vancouver-r1-1-facts.ts), so this generic
+  // adapter-level behavior is now demonstrated with SYNTHETIC_UNDATED_FACT
+  // rather than the real, now-fully-dated pilot bundle.
+  function normalizedWithSyntheticUndatedFact(): E85NormalizedRuleBundle {
+    const result = vancouverR11Adapter.normalize(r11Document({ facts: [SYNTHETIC_UNDATED_FACT] }), VANCOUVER_R1_1_SOURCE);
+    if (result.outcome !== "NORMALIZED") throw new Error(`expected NORMALIZED, got ${result.outcome}`);
+    return result.bundle;
+  }
+
   test("the bundle carries an EFFECTIVE_DATE_UNKNOWN gap, as the basis enum requires", () => {
-    const allGaps = normalized().findings.filter((f) => f.severity === "GAP");
+    const allGaps = normalizedWithSyntheticUndatedFact().findings.filter((f) => f.severity === "GAP");
     // Phase 12B.2: the only other GAPs are the declared coverage gaps for
     // provisions deliberately left unstructured — never a fact-level failure.
     expect(allGaps.filter((f) => f.gap?.reasonCode !== "EFFECTIVE_DATE_UNKNOWN").every((f) => f.code === "SOURCE_SECTION_UNAVAILABLE")).toBe(true);
@@ -213,7 +243,7 @@ describe("E85 Phase 5A — temporal uncertainty survives into the bundle and dow
   });
 
   test("the gap explains the distinction rather than merely stating a value is missing", () => {
-    const gap = normalized().findings.find((f) => f.gap?.reasonCode === "EFFECTIVE_DATE_UNKNOWN")?.gap;
+    const gap = normalizedWithSyntheticUndatedFact().findings.find((f) => f.gap?.reasonCode === "EFFECTIVE_DATE_UNKNOWN")?.gap;
     expect(gap?.reason).toMatch(/identifies WHICH TEXT was read/i);
     expect(gap?.reason).toMatch(/does not state when the provisions took legal effect/i);
   });

@@ -39,7 +39,15 @@ import {
   E85SourceDefinition,
   E85UseRule,
 } from "../../src/zoning-land-use-engine";
-import { r11Document, AFFORDABLE_HOUSING_CHOICE_GROUP, SITE_WEST_OF_ONTARIO_OR_CARRALL_CONDITION, R1_1_FACTS } from "./fixtures/vancouver-r1-1-facts";
+import {
+  r11Document,
+  AFFORDABLE_HOUSING_CHOICE_GROUP,
+  SITE_WEST_OF_ONTARIO_OR_CARRALL_CONDITION,
+  R1_1_FACTS,
+  R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION,
+  R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION,
+  R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION,
+} from "./fixtures/vancouver-r1-1-facts";
 
 const J = "xx-yy-testville";
 const Z = "T-1";
@@ -542,7 +550,23 @@ describe("R1-1 §3.1.1.3(b)(ii) — Phase 4 for proposals (hypothetical dated co
   });
 
   test("the requirement gap does not reach a USE/DENSITY/DIMENSIONAL-only request", () => {
-    const outcome = r11Evaluate(rules, { requestedAnalyses: ["USE", "DENSITY", "DIMENSIONAL"], proposal: { dwellingUnitCount: 6, tenureCode: "strata", frontageMetres: 18, buildingRole: "principal_building" } });
+    // PHASE 12C.4A: use-005's own §2.2.7 conditions are affirmed alongside the
+    // pre-existing SITE_WEST_OF_ONTARIO_OR_CARRALL_CONDITION affirmation, so
+    // this test's actual subject (the REQUIREMENT gap staying scoped to
+    // REQUIREMENT-only requests) is exercised without also tripping over the
+    // unrelated, still-real USE site-eligibility gate.
+    const outcome = r11Evaluate(rules, {
+      requestedAnalyses: ["USE", "DENSITY", "DIMENSIONAL"],
+      proposal: { dwellingUnitCount: 6, tenureCode: "strata", frontageMetres: 18, buildingRole: "principal_building" },
+      callerContext: {
+        satisfiedConditions: [
+          SITE_WEST_OF_ONTARIO_OR_CARRALL_CONDITION,
+          R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION,
+          R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION,
+          R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION,
+        ],
+      },
+    });
     expect(outcome.requirements).toBeUndefined();
     expect(outcome.result.status).not.toBe("DATA_GAP");
     expect(outcome.resolvedMaxFsr?.value).toBe(1.0);
@@ -593,7 +617,8 @@ describe("R1-1 §3.1.1.3(b)(ii) — Phase 4 for proposals (hypothetical dated co
     expect(outcome.requirements!.map((r) => r.status)).toEqual(["APPLICABILITY_UNDETERMINED", "APPLICABILITY_UNDETERMINED"]);
     expect(gapCodes(outcome)).toEqual(["RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED"]);
     // The dependency note is visible in normalized-bundle audit output, but purely as INFO — never as what makes the obligation current.
-    const noteFindings = r11Bundle().findings.filter((f) => f.code === "SOURCE_NOTE_PRESERVED");
+    // PHASE 12C.4B: use-005 now also carries its own (unrelated) note, so 2 SOURCE_NOTE_PRESERVED findings exist; this one is requirement-001's.
+    const noteFindings = r11Bundle().findings.filter((f) => f.code === "SOURCE_NOTE_PRESERVED" && f.factId === "r1-1-requirement-001");
     expect(noteFindings).toHaveLength(1);
     expect(noteFindings[0].message).toMatch(/2026-02-03/);
   });

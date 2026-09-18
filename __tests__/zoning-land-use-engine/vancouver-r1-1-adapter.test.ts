@@ -89,13 +89,22 @@ describe("Vancouver R1-1 — use terminology (Phase 12B.2 remediation)", () => {
     expect(mapVancouverUseCode("One-Family Dwelling")).toBe("one_family_dwelling");
   });
 
-  test("Multiple Dwelling is CONDITIONAL only within its machine-evaluable ≤8-unit scope", () => {
+  test("Multiple Dwelling is CONDITIONAL only within its machine-evaluable ≤8-unit, §2.2.7-eligible scope", () => {
     const p = useRule(normalized()).permissions.find((e) => e.value.useCode === "multiple_dwelling");
     expect(p?.value.status).toBe("CONDITIONAL");
     expect(p?.value.approvalAuthority).toBe("Director of Planning");
     expect(p?.applicability?.dwellingUnits).toEqual({ max: 8 });
-    expect(canonicalE85ApplicabilityKey(p?.applicability)).toBe("dwellingUnits=..8");
+    // PHASE 12C.4A: current §2.2.7 site-eligibility is a genuine USE
+    // applicability gate (§2.1's Multiple Dwelling row cross-references it as
+    // a precondition of the use, not a build-on compliance obligation), so it
+    // is now part of use-005's own canonical scope, alongside the coarse
+    // ≤8-unit bound the row's own text states directly.
+    expect(p?.applicability?.requiredConditionIds?.length).toBe(3);
+    expect(canonicalE85ApplicabilityKey(p?.applicability)).toBe(
+      "dwellingUnits=..8;conditions=vancouver_r1_1_lot_on_record_or_subdivided|vancouver_r1_1_not_in_flood_plain|vancouver_r1_1_rear_vehicular_access",
+    );
     expect(p?.applicability?.locators?.dwellingUnits?.row).toBe("Multiple Dwelling, containing no more than 8 dwelling units");
+    expect(p?.applicability?.locators?.requiredConditionIds).toEqual({ section: "2.2.7", page: 5 });
   });
 
   test("duplex rows are present so the duplex density scope names recognized uses", () => {
@@ -313,13 +322,12 @@ describe("Vancouver R1-1 — provenance preservation", () => {
     expect(bundle.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
   });
 
-  // PHASE 12C.2/12C.3A: values now legitimately carry a proven date, either
-  // 2026-06-30 (By-law 14747, the current §3.1.1 replacement) or 2023-10-17
-  // (By-law 13817, proven identical to Schedule A's original text). Only
-  // use-005 (Multiple Dwelling) remains UNKNOWN, because its current scope
-  // differs from what 2023 actually permitted for the 7-8 unit range
-  // (§2.2.7's rental-tenure qualifier — see vancouver-r1-1-facts.ts).
-  test("only use-005 (Multiple Dwelling) remains temporally UNKNOWN; every other value carries a proven date", () => {
+  // PHASE 12C.2/12C.3A/12C.4B: every current value now legitimately carries a
+  // proven date — 2026-06-30 (By-law 14747: the current §3.1.1 replacement,
+  // and, as of 12C.4B, use-005's own current site-eligibility proposition via
+  // clause 4(b)) or 2023-10-17 (By-law 13817, proven identical to Schedule
+  // A's original text). No current R1-1 value remains temporally UNKNOWN.
+  test("every current value carries a proven date; none remains temporally UNKNOWN", () => {
     const bundle = normalized();
     for (const rule of bundle.rules) {
       if (rule.family === "REQUIREMENT") continue; // the whole REQUIREMENT family here is the proven 2026-06-30 obligation.
@@ -328,11 +336,7 @@ describe("Vancouver R1-1 — provenance preservation", () => {
         rule.family === "USE"
           ? rule.permissions
           : objects.flatMap((v) => ("temporal" in v ? [v as { temporal: unknown }] : Object.values(v).filter((x): x is { temporal: unknown } => typeof x === "object" && x !== null && "temporal" in x)));
-      for (const ev of evidences) {
-        const isMultipleDwellingUse = rule.family === "USE" && (ev as E85Evidence<{ useCode: string }>).value.useCode === "multiple_dwelling";
-        if (isMultipleDwellingUse) expect(ev.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
-        else expect(ev.temporal).not.toEqual({ effectiveDateBasis: "UNKNOWN" });
-      }
+      for (const ev of evidences) expect(ev.temporal).not.toEqual({ effectiveDateBasis: "UNKNOWN" });
     }
   });
 
@@ -426,11 +430,36 @@ describe("Vancouver R1-1 — temporal authority is machine-auditable (Phase 12C.
     }
   });
 
-  test("use-005 (Multiple Dwelling) remains temporally UNKNOWN with no temporalAuthority, because its current scope differs from the proven 2023 text", () => {
+  // PHASE 12C.4B: proven by direct re-inspection of By-law 13817's original
+  // 2023 Schedule A (the ORIGINAL Multiple Dwelling row cited old-§2.2.7, the
+  // 7-8-unit tenure/stratification bar later struck entirely) and By-law
+  // 14747's actual R1-1 clause 4(b) ("strikes section 2.2.7, renumbers
+  // section 2.2.8 as 2.2.7, and then renumbers the following sections
+  // sequentially") — the clause that eliminates that historical bar is the
+  // primary authority for the current, tenure-silent use-005 proposition,
+  // chosen over clause 4(a)(i) (a row-reference cleanup consequential to
+  // 4(b)'s renumbering, not an independent cause) by legal-semantic
+  // causation, never clause order.
+  test("use-005 (Multiple Dwelling) is now proven to 2026-06-30 via By-law 14747 clause 4(b), never clause 4(d)", () => {
     const bundle = normalized();
     const md = useRule(bundle).permissions.find((e) => e.value.useCode === "multiple_dwelling")!;
-    expect(md.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
-    expect(md.provenance.temporalAuthority).toBeUndefined();
+    expect(md.temporal).toEqual({ effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" });
+    expect(md.provenance.temporalAuthority).toEqual({
+      instrument: { bylawOrDocumentId: "14747" },
+      propositionLocator: { bylawOrDocumentId: "14747", clause: "4(b)" },
+      commencementLocator: { bylawOrDocumentId: "14747", section: "37" },
+    });
+    // Never the §3.1.1 DENSITY-replacement clause — a different proposition, different authority.
+    expect(md.provenance.temporalAuthority?.propositionLocator).not.toEqual({ bylawOrDocumentId: "14747", clause: "4(d)" });
+  });
+
+  test("use-005's supporting amendment dependencies (4(a)(i) row cleanup, and By-law 13998's earlier 2024-04-23 amendment to condition (a)) are preserved via the source-note mechanism, never folded into the primary authority", () => {
+    const bundle = normalized();
+    const note = bundle.findings.find((f) => f.code === "SOURCE_NOTE_PRESERVED" && f.factId === "r1-1-use-005");
+    expect(note?.message).toMatch(/4\(a\)\(i\)/);
+    expect(note?.message).toMatch(/13998/);
+    expect(note?.message).toMatch(/2024-04-23/);
+    expect(note?.severity).toBe("INFO");
   });
 
   test("temporal authority does not enter the scoped concept identity — the concept key for a dated and an (otherwise identical) undated fact would be equal", () => {
@@ -444,12 +473,15 @@ describe("Vancouver R1-1 — temporal authority is machine-auditable (Phase 12C.
 
   test("an extractor's note on a source fact survives normalization as an audit-only INFO finding, never a gap", () => {
     const bundle = normalized();
+    // PHASE 12C.4B: use-005 now also carries a note (its supporting 4(a)(i)/
+    // 13998 amendment dependencies), so exactly 2 SOURCE_NOTE_PRESERVED
+    // findings are expected — this test asserts the requirement-001 one specifically.
     const noteFindings = bundle.findings.filter((f) => f.code === "SOURCE_NOTE_PRESERVED");
-    expect(noteFindings).toHaveLength(1);
-    expect(noteFindings[0].severity).toBe("INFO");
-    expect(noteFindings[0].factId).toBe("r1-1-requirement-001");
-    expect(noteFindings[0].message).toMatch(/By-law 14586/);
-    expect(noteFindings[0].message).toMatch(/2026-02-03/);
+    expect(noteFindings).toHaveLength(2);
+    const requirementNote = noteFindings.find((f) => f.factId === "r1-1-requirement-001")!;
+    expect(requirementNote.severity).toBe("INFO");
+    expect(requirementNote.message).toMatch(/By-law 14586/);
+    expect(requirementNote.message).toMatch(/2026-02-03/);
     // A note is audit context only: it never appears as a gap, and does not change the requirement's normalized outcome.
     expect(bundle.findings.filter((f) => f.severity === "GAP" && f.factId === "r1-1-requirement-001")).toHaveLength(0);
   });

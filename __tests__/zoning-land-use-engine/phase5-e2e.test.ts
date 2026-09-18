@@ -29,9 +29,51 @@ import {
   E85ParcelReference,
   E85PolicyVersion,
   E85SourceDefinition,
+  E85UseRule,
   adapters,
 } from "../../src/zoning-land-use-engine";
-import { r11Document } from "./fixtures/vancouver-r1-1-facts";
+import {
+  r11Document,
+  R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION,
+  R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION,
+  R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION,
+  R1_1_UNSTRUCTURED_SECTIONS,
+} from "./fixtures/vancouver-r1-1-facts";
+
+/** PHASE 12C.4A: all three of use-005's current §2.2.7 site-eligibility conditions affirmed, so tests whose real subject is something other than that gate can reach it. */
+const MD_SITE_ELIGIBLE: { readonly satisfiedConditions: readonly string[] } = {
+  satisfiedConditions: [R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION, R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION, R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION],
+};
+
+/**
+ * PHASE 12C.4B: every current R1-1 USE/DENSITY/DIMENSIONAL fact is now
+ * individually dated (use-005 was the last one — see vancouver-r1-1-facts.ts),
+ * so the real R1-1 pilot bundle can no longer demonstrate Phase 4's generic
+ * EFFECTIVE_DATE_UNKNOWN behavior end-to-end. This synthetic, non-Vancouver
+ * USE rule (fed straight to `evaluate()`, bypassing the adapter) exists only
+ * to keep that end-to-end demonstration alive without artificially leaving a
+ * real R1-1 fact undated for test convenience. The dedicated, purely generic
+ * unit-level proof of this same behavior already lives in
+ * `use-evaluation.test.ts` ("UNKNOWN effective-date basis on the only
+ * matching evidence yields a GAP") — this fixture instead exercises the same
+ * behavior through the full request → EvaluationOutcome shape.
+ */
+function syntheticUndatedUseRules(): readonly E85UseRule[] {
+  return [
+    {
+      family: "USE",
+      jurisdictionId: VANCOUVER_JURISDICTION_ID,
+      zoneDesignation: VANCOUVER_R1_1_ZONE,
+      permissions: [
+        {
+          value: { useCode: "synthetic_undated_use", status: "CONDITIONAL" },
+          provenance: { sourceId: "synthetic-undated-source" },
+          temporal: { effectiveDateBasis: "UNKNOWN" },
+        },
+      ],
+    },
+  ];
+}
 
 const { vancouverR11Adapter, VANCOUVER_R1_1_SOURCE, VANCOUVER_JURISDICTION, VANCOUVER_JURISDICTION_ID, VANCOUVER_R1_1_ZONE, VANCOUVER_R1_1_ADAPTER_ID } = adapters.vancouver;
 
@@ -113,40 +155,53 @@ describe("E85 Phase 5 end-to-end — R1-1 facts through the adapter into Phase 4
     expect(bundle.findings.filter((f) => f.severity === "GAP" && f.factId !== undefined)).toEqual([]);
   });
 
-  test("the gaps are the effective date plus the two declared coverage gaps — nothing else", () => {
+  test("the gaps are the five declared coverage gaps — no bundle-level EFFECTIVE_DATE_UNKNOWN remains, since every current fact is now individually dated", () => {
     const gaps = bundle.findings.filter((f) => f.severity === "GAP");
-    expect(gaps.map((g) => g.gap?.reasonCode).sort()).toEqual(["EFFECTIVE_DATE_UNKNOWN", "RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED"]);
+    // PHASE 12C.4B: use-005 (the last remaining undated fact) received its
+    // own proven temporal window, so `undatedFactIds` is now empty and the
+    // adapter's bundle-level EFFECTIVE_DATE_UNKNOWN finding (gated on
+    // `undatedFactIds.length > 0`) no longer fires — even though the
+    // document VERSION's own stamp (`bundle.temporal`, checked below) is
+    // still, correctly, UNKNOWN (the source itself states no version date).
+    // R1_1_UNSTRUCTURED_SECTIONS carries 5 entries (3.1.1.4, 3.2.2.10,
+    // 2.2.1-with-2.2.2-noted, 2.2.8, 2.2.9 — §2.2.2 was folded into the
+    // §2.2.1 entry rather than counted as its own gap, since it is
+    // DEFINITION_SUPPORT_ONLY and has no independent obligation).
+    expect(gaps.map((g) => g.gap?.reasonCode).sort()).toEqual(["RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED"]);
     expect(bundle.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
   });
 
-  // PHASE 12C.3A: single_detached_house's own USE/DENSITY/DIMENSIONAL facts
-  // are now individually proven to 2023-10-17 (By-law 13817) or 2026-06-30
-  // (By-law 14747) — see vancouver-r1-1-facts.ts — so single_detached_house
-  // itself resolves cleanly at 2026-09-01. use-005 (Multiple Dwelling) is the
-  // one fact deliberately left temporally UNKNOWN (its current scope differs
-  // from the proven 2023 text — Phase 12C.3), so it is what now demonstrates
-  // the genuine, still-real temporal-uncertainty behaviour this section is about.
+  // PHASE 12C.4B: every current R1-1 USE/DENSITY/DIMENSIONAL fact — including
+  // use-005, the last holdout — is now individually dated (2023-10-17 or
+  // 2026-06-30). The real R1-1 pilot bundle therefore has no fact left that
+  // can demonstrate Phase 4's generic EFFECTIVE_DATE_UNKNOWN behaviour, so
+  // these four tests were migrated to `syntheticUndatedUseRules()` — a
+  // minimal, non-Vancouver USE rule constructed directly, never a real R1-1
+  // fact kept artificially undated for test convenience (see its doc comment
+  // above). The rest of this describe block (adaptation success, coverage
+  // gaps, single-detached-house/duplex/Multiple-Dwelling values) still
+  // exercises the real bundle.
   test("Phase 4 reports the temporal uncertainty rather than resolving through it", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
+    const outcome = evaluate({ rules: syntheticUndatedUseRules(), useCode: "synthetic_undated_use", requestedAnalyses: ["USE"] });
     expect(outcome.result.status).toBe("DATA_GAP");
     expect(gapCodes(outcome)).toContain("EFFECTIVE_DATE_UNKNOWN");
   });
 
   test("no rule value is asserted while its effective date is unestablished", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
+    const outcome = evaluate({ rules: syntheticUndatedUseRules(), useCode: "synthetic_undated_use", requestedAnalyses: ["USE"] });
     expect(outcome.usePermission).toBeUndefined();
     expect(outcome.resolvedMaxFsr).toBeUndefined();
     expect("envelope" in outcome.result ? outcome.result.envelope : undefined).toBeUndefined();
   });
 
   test("the parcel and its identity still round-trip through the gapped result", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
+    const outcome = evaluate({ rules: syntheticUndatedUseRules(), useCode: "synthetic_undated_use", requestedAnalyses: ["USE"] });
     expect(outcome.result.parcel.parcelReferenceId).toBe("pilot-parcel-1");
     expect(outcome.result.qualification.parcelMatch).toBe("high");
   });
 
   test("no architectural massing or financial figure appears in the result", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
+    const outcome = evaluate({ rules: syntheticUndatedUseRules(), useCode: "synthetic_undated_use", requestedAnalyses: ["USE"] });
     const serialized = JSON.stringify(outcome).toLowerCase();
     for (const forbidden of ["netsellablearea", "netrentablearea", "netbuildablearea", "massing", "revenue", "irr", "residuallandvalue", "constructioncost"]) {
       expect(serialized).not.toContain(forbidden);
@@ -197,7 +252,9 @@ describe("E85 Phase 12B.2 end-to-end — scoped rules govern only their own prop
   });
 
   test("Multiple Dwelling (6 units, principal building, strata): CONDITIONAL, FSR 1.00, §3.1 envelope, no coverage limit invented", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", proposal: { dwellingUnitCount: 6, buildingRole: "principal_building", tenureCode: "strata" } });
+    // PHASE 12C.4A: §2.2.7 site eligibility is affirmed so this test can still
+    // reach a resolved USE status; it is not itself testing that gate.
+    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", proposal: { dwellingUnitCount: 6, buildingRole: "principal_building", tenureCode: "strata" }, callerContext: MD_SITE_ELIGIBLE });
     expect(outcome.usePermission?.status).toBe("CONDITIONAL");
     expect(outcome.usePermission?.evidence?.value.approvalAuthority).toBe("Director of Planning");
     expect(outcome.resolvedMaxFsr?.value).toBe(1.0);
@@ -422,5 +479,156 @@ describe("E85 Phase 12C.3A — 2023-10-17 boundary (By-law 13817, visually prove
     expect(outcome.resolvedMaxFsr?.value).toBe(0.6);
     expect(envelopeOf(outcome)?.maxHeightMetres?.value).toBe(11.5);
     expect(gapCodes(outcome)).not.toContain("EFFECTIVE_DATE_UNKNOWN");
+  });
+});
+
+/**
+ * PHASE 12C.4A/12C.4B — current §2.2.7 site-eligibility, structured as three
+ * independent `requiredConditionIds` on use-005. These three conditions are
+ * load-bearing regardless of temporal state: scope is decided before temporal
+ * filtering, so a missing or explicitly-false condition produces its
+ * gap/UNKNOWN outcome whether or not use-005 is dated. use-005 is now dated
+ * (2026-06-30, By-law 14747 clause 4(b) — see vancouver-r1-1-facts.ts), so
+ * this block also covers the positive-resolution and boundary-date paths that
+ * were blocked in 12C.4A pending that reconstruction.
+ */
+describe("E85 Phase 12C.4A / 12C.4B — §2.2.7 site-eligibility conditions on use-005", () => {
+  const bundle = normalizeR11();
+  const ALL_THREE = [R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION, R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION, R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION];
+
+  test.each([
+    ["lot-history missing", [R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION, R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION]],
+    ["rear-access missing", [R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION, R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION]],
+    ["flood-plain condition missing", [R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION, R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION]],
+  ])("%s (the other two satisfied) → EXTERNAL_CONDITION_UNDETERMINED, never a resolved status", (_label, satisfied) => {
+    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 }, callerContext: { satisfiedConditions: satisfied } });
+    expect(outcome.usePermission).toBeUndefined();
+    expect(gapCodes(outcome)).toContain("EXTERNAL_CONDITION_UNDETERMINED");
+  });
+
+  test("one condition explicitly unsatisfied (the other two satisfied) → USE evidence excluded, result UNKNOWN, never PROHIBITED", () => {
+    const outcome = evaluate({
+      rules: bundle.rules,
+      useCode: "multiple_dwelling",
+      requestedAnalyses: ["USE"],
+      proposal: { dwellingUnitCount: 6 },
+      callerContext: {
+        satisfiedConditions: [R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION, R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION],
+        unsatisfiedConditions: [R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION],
+      },
+    });
+    expect(outcome.usePermission?.status).toBe("UNKNOWN");
+    expect(outcome.usePermission?.status).not.toBe("PROHIBITED");
+    expect(gapCodes(outcome)).not.toContain("EXTERNAL_CONDITION_UNDETERMINED");
+  });
+
+  test("all three satisfied but 9 dwelling units: still not applicable, on the dwelling-unit bound alone", () => {
+    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 9 }, callerContext: { satisfiedConditions: ALL_THREE } });
+    expect(outcome.usePermission?.status).toBe("UNKNOWN");
+    expect(outcome.usePermission?.status).not.toBe("PROHIBITED");
+  });
+
+  test("condition order in the caller context does not change which gap fires (canonical key is order-independent)", () => {
+    const forward = evaluate({
+      rules: bundle.rules,
+      useCode: "multiple_dwelling",
+      requestedAnalyses: ["USE"],
+      proposal: { dwellingUnitCount: 6 },
+      callerContext: { satisfiedConditions: [...ALL_THREE].reverse() },
+    });
+    const reverse = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 }, callerContext: { satisfiedConditions: ALL_THREE } });
+    expect(gapCodes(forward)).toEqual(gapCodes(reverse));
+  });
+
+  test("2026-06-29 (all three conditions satisfied): the current proposition is NOT yet in force — UNKNOWN, never CONDITIONAL", () => {
+    const outcome = evaluate({
+      rules: bundle.rules,
+      useCode: "multiple_dwelling",
+      requestedAnalyses: ["USE"],
+      proposal: { dwellingUnitCount: 6 },
+      asOfDate: "2026-06-29",
+      callerContext: { satisfiedConditions: ALL_THREE },
+    });
+    expect(outcome.usePermission?.status).toBe("UNKNOWN");
+    expect(outcome.usePermission?.status).not.toBe("CONDITIONAL");
+  });
+
+  test("2026-06-30 (all three conditions satisfied): CONDITIONAL, no EFFECTIVE_DATE_UNKNOWN", () => {
+    const outcome = evaluate({
+      rules: bundle.rules,
+      useCode: "multiple_dwelling",
+      requestedAnalyses: ["USE"],
+      proposal: { dwellingUnitCount: 6 },
+      asOfDate: "2026-06-30",
+      callerContext: { satisfiedConditions: ALL_THREE },
+    });
+    expect(outcome.usePermission?.status).toBe("CONDITIONAL");
+    expect(gapCodes(outcome)).not.toContain("EFFECTIVE_DATE_UNKNOWN");
+  });
+
+  test("exact target 2026-09-14 (all three conditions satisfied): CONDITIONAL, neither EFFECTIVE_DATE_UNKNOWN nor EXTERNAL_CONDITION_UNDETERMINED, and the disclosed coverage gaps do not erase the resolved status", () => {
+    const outcome = evaluate({
+      rules: bundle.rules,
+      useCode: "multiple_dwelling",
+      requestedAnalyses: ["USE"],
+      proposal: { dwellingUnitCount: 6 },
+      asOfDate: "2026-09-14",
+      callerContext: { satisfiedConditions: ALL_THREE },
+    });
+    expect(outcome.usePermission?.status).toBe("CONDITIONAL");
+    expect(gapCodes(outcome)).not.toContain("EFFECTIVE_DATE_UNKNOWN");
+    expect(gapCodes(outcome)).not.toContain("EXTERNAL_CONDITION_UNDETERMINED");
+  });
+
+  test("DENSITY independence at 2026-09-14: 8-unit rental resolves CONDITIONAL/8, 8-unit other tenure resolves CONDITIONAL/6 — USE eligibility and DENSITY feasibility stay separate questions", () => {
+    const rental = evaluate({
+      rules: bundle.rules,
+      useCode: "multiple_dwelling",
+      proposal: { dwellingUnitCount: 8, tenureCode: RENTAL },
+      asOfDate: "2026-09-14",
+      callerContext: { satisfiedConditions: ALL_THREE },
+    });
+    expect(rental.usePermission?.status).toBe("CONDITIONAL");
+    expect(rental.resolvedMaxFsr).toBeDefined();
+
+    const other = evaluate({
+      rules: bundle.rules,
+      useCode: "multiple_dwelling",
+      proposal: { dwellingUnitCount: 8, tenureCode: "strata" },
+      asOfDate: "2026-09-14",
+      callerContext: { satisfiedConditions: ALL_THREE },
+    });
+    expect(other.usePermission?.status).toBe("CONDITIONAL");
+    expect(other.usePermission?.status).not.toBe("PROHIBITED");
+  });
+});
+
+/**
+ * PHASE 12C.4B — coverage completeness: every current §2.1 Multiple Dwelling
+ * cross-reference (§2.2.1, §2.2.2, §2.2.7, §2.2.8, §2.2.9) is now either
+ * STRUCTURED (§2.2.7, via use-005's own requiredConditionIds) or EXPLICITLY
+ * ACCOUNTED FOR (the other four) — never silently undisclosed, and never one
+ * mechanical gap per section number: §2.2.2 (a supporting definition with no
+ * independent obligation) is folded into §2.2.1's single disclosure entry
+ * rather than emitting its own separate RULE_NOT_STRUCTURED finding.
+ */
+describe("E85 Phase 12C.4B — current Multiple Dwelling cross-reference coverage is complete", () => {
+  test("§2.2.7 is structured on use-005; §2.2.1 (with §2.2.2 noted inside it), §2.2.8, §2.2.9 are explicitly disclosed as unstructured", () => {
+    const bundle = normalizeR11();
+    const useRuleRecord = bundle.rules.find((r) => r.family === "USE") as { permissions: readonly { value: { useCode: string }; applicability?: { requiredConditionIds?: readonly string[] } }[] } | undefined;
+    const md = useRuleRecord?.permissions.find((p) => p.value.useCode === "multiple_dwelling");
+    expect(md?.applicability?.requiredConditionIds?.length).toBe(3);
+
+    for (const section of ["2.2.1", "2.2.8", "2.2.9"]) {
+      expect(R1_1_UNSTRUCTURED_SECTIONS.some((s) => s.startsWith(section))).toBe(true);
+    }
+    // §2.2.2 is NOT its own list entry (that would emit its own, misleading
+    // independent RULE_NOT_STRUCTURED gap for a section with no obligation of
+    // its own) — it is referenced, marked DEFINITION_SUPPORT_ONLY, inside the
+    // §2.2.1 entry that owns the obligation it supports.
+    expect(R1_1_UNSTRUCTURED_SECTIONS.some((s) => s.startsWith("2.2.2"))).toBe(false);
+    const s221 = R1_1_UNSTRUCTURED_SECTIONS.find((s) => s.startsWith("2.2.1"));
+    expect(s221).toMatch(/2\.2\.2/);
+    expect(s221).toMatch(/DEFINITION_SUPPORT_ONLY/);
   });
 });

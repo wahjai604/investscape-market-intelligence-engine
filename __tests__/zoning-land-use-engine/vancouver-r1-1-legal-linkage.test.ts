@@ -66,7 +66,13 @@ import {
   VAN_RM_5_WITH_HOLE,
   vancouverSnapshot,
 } from "./fixtures/vancouver-spatial-snapshot";
-import { deepFreeze, r11Document } from "./fixtures/vancouver-r1-1-facts";
+import {
+  deepFreeze,
+  r11Document,
+  R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION,
+  R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION,
+  R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION,
+} from "./fixtures/vancouver-r1-1-facts";
 
 const { vancouverR11Adapter, VANCOUVER_R1_1_SOURCE, VANCOUVER_R1_1_SOURCE_ID, VANCOUVER_R1_1_VERSION_ID, VANCOUVER_JURISDICTION_ID } = adapters.vancouver;
 
@@ -359,6 +365,8 @@ interface DecideSpec {
   parcel?: E85ParcelSpatialReference;
   useCode?: string;
   proposal?: E85ProposalContext;
+  callerContext?: { readonly satisfiedConditions?: readonly string[]; readonly unsatisfiedConditions?: readonly string[] };
+  requestedAnalyses?: readonly E85RequestedAnalysis[];
 }
 
 function decide(spec: DecideSpec = {}): E85DecisionPackage {
@@ -377,7 +385,7 @@ function decide(spec: DecideSpec = {}): E85DecisionPackage {
     // Phase 12B.2: the authoritative R1-1 §2.1 term is "Single Detached House".
     useCode: spec.useCode ?? "single_detached_house",
     asOfDate: "2026-09-14",
-    requestedAnalyses: ALL_ANALYSES,
+    requestedAnalyses: spec.requestedAnalyses ?? ALL_ANALYSES,
     policyVersion: policy(),
     availableRulePacks: legal.map((b) => canonicalRulePackFromBundle(b, "BASE")),
     spatialRegistry: datasets(),
@@ -385,6 +393,7 @@ function decide(spec: DecideSpec = {}): E85DecisionPackage {
     composedAt: COMPOSED_AT,
     assembledAt: ASSEMBLED_AT,
     ...(spec.proposal === undefined ? {} : { proposal: spec.proposal }),
+    ...(spec.callerContext === undefined ? {} : { callerContext: spec.callerContext }),
   });
 }
 
@@ -523,33 +532,53 @@ describe("E85 Phase 11 — real City geometry, real City law, synthetic parcel, 
     expect(VANCOUVER_ZONING_RELEASE).not.toBe(VANCOUVER_R1_1_VERSION_ID);
   });
 
-  test("§23 UNKNOWN temporal overlap is not laundered into a clean result", () => {
-    // BOTH sides are silent on legal effect: the layer publishes no effective
-    // date, and the schedule prints "June 2026" with no adoption date. So the
-    // identity join succeeds and the TEMPORAL join cannot be established.
-    //
-    // PHASE 12C.3A: single_detached_house's own USE/DENSITY/DIMENSIONAL facts
-    // now carry individually proven dates (2023-10-17/2026-06-30), so they no
-    // longer demonstrate this bundle-level UNKNOWN gapping through to Phase 4.
-    // use-005 (Multiple Dwelling) is the one fact still genuinely temporally
-    // UNKNOWN (its current scope differs from the proven 2023 text —
-    // Phase 12C.3), so it is used here instead.
-    const p = decide({ useCode: "multiple_dwelling", proposal: { dwellingUnitCount: 6 } });
+  test("§23 a fact's own proven date overrides an UNKNOWN bundle/version stamp — the version-level silence is not laundered into a false gap either", () => {
+    // BOTH sides are silent on legal effect at the VERSION level: the spatial
+    // layer publishes no effective date, and the schedule prints "June 2026"
+    // with no adoption date. Confirmed still true and unaffected by any fact
+    // being dated — these are the SOURCE's own version-level stamps, not
+    // derived from any individual fact.
     expect(r11Bundle().temporal.effectiveDateBasis).toBe("UNKNOWN");
     expect(vancouverZoningDataset().versions[0].effectiveDateBasis).toBe("UNKNOWN");
 
-    // Phase 4 reaches the rules and then refuses to date them, using the
-    // existing Phase 5A vocabulary — no new temporal status was invented.
+    // PHASE 12C.3A/12C.4B: every current R1-1 USE/DENSITY/DIMENSIONAL fact —
+    // including use-005, the last holdout, now dated to 2026-06-30 by By-law
+    // 14747 clause 4(b) — carries its OWN proven date, which always takes
+    // precedence over the bundle/version's UNKNOWN basis (`factTemporal =
+    // fact.temporal ?? temporal`, unchanged since Phase 12C.2). So the
+    // version-level UNKNOWN shown above no longer produces a laundered-away
+    // OR a falsely-invented gap for this proposal: it correctly produces NO
+    // gap at all, because every fact this query touches has its own answer.
+    // Restricted to USE: DENSITY/DIMENSIONAL for this use also need tenure/
+    // building-role proposal fields this test isn't about supplying — the
+    // point here is specifically USE's own temporal-override behavior.
+    const p = decide({
+      useCode: "multiple_dwelling",
+      proposal: { dwellingUnitCount: 6 },
+      requestedAnalyses: ["USE"],
+      callerContext: {
+        satisfiedConditions: [R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION, R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION, R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION],
+      },
+    });
+    const phase4 = p.phase4?.result;
+    expect(phase4?.status).not.toBe("DATA_GAP");
+    expect(p.phase4?.usePermission?.status).toBe("CONDITIONAL");
+    expect(p.status).not.toBe("DATA_GAP");
+  });
+
+  test("§23 a genuinely still-unresolved proposal on the same bundle is NOT laundered into a clean result", () => {
+    // The version-level UNKNOWN stamps (proven above) are no longer reachable
+    // through any current R1-1 fact's own evaluation, since every current
+    // fact is now individually dated. This test proves the "not laundered"
+    // invariant still holds for a genuinely still-unresolved input on the
+    // SAME real bundle: use-005's own §2.2.7 conditions are left unaffirmed,
+    // so scope — not the (now fully resolved) temporal question — is what
+    // correctly still produces an honest DATA_GAP, never a clean answer.
+    const p = decide({ useCode: "multiple_dwelling", proposal: { dwellingUnitCount: 6 } });
     const phase4 = p.phase4?.result;
     if (phase4?.status !== "DATA_GAP") throw new Error(`expected Phase 4 DATA_GAP, got ${String(phase4?.status)}`);
-    expect(phase4.gaps.some((g) => g.reasonCode === "EFFECTIVE_DATE_UNKNOWN")).toBe(true);
-
-    // No USE value is produced for use-005 specifically, since it alone
-    // remains undated (density-002's maxFsr is separately, legitimately
-    // dated to 2026-06-30 by By-law 14747 and is expected to resolve).
+    expect(phase4.gaps.some((g) => g.reasonCode === "EXTERNAL_CONDITION_UNDETERMINED")).toBe(true);
     expect(p.phase4?.usePermission).toBeUndefined();
-
-    // And the decision reports that, rather than a clean answer.
     expect(p.status).toBe("DATA_GAP");
     expect(p.status).not.toBe("MACHINE_RESOLVED");
     expect(p.status).not.toBe("MACHINE_RESOLVED_WITH_WARNINGS");

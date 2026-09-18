@@ -176,6 +176,70 @@ export const FACT_CONDITIONAL_DUPLEX_WITH_SUITE: E85StructuredSourceFact = {
   temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "2.1", row: DUPLEX_WITH_SUITE_TERM, page: 12 }),
 };
 
+/**
+ * PHASE 12C.4A — current §2.2.7 site-eligibility gate for Multiple Dwelling.
+ * Opaque, adapter-level ids for §2.2.7(a)/(b)/(c): E85 does not resolve
+ * land-title/parcel-history, site-access, or flood-plain-overlay facts itself;
+ * a caller affirms or denies each independently. None of the three implies
+ * or duplicates the others, and none is derived from any other field —
+ * distinct from the coarse `dwellingUnits <= 8` scope, which is the USE row's
+ * own text, and distinct from the tenure-conditioned unit cap, which remains
+ * solely a DENSITY-family concern (`density-005`/`006`, §3.1.1.3).
+ */
+export const R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION = "vancouver_r1_1_lot_on_record_or_subdivided";
+/** §2.2.7(b): site provides vehicular access from the rear. */
+export const R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION = "vancouver_r1_1_rear_vehicular_access";
+/** §2.2.7(c): site is not partially or fully within a designated flood plain. */
+export const R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION = "vancouver_r1_1_not_in_flood_plain";
+
+/**
+ * PHASE 12C.4B — proven by direct visual re-inspection of By-law 13817's
+ * original 2023 Schedule A page 15: the ORIGINAL Multiple Dwelling row cited
+ * six use-specific regulations (2.2.1, 2.2.2, 2.2.7, 2.2.8, 2.2.9, 2.2.10),
+ * where original §2.2.7 was the 7-8-unit non-stratified/rental-tenure
+ * eligibility bar, original §2.2.8 was today's site-eligibility text
+ * (byte-identical apart from clause (a), see below), original §2.2.9 was
+ * today's bedroom-mix table, and original §2.2.10 was today's Director
+ * discretion for >1 principal building.
+ *
+ * By-law 14747 clause 4(b) — "strikes section 2.2.7, renumbers section 2.2.8
+ * as 2.2.7, and then renumbers the following sections sequentially" — is the
+ * clause that (a) ELIMINATES the historical tenure/stratification eligibility
+ * bar entirely (the semantic change that makes the current, tenure-silent
+ * `use-005` proposition true for the first time) and (b) causes old-2.2.8/9/10
+ * to become new-2.2.7/8/9. This is the PRIMARY proposition-changing authority,
+ * chosen over clause 4(a)(i) by legal-semantic causation, not clause order:
+ * 4(a)(i) (which strikes a now-stale ", 2.2.10" citation from the row) is a
+ * consequence OF clause 4(b)'s renumbering cascade — without 4(b), the row
+ * citing "2.2.10" a second time under new numbering would double-cite content
+ * already covered by the row's own (renumbered) "2.2.9" — never an
+ * independent cause of the row's current, shorter reference list.
+ *
+ * A THIRD, EARLIER amendment was found during this reconstruction and is
+ * preserved as a supporting note rather than folded into the single
+ * `propositionLocator`: By-law 13998 (enacted and in force 2024-04-23, before
+ * 14747) clause 17(b) amended old-§2.2.7(a) [[now new-§2.2.7(a) verbatim, per
+ * 14747's later pure renumbering]] from "is a single lot on record ... prior
+ * to October 17, 2023" to the current two-branch "(i) prior to October 17,
+ * 2023, or (ii) created by subdivision". This means the exact CURRENT wording
+ * of condition (a) took its current form on 2024-04-23, under the
+ * then-current section number (old 2.2.8), predating 14747's later
+ * renumbering — 14747 did not originate the "created by subdivision" branch,
+ * it only carried the already-13998-amended text forward under a new number.
+ * The fact's own `effectiveFrom` is still correctly 2026-06-30: before that
+ * date, the OVERALL current proposition (Conditional, ≤8 units, gated ONLY by
+ * site-eligibility, with NO tenure/stratification bar) was false, because the
+ * tenure/stratification bar was still in force under old-§2.2.7 until 14747
+ * struck it. 13998 changed one component's wording earlier, under a different
+ * number, while the historical tenure bar it coexisted with remained active.
+ */
+const S2_2_7_ELIGIBILITY_TEMPORAL: E85TemporalWindow = { effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" };
+const S2_2_7_ELIGIBILITY_AUTHORITY: E85TemporalAuthority = {
+  instrument: { bylawOrDocumentId: "14747" },
+  propositionLocator: { bylawOrDocumentId: "14747", clause: "4(b)" },
+  commencementLocator: { bylawOrDocumentId: "14747", section: "37" },
+};
+
 export const FACT_CONDITIONAL_MULTIPLE_DWELLING: E85StructuredSourceFact = {
   factId: "r1-1-use-005",
   family: "USE",
@@ -184,9 +248,17 @@ export const FACT_CONDITIONAL_MULTIPLE_DWELLING: E85StructuredSourceFact = {
   sourceUseTerm: MULTIPLE_DWELLING_TERM,
   applicability: {
     dwellingUnits: { max: 8 },
-    locators: { dwellingUnits: { section: "2.1", table: USE_TABLE, row: MULTIPLE_DWELLING_TERM, page: 3 } },
+    conditionIds: [R1_1_MD_LOT_ON_RECORD_OR_SUBDIVIDED_CONDITION, R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION, R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION],
+    locators: {
+      dwellingUnits: { section: "2.1", table: USE_TABLE, row: MULTIPLE_DWELLING_TERM, page: 3 },
+      requiredConditionIds: { section: "2.2.7", page: 5 },
+    },
   },
   locator: { section: "2.1", table: USE_TABLE, row: MULTIPLE_DWELLING_TERM, page: 3 },
+  temporal: S2_2_7_ELIGIBILITY_TEMPORAL,
+  temporalAuthority: S2_2_7_ELIGIBILITY_AUTHORITY,
+  notes:
+    'By-law 14747 clause 4(a)(i) also struck a now-stale ", 2.2.10" citation from this row\'s third column — a consequence of clause 4(b)\'s renumbering cascade, not an independent proposition change. Separately, By-law 13998 (in force 2024-04-23, predating 14747) clause 17(b) amended condition (a)\'s wording (then numbered 2.2.8(a)) to add the "created by subdivision" branch; 14747 carried that already-amended text forward under the new number 2.2.7(a) without further substantive change.',
 };
 
 /**
@@ -490,6 +562,9 @@ export const R1_1_FACTS: readonly E85StructuredSourceFact[] = [
 export const R1_1_UNSTRUCTURED_SECTIONS: readonly string[] = [
   "3.1.1.4 — owner-occupied dwelling unit exception to 3.1.1.3(a) (not structured)",
   "3.2.2.10 — partial third storey for §3.2 uses (limits the §3.2.2.3 storey allowance, so §3.2 maximum storeys are withheld)",
+  "2.2.1 — front-yard tree retention/planting for new Multiple Dwelling (and other new-construction uses); requires site/tree-inventory facts not represented in current E85 proposal context (not structured). §2.2.2 supplies supporting definitions (\"existing\"/\"planted\" tree) for this section ONLY [DEFINITION_SUPPORT_ONLY] and has no independent obligation of its own, so it is disclosed here rather than as its own separate coverage entry — one unstructured provision, not two.",
+  "2.2.8 — bedroom-mix minimum unit-composition table by unit count and tenure; a genuine compliance obligation, but current E85RequirementCategory (AFFORDABLE_HOUSING only) does not honestly represent unit-composition requirements (not structured)",
+  "2.2.9 — Director of Planning discretion to permit more than one principal building for Multiple Dwelling; a discretionary standard, not a caller-affirmable binary fact, so it does not fit requiredConditionIds (not structured)",
 ];
 
 /** Retired fact ids. None may appear in the corrected fact set. */
