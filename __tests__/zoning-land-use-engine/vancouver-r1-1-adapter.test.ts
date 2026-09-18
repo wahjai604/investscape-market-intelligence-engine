@@ -308,10 +308,27 @@ describe("Vancouver R1-1 — provenance preservation", () => {
     }
   });
 
-  test("no effective date is asserted, because the source states none — on the bundle or on any value", () => {
+  test("no effective date is asserted for the source itself, because the source states none", () => {
     const bundle = normalized();
     expect(bundle.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
-    expect(JSON.stringify(bundle.rules)).not.toMatch(/effectiveFrom|effectiveTo/);
+  });
+
+  // PHASE 12C.2: some values now legitimately carry the proven 2026-06-30
+  // amendment date (By-law 14747), distinct from the source's own UNKNOWN
+  // basis asserted above. Every remaining value — none of which By-law 14747
+  // touches — must still carry no effective date at all.
+  test("every value outside By-law 14747's current §3.1.1 replacement still asserts no effective date", () => {
+    const bundle = normalized();
+    const s311Locators = new Set(["3.1.1.2", "3.1.1.3"]);
+    for (const rule of bundle.rules) {
+      if (rule.family === "REQUIREMENT") continue; // the whole REQUIREMENT family here IS the §3.1.1.3(b)(ii) obligation.
+      const objects = Object.values(rule).filter((v): v is object => typeof v === "object" && v !== null);
+      const evidences = rule.family === "USE" ? rule.permissions : objects.flatMap((v) => ("temporal" in v ? [v as { temporal: unknown; provenance: { documentLocator: { section?: string } } }] : Object.values(v).filter((x): x is { temporal: unknown; provenance: { documentLocator: { section?: string } } } => typeof x === "object" && x !== null && "temporal" in x)));
+      for (const ev of evidences) {
+        if (s311Locators.has(ev.provenance.documentLocator?.section ?? "")) continue;
+        expect(ev.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
+      }
+    }
   });
 
   test("the publication stamp is recorded at the precision the source prints, and says it is a publication stamp", () => {
@@ -343,8 +360,69 @@ describe("Vancouver R1-1 — provenance preservation", () => {
         documentLocator: { bylawOrDocumentId: "3575", schedule: "District Schedule R1-1", section: "3.1.1.2", page: 8 },
       },
       applicability: { useCodes: ["multiple_dwelling"], dwellingUnits: { max: 8 } },
-      temporal: { effectiveDateBasis: "UNKNOWN" },
+      // PHASE 12C.2: §3.1.1.2's own proven effective date (By-law 14747, §37), not
+      // the source version's UNKNOWN basis this same fact carried before Phase 12C.2.
+      temporal: { effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" },
     });
+  });
+});
+
+describe("Vancouver R1-1 — temporal authority is machine-auditable (Phase 12C.2A)", () => {
+  const EXPECTED_AUTHORITY = { instrument: { bylawOrDocumentId: "14747" }, propositionLocator: { bylawOrDocumentId: "14747", clause: "4(d)" }, commencementLocator: { bylawOrDocumentId: "14747", section: "37" } };
+
+  test("every AMENDMENT_DATE_KNOWN evidence item names its instrument, proposition clause and commencement clause — not just a date", () => {
+    const bundle = normalized();
+    const dated: E85Evidence<unknown>[] = [
+      ...densityRules(bundle).flatMap((r) => [r.maxFsr, r.maxDwellingUnits].filter((e): e is E85Evidence<number> => e !== undefined && e.temporal.effectiveDateBasis === "AMENDMENT_DATE_KNOWN")),
+      ...bundle.rules.flatMap((r) => (r.family === "REQUIREMENT" ? r.requirements.flatMap((i) => [i.requirement, ...(i.quantities ?? [])]) : [])).filter((e) => e.temporal.effectiveDateBasis === "AMENDMENT_DATE_KNOWN"),
+    ];
+    // density-002, density-005, density-006, requirement-001, requirement-002, and requirement-001's own quantity evidence.
+    expect(dated.length).toBe(6);
+    for (const ev of dated) {
+      expect(ev.provenance.temporalAuthority).toEqual(EXPECTED_AUTHORITY);
+      // Value provenance (the CURRENT consolidated clause) is never overwritten by amendment provenance.
+      expect(ev.provenance.documentLocator?.bylawOrDocumentId).toBe("3575");
+      expect(ev.provenance.documentLocator?.section).toMatch(/^3\.1\.1\./);
+    }
+  });
+
+  test("the requirement-001 quantity (the 5% figure) carries its own temporal authority independent of its parent requirement", () => {
+    const bundle = normalized();
+    const rule = bundle.rules.find((r) => r.family === "REQUIREMENT")!;
+    if (rule.family !== "REQUIREMENT") throw new Error("expected REQUIREMENT");
+    const item = rule.requirements.find((i) => i.requirement.value.rawSourceTerminology === "Social Housing")!;
+    expect(item.quantities?.[0]?.provenance.temporalAuthority).toEqual(EXPECTED_AUTHORITY);
+    expect(item.quantities?.[0]?.temporal).toEqual({ effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" });
+  });
+
+  test("undated evidence (outside the §3.1.1 replacement) carries no temporalAuthority — it is not fabricated for an UNKNOWN basis", () => {
+    const bundle = normalized();
+    const dupFsr = fsr(normalized(), DUPLEX);
+    expect(dupFsr[0].temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
+    expect(dupFsr[0].provenance.temporalAuthority).toBeUndefined();
+    const otherHeight = dim(bundle, "maxHeightMetres", OTHER_USES);
+    expect(otherHeight[0].provenance.temporalAuthority).toBeUndefined();
+  });
+
+  test("temporal authority does not enter the scoped concept identity — the concept key for a dated and an (otherwise identical) undated fact would be equal", () => {
+    // canonicalE85ApplicabilityKey covers scope only; temporal/provenance are deliberately excluded
+    // from it by design (Phase 12B.2), and this remains true once temporalAuthority is added.
+    const bundle = normalized();
+    const mdFsr = fsr(bundle, MD)[0];
+    expect(canonicalE85ApplicabilityKey(mdFsr.applicability)).toBe(MD);
+    expect(Object.keys(mdFsr)).not.toContain("temporalAuthority");
+  });
+
+  test("an extractor's note on a source fact survives normalization as an audit-only INFO finding, never a gap", () => {
+    const bundle = normalized();
+    const noteFindings = bundle.findings.filter((f) => f.code === "SOURCE_NOTE_PRESERVED");
+    expect(noteFindings).toHaveLength(1);
+    expect(noteFindings[0].severity).toBe("INFO");
+    expect(noteFindings[0].factId).toBe("r1-1-requirement-001");
+    expect(noteFindings[0].message).toMatch(/By-law 14586/);
+    expect(noteFindings[0].message).toMatch(/2026-02-03/);
+    // A note is audit context only: it never appears as a gap, and does not change the requirement's normalized outcome.
+    expect(bundle.findings.filter((f) => f.severity === "GAP" && f.factId === "r1-1-requirement-001")).toHaveLength(0);
   });
 });
 

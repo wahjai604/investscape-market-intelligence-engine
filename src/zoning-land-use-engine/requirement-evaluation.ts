@@ -28,7 +28,7 @@ import type { E85RegulatoryRequirement, E85RequirementOutcome, E85RequirementQua
 import { evaluateTemporalApplicability, matchesJurisdictionZone } from "./applicability";
 import { dedupeEvidence, evidenceIdentityKey } from "./rule-identity";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
-import { e85ResolvedApplicabilityAudit, partitionE85EvidenceByApplicability, selectE85EvidenceForProposal } from "./rule-applicability";
+import { e85HistoricalRuleNotStructuredGap, e85ResolvedApplicabilityAudit, e85TemporallyExcludedOnly, partitionE85EvidenceByApplicability, selectE85EvidenceForProposal } from "./rule-applicability";
 import { e85RequirementAgreementKey, e85RequirementIdentity, e85RequirementQuantificationUnresolved } from "./regulatory-requirement";
 import { buildE85ConceptKey } from "./rule-concept-identity";
 
@@ -116,6 +116,21 @@ export function evaluateRequirements(
         const audit = e85ResolvedApplicabilityAudit(evidence[0]);
         findings.push({ family: "REQUIREMENT", field, outcome: "GAP", gap, ...(audit ? { applicability: audit } : {}) });
         requirements.push({ ...base, status: "APPLICABILITY_UNDETERMINED", quantities: [], evidence, ...(audit ? { applicability: audit } : {}), gap });
+        continue;
+      }
+      // PHASE 12C.2 — CURRENT-ONLY ANTI-LOOK-AHEAD: the trigger governs this
+      // proposal and its effective date IS proven, but that date is after (or,
+      // in principle, before the end of) the requested as-of date, and no
+      // historical predecessor obligation is structured. Never silently
+      // becomes "no requirement": the honest answer is that the obligation
+      // content applicable at this date is not structured.
+      const excluded = e85TemporallyExcludedOnly(group.requirements, context, asOfDate);
+      if (excluded.length > 0) {
+        const gapFinding = e85HistoricalRuleNotStructuredGap("REQUIREMENT", field, excluded, asOfDate);
+        const evidence = canonical(excluded);
+        const audit = e85ResolvedApplicabilityAudit(evidence[0]);
+        findings.push(gapFinding.applicability || audit ? { ...gapFinding, applicability: gapFinding.applicability ?? audit } : gapFinding);
+        requirements.push({ ...base, status: "APPLICABILITY_UNDETERMINED", quantities: [], evidence, ...(audit ? { applicability: audit } : {}), gap: gapFinding.gap! });
       }
       continue;
     }

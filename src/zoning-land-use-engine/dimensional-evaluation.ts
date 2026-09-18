@@ -22,7 +22,7 @@ import type { E85ApplicabilityContext } from "./rule-applicability-types";
 import { matchesJurisdictionZone } from "./applicability";
 import { detectConflict } from "./conflict-detection";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
-import { e85ResolvedApplicabilityAudit, selectE85EvidenceForProposal } from "./rule-applicability";
+import { e85HistoricalRuleNotStructuredGap, e85ResolvedApplicabilityAudit, e85TemporallyExcludedOnly, selectE85EvidenceForProposal } from "./rule-applicability";
 
 function applicableDimensionalRules(rules: readonly E85RuleRecord[], jurisdictionId: string, zoneDesignation: string): E85DimensionalRule[] {
   return rules.filter((r): r is E85DimensionalRule => r.family === "DIMENSIONAL" && matchesJurisdictionZone(r, jurisdictionId, zoneDesignation));
@@ -41,7 +41,10 @@ function evaluateScalarField(
   const selection = selectE85EvidenceForProposal("DIMENSIONAL", fieldName, evidenceItems, context, asOfDate);
   if (selection.finding) return selection.finding;
   const applicable = selection.applicable;
-  if (applicable.length === 0) return undefined;
+  if (applicable.length === 0) {
+    const excluded = e85TemporallyExcludedOnly(evidenceItems, context, asOfDate);
+    return excluded.length > 0 ? e85HistoricalRuleNotStructuredGap("DIMENSIONAL", fieldName, excluded, asOfDate) : undefined;
+  }
   const conflict = detectConflict(applicable, (a, b) => a === b);
   if (conflict.hasConflict) {
     return {

@@ -89,8 +89,25 @@ describe("E85 Phase 5A — a month-only publication stamp never becomes a day", 
   test("the string 2026-06-01 appears nowhere in the registered source or the normalized bundle", () => {
     expect(JSON.stringify(VANCOUVER_R1_1_SOURCE)).not.toContain("2026-06-01");
     expect(JSON.stringify(normalized())).not.toContain("2026-06-01");
-    // Nor any other manufactured day in that month.
-    expect(JSON.stringify(normalized())).not.toMatch(/2026-06-\d{2}/);
+  });
+
+  // PHASE 12C.2: the source's own June-2026 publication stamp still never
+  // becomes a day (no "sourceVersionId"-only value manufactures one), but the
+  // bundle now legitimately carries "2026-06-30" on the facts By-law 14747
+  // proves took effect that day — a genuinely different date, from a genuinely
+  // different instrument, never inferred from the June-2026 consolidation
+  // stamp. Every occurrence must be traceable to AMENDMENT_DATE_KNOWN.
+  test("every 2026-06 date in the bundle is the proven 2026-06-30 amendment date, never a manufactured publication-stamp day", () => {
+    const parsed: unknown = JSON.parse(JSON.stringify(normalized()));
+    const found = new Set<string>();
+    (function walk(node: unknown): void {
+      if (typeof node === "string") {
+        for (const m of node.matchAll(/2026-06-\d{2}/g)) found.add(m[0]);
+      } else if (node !== null && typeof node === "object") {
+        for (const v of Object.values(node)) walk(v);
+      }
+    })(parsed);
+    expect([...found]).toEqual(["2026-06-30"]);
   });
 
   test("source-version identity and rule-effective date are different fields answering different questions", () => {
@@ -208,7 +225,14 @@ describe("E85 Phase 5A — temporal uncertainty survives into the bundle and dow
     }
   });
 
-  test("every normalized value carries the uncertain window — not just the bundle header", () => {
+  // PHASE 12C.2: the bundle mixes undated evidence (still exactly the
+  // UNKNOWN window this Phase 5A test line originally pinned) with the
+  // handful of facts By-law 14747 proves took effect on 2026-06-30. This test
+  // now checks that EVERY evidence item still carries an explicit `temporal`
+  // object of one of these two authoritative shapes — never a third,
+  // unaccounted-for shape, and never simply absent.
+  const KNOWN_2026_06_30 = { effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" };
+  test("every normalized value carries an accounted-for temporal window — not just the bundle header", () => {
     const bundle = normalized();
     for (const rule of bundle.rules) {
       // Keyed maps (setbacks) are flattened, so a record holding only a scoped
@@ -221,7 +245,7 @@ describe("E85 Phase 5A — temporal uncertainty survives into the bundle and dow
           ? rule.requirements.flatMap((item) => [item.requirement, ...(item.quantities ?? [])])
           : objects.flatMap((v) => ("temporal" in v ? [v as { temporal: unknown }] : Object.values(v).filter((x): x is { temporal: unknown } => typeof x === "object" && x !== null && "temporal" in x)));
       expect(evidences.length).toBeGreaterThan(0);
-      for (const ev of evidences) expect(ev.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
+      for (const ev of evidences) expect([{ effectiveDateBasis: "UNKNOWN" }, KNOWN_2026_06_30]).toContainEqual(ev.temporal);
     }
   });
 

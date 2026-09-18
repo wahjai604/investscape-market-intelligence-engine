@@ -457,10 +457,13 @@ describe("R1-1 §3.1.1.3(b)(ii) — the normalized obligation", () => {
     for (const i of r11Items(bundle)) expect(Object.keys(i.requirement.value).every((k) => ["category", "requirementCode", "obligationKind", "rawSourceTerminology", "choice", "instrumentReferences"].includes(k))).toBe(true);
   });
 
-  test("every requirement evidence item is temporally UNKNOWN, with no effectiveFrom or effectiveTo", () => {
+  // PHASE 12C.2: the entire §3.1.1.3(b)(ii) obligation — both alternatives and
+  // the 5% quantity — was created by By-law 14747's wholesale §3.1.1
+  // replacement, proven effective 2026-06-30 (§37). No longer UNKNOWN.
+  test("every requirement evidence item carries the proven 2026-06-30 amendment date, with no effectiveTo", () => {
     const evidences = r11Items(bundle).flatMap((i) => [i.requirement, ...(i.quantities ?? [])]);
     expect(evidences).toHaveLength(3);
-    for (const e of evidences) expect(e.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
+    for (const e of evidences) expect(e.temporal).toEqual({ effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" });
   });
 
   test("the §3.1.1.3(b)(ii) coverage gap is gone; §3.1.1.4 and §3.2.2.10 remain declared gaps", () => {
@@ -545,15 +548,53 @@ describe("R1-1 §3.1.1.3(b)(ii) — Phase 4 for proposals (hypothetical dated co
     expect(outcome.resolvedMaxFsr?.value).toBe(1.0);
   });
 
-  test("the real, undated source reports the obligation as APPLICABILITY_UNDETERMINED on EFFECTIVE_DATE_UNKNOWN", () => {
+  // PHASE 12C.2: at the target 2026-09-01 asOf, the obligation's now-proven
+  // 2026-06-30 effective date makes it in force. The social-housing
+  // alternative fully resolves; the cash-in-lieu alternative still cannot
+  // resolve, but for an entirely different, pre-existing reason — its
+  // Schedule J rate remains deliberately unstructured (RULE_NOT_STRUCTURED),
+  // never EFFECTIVE_DATE_UNKNOWN.
+  test("at the target date, the social-housing alternative resolves and the cash-in-lieu alternative reports its pre-existing Schedule J quantification gap — neither is EFFECTIVE_DATE_UNKNOWN", () => {
     const outcome = r11Evaluate(r11Bundle().rules);
+    expect(outcome.requirements!.map((r) => r.status).sort()).toEqual(["APPLICABLE_QUANTIFICATION_UNRESOLVED", "APPLICABLE_STRUCTURED"]);
+    expect(gapCodes(outcome)).not.toContain("EFFECTIVE_DATE_UNKNOWN");
+    expect(gapCodes(outcome)).toContain("RULE_NOT_STRUCTURED");
+  });
+
+  // Before the proven effective date, the current obligation is not yet in
+  // force and no historical predecessor is structured: the honest answer is
+  // an unresolved historical gap, never "no requirement" and never the
+  // current values applied retroactively.
+  test("before 2026-06-30, the current obligation is not yet in force and reports an unresolved historical gap, never a silent absence", () => {
+    const outcome = r11Evaluate(r11Bundle().rules, { asOfDate: "2026-06-29" });
     expect(outcome.requirements!.map((r) => r.status)).toEqual(["APPLICABILITY_UNDETERMINED", "APPLICABILITY_UNDETERMINED"]);
-    expect(gapCodes(outcome)).toContain("EFFECTIVE_DATE_UNKNOWN");
+    expect(gapCodes(outcome)).toEqual(["RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED"]);
   });
 
   test("composition carries the obligation through unchanged, with no conflict", () => {
     const c = composed([{ ...pack("r11", r11Bundle(hypotheticalDatedSource()).rules), jurisdictionId: VANCOUVER_JURISDICTION_ID, zoneDesignation: VANCOUVER_R1_1_ZONE }]);
     expect(c.unresolvedConflicts).toEqual([]);
     expect(r11Evaluate(c.effectiveRules).requirements!.map((r) => r.status)).toEqual(["APPLICABLE_QUANTIFICATION_UNRESOLVED", "APPLICABLE_STRUCTURED"]);
+  });
+
+  // PHASE 12C.2A §19 — the actual Phase 12 target date, not a stand-in.
+  test("at the exact target date 2026-09-14, dated evidence resolves and no dated fact reports EFFECTIVE_DATE_UNKNOWN", () => {
+    const outcome = r11Evaluate(r11Bundle().rules, { asOfDate: "2026-09-14" });
+    expect(outcome.requirements!.map((r) => r.status).sort()).toEqual(["APPLICABLE_QUANTIFICATION_UNRESOLVED", "APPLICABLE_STRUCTURED"]);
+    expect(gapCodes(outcome)).not.toContain("EFFECTIVE_DATE_UNKNOWN");
+    expect(gapCodes(outcome)).toContain("RULE_NOT_STRUCTURED");
+  });
+
+  // PHASE 12C.2A §20 — the 14586 definition-dependency date (2026-02-03) must
+  // never become a usable effectiveFrom for requirement-001/002: querying
+  // exactly that date must still find the current obligation not yet in force.
+  test("2026-02-03 (the 14586 dependency date) does not activate the current obligation", () => {
+    const outcome = r11Evaluate(r11Bundle().rules, { asOfDate: "2026-02-03" });
+    expect(outcome.requirements!.map((r) => r.status)).toEqual(["APPLICABILITY_UNDETERMINED", "APPLICABILITY_UNDETERMINED"]);
+    expect(gapCodes(outcome)).toEqual(["RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED"]);
+    // The dependency note is visible in normalized-bundle audit output, but purely as INFO — never as what makes the obligation current.
+    const noteFindings = r11Bundle().findings.filter((f) => f.code === "SOURCE_NOTE_PRESERVED");
+    expect(noteFindings).toHaveLength(1);
+    expect(noteFindings[0].message).toMatch(/2026-02-03/);
   });
 });

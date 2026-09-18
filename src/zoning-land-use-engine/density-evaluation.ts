@@ -25,7 +25,7 @@ import type { E85ApplicabilityContext } from "./rule-applicability-types";
 import { evaluateTemporalApplicability, matchesJurisdictionZone } from "./applicability";
 import { detectConflict } from "./conflict-detection";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
-import { e85ResolvedApplicabilityAudit, evaluateE85RuleApplicability, selectE85EvidenceForProposal } from "./rule-applicability";
+import { e85HistoricalRuleNotStructuredGap, e85ResolvedApplicabilityAudit, e85TemporallyExcludedOnly, evaluateE85RuleApplicability, selectE85EvidenceForProposal } from "./rule-applicability";
 
 function applicableDensityRules(rules: readonly E85RuleRecord[], jurisdictionId: string, zoneDesignation: string): E85DensityRule[] {
   return rules.filter((r): r is E85DensityRule => r.family === "DENSITY" && matchesJurisdictionZone(r, jurisdictionId, zoneDesignation));
@@ -54,14 +54,14 @@ export function evaluateDensity(
   const densityRules = applicableDensityRules(rules, jurisdictionId, zoneDesignation);
 
   // --- maxFsr ---
-  const fsrSelection = selectE85EvidenceForProposal(
-    "DENSITY",
-    "maxFsr",
-    densityRules.map((r) => r.maxFsr).filter((ev): ev is NonNullable<typeof ev> => ev !== undefined),
-    context,
-    asOfDate,
-  );
-  if (fsrSelection.finding) findings.push(fsrSelection.finding);
+  const fsrItems = densityRules.map((r) => r.maxFsr).filter((ev): ev is NonNullable<typeof ev> => ev !== undefined);
+  const fsrSelection = selectE85EvidenceForProposal("DENSITY", "maxFsr", fsrItems, context, asOfDate);
+  if (fsrSelection.finding) {
+    findings.push(fsrSelection.finding);
+  } else if (fsrSelection.applicable.length === 0) {
+    const excluded = e85TemporallyExcludedOnly(fsrItems, context, asOfDate);
+    if (excluded.length > 0) findings.push(e85HistoricalRuleNotStructuredGap("DENSITY", "maxFsr", excluded, asOfDate));
+  }
   const fsrEvidence = fsrSelection.applicable;
 
   let resolvedFsr: number | undefined;
@@ -190,14 +190,14 @@ export function evaluateDensity(
   }
 
   // --- maximum dwelling units (Phase 12B.2): a regulatory output, reported as its own finding ---
-  const unitsSelection = selectE85EvidenceForProposal(
-    "DENSITY",
-    "maxDwellingUnits",
-    densityRules.map((r) => r.maxDwellingUnits).filter((ev): ev is NonNullable<typeof ev> => ev !== undefined),
-    context,
-    asOfDate,
-  );
-  if (unitsSelection.finding) findings.push(unitsSelection.finding);
+  const unitsItems = densityRules.map((r) => r.maxDwellingUnits).filter((ev): ev is NonNullable<typeof ev> => ev !== undefined);
+  const unitsSelection = selectE85EvidenceForProposal("DENSITY", "maxDwellingUnits", unitsItems, context, asOfDate);
+  if (unitsSelection.finding) {
+    findings.push(unitsSelection.finding);
+  } else if (unitsSelection.applicable.length === 0) {
+    const excluded = e85TemporallyExcludedOnly(unitsItems, context, asOfDate);
+    if (excluded.length > 0) findings.push(e85HistoricalRuleNotStructuredGap("DENSITY", "maxDwellingUnits", excluded, asOfDate));
+  }
   if (unitsSelection.applicable.length > 0) {
     const conflict = detectConflict(unitsSelection.applicable, (a, b) => a === b);
     if (conflict.hasConflict) {

@@ -269,6 +269,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
     // it, and says so. It is not a claim about when the provision took effect —
     // that lives in `temporal`, and is UNKNOWN whenever the source states none.
     effectiveDateBasisNote: publicationNote,
+    ...(fact.temporalAuthority === undefined ? {} : { temporalAuthority: fact.temporalAuthority }),
     url: version?.url ?? source.url,
     interpretationNote,
     retrievedAt: document.extractedAt,
@@ -307,6 +308,12 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
   const permissions: E85Evidence<E85UsePermission>[] = [];
   const scalars: ScopedScalar[] = [];
   const requirementItems: E85RequirementItem[] = [];
+  // PHASE 12C.2 — facts that fell back to the source version's own temporal
+  // window because they carry no proven window of their own. Collected so the
+  // bundle-level EFFECTIVE_DATE_UNKNOWN gap below names exactly which facts it
+  // covers, rather than (now inaccurately) claiming the whole bundle is undated
+  // once some facts carry a proven `temporal`.
+  const undatedFactIds: string[] = [];
 
   for (const fact of facts) {
     if (fact.zoneDesignation !== document.zoneDesignation) {
@@ -343,6 +350,39 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
     const scoped = scope.applicability === undefined ? {} : { applicability: scope.applicability };
     const scopeNote = scope.scopeKey === "" ? "" : ` Scope: {${scope.scopeKey}}.`;
 
+    // PHASE 12C.2A — an extractor's note is audit context, never silently
+    // dropped: the contract on `E85StructuredSourceFact.notes` has always
+    // promised it "surfaces as an adapter finding", but nothing here actually
+    // did that until now. INFO severity only: a note is never itself grounds
+    // to change a fact's outcome (a fact whose note describes a real problem
+    // must still fail through one of the ordinary gap paths above/below).
+    if (fact.notes !== undefined && fact.notes.trim() !== "") {
+      findings.push({
+        code: "SOURCE_NOTE_PRESERVED",
+        severity: "INFO",
+        factId: fact.factId,
+        sourceTerm: fact.sourceTerm,
+        message: `Extractor's note on fact "${fact.factId}": ${fact.notes}`,
+      });
+    }
+
+    // PHASE 12C.2 — a fact's own proven legal window takes precedence over the
+    // document version's bundle-wide window; absence falls back exactly as
+    // every earlier phase behaved, so a bundle may mix dated and undated facts
+    // without one date leaking onto the other's evidence.
+    const factTemporal: E85TemporalWindow = fact.temporal ?? temporal;
+    if (fact.temporal !== undefined && fact.temporal.effectiveDateBasis !== "UNKNOWN") {
+      findings.push({
+        code: "TERM_MAPPED_EXACT",
+        severity: "INFO",
+        factId: fact.factId,
+        sourceTerm: fact.sourceTerm,
+        message: `Fact "${fact.factId}" carries its own proven effective date (${fact.temporal.effectiveFrom ?? "no effectiveFrom"}, basis ${fact.temporal.effectiveDateBasis}), distinct from source version "${document.versionId}"'s ${temporal.effectiveDateBasis === "UNKNOWN" ? "unknown" : "own"} temporal basis.`,
+      });
+    } else if (factTemporal.effectiveDateBasis === "UNKNOWN") {
+      undatedFactIds.push(fact.factId);
+    }
+
     if (fact.family === "USE") {
       const status = mapVancouverUseStatus(fact.sourceTerm);
       if (status === undefined) {
@@ -378,7 +418,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         ...(status === "CONDITIONAL" ? { approvalAuthority: VANCOUVER_CONDITIONAL_APPROVAL_AUTHORITY } : {}),
         ...(fact.condition ? { conditionsNote: fact.condition } : {}),
       };
-      permissions.push({ value: permission, provenance, temporal, ...scoped });
+      permissions.push({ value: permission, provenance, temporal: factTemporal, ...scoped });
       qualityTiers.push(deriveEvidenceQuality(provenance));
       applicabilityTiers.push(fact.condition ? "moderate" : "high");
       findings.push({
@@ -435,7 +475,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         quantity = {
           value: { kind: mapping.quantityKind, value: converted.value, basisTerm: spec.quantityBasisTerm },
           provenance: baseProvenance(fact, converted.policyApplied),
-          temporal,
+          temporal: factTemporal,
           ...scoped,
         };
       }
@@ -451,7 +491,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
           : { instrumentReferences: spec.references.map((r) => ({ role: r.role, target: r.target, description: r.description, structured: false })) }),
       };
       const provenance = baseProvenance(fact);
-      const item: E85RequirementItem = { requirement: { value: requirement, provenance, temporal, ...scoped }, ...(quantity === undefined ? {} : { quantities: [quantity] }) };
+      const item: E85RequirementItem = { requirement: { value: requirement, provenance, temporal: factTemporal, ...scoped }, ...(quantity === undefined ? {} : { quantities: [quantity] }) };
       const problems = validateE85RequirementItem(item);
       if (problems.length > 0) {
         addGap(fact, "AMBIGUOUS_SOURCE_INTERPRETATION", "RULE_NOT_STRUCTURED", `Requirement fact "${fact.factId}" cannot be emitted: ${problems.join(" ")}`);
@@ -520,7 +560,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
     }
 
     const provenance = baseProvenance(fact, converted.policyApplied);
-    const evidence: E85Evidence<number> = { value: converted.value, provenance, temporal, ...scoped };
+    const evidence: E85Evidence<number> = { value: converted.value, provenance, temporal: factTemporal, ...scoped };
     qualityTiers.push(deriveEvidenceQuality(provenance));
     applicabilityTiers.push(fact.condition ? "moderate" : "high");
 
@@ -578,11 +618,18 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
   // date, which the source never made. Phase 4 sees UNDETERMINED applicability
   // and reports it, rather than being handed a manufactured date that would
   // silently evaluate as MACHINE_RESOLVED.
-  if (temporal.effectiveDateBasis === "UNKNOWN") {
+  //
+  // PHASE 12C.2 — this fires only for the facts that actually fell back to the
+  // version's own UNKNOWN basis (`undatedFactIds`), not unconditionally on the
+  // version's basis: some facts now carry their own proven `temporal` and must
+  // not be reported as undated merely because the DOCUMENT's own publication
+  // stamp is not a legal effective date.
+  if (undatedFactIds.length > 0) {
     const message =
       `No effective date is established for "${source.sourceId}" version "${document.versionId}"` +
       (version?.consolidationPeriod ? `, which carries a ${version.consolidationPeriod} publication stamp at month precision and no day` : "") +
-      `. The source version identifies WHICH TEXT was read; it does not state when the provisions took legal effect, and no date is inferred from it.`;
+      `. The source version identifies WHICH TEXT was read; it does not state when the provisions took legal effect, and no date is inferred from it. ` +
+      `${undatedFactIds.length} fact(s) carry no proven amendment-instrument date of their own and therefore fall back to this unknown basis: ${[...undatedFactIds].sort().join(", ")}.`;
     findings.push({
       code: "SOURCE_VERSION_INCOMPLETE",
       severity: "GAP",
@@ -592,7 +639,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         reason: message,
         sourcesChecked: [source.sourceId],
         checkedAt: normalizedAt,
-        resolutionHint: "Establish the provisions' effective date from an authoritative statement (enactment/adoption record or an explicit in-force date) and register it as `effectiveFrom` on this version.",
+        resolutionHint: "Establish the provisions' effective date from an authoritative statement (enactment/adoption record or an explicit in-force date) and register it as `effectiveFrom` on this version, or on the individual fact's own `temporal` when only that fact's date is known.",
       },
     });
   }

@@ -438,11 +438,26 @@ describe("R1-1 freezes on the corrected facts", () => {
     return result.bundle;
   };
 
-  test("every corrected value remains temporally UNKNOWN, with no effectiveFrom/effectiveTo", () => {
+  // PHASE 12C.2: this freeze originally guarded against ANY temporal
+  // implementation happening before its own evidence gate closed. That gate
+  // is now closed for exactly one proven date — By-law 14747, effective
+  // 2026-06-30, for the current §3.1.1 density/unit-cap/affordable-housing
+  // block — so the freeze narrows to: no effectiveTo is ever invented, no
+  // OTHER date appears, and every basis is either UNKNOWN or the one proven
+  // AMENDMENT_DATE_KNOWN value.
+  test("no effectiveTo is invented, and every effectiveDateBasis is UNKNOWN or the one proven AMENDMENT_DATE_KNOWN date", () => {
     const serialized = JSON.stringify(normalized().rules);
-    expect(serialized).not.toMatch(/"effectiveFrom"|"effectiveTo"/);
-    expect(serialized.match(/"effectiveDateBasis":"([A-Z_]+)"/g)?.every((m) => m.endsWith('"UNKNOWN"'))).toBe(true);
-    expect(serialized).not.toMatch(/2023-10-17|2026-06-30|2026-06-03/);
+    expect(serialized).not.toMatch(/"effectiveTo"/);
+    const bases = serialized.match(/"effectiveDateBasis":"([A-Z_]+)"/g);
+    expect(bases?.every((m) => m.endsWith('"UNKNOWN"') || m.endsWith('"AMENDMENT_DATE_KNOWN"'))).toBe(true);
+    expect(bases?.some((m) => m.endsWith('"AMENDMENT_DATE_KNOWN"'))).toBe(true);
+    // No manufactured or speculative date anywhere — only the one proven day.
+    const dates = new Set([...serialized.matchAll(/"effectiveFrom":"(\d{4}-\d{2}-\d{2})"/g)].map((m) => m[1]));
+    expect([...dates]).toEqual(["2026-06-30"]);
+    // The R1-1 creation date (2023-10-17) is deliberately NOT assigned in this
+    // phase: By-law 13817's Schedule A is scanned images, not extractable
+    // text, so its content could not be directly verified (Phase 12C.2 §4).
+    expect(serialized).not.toMatch(/2023-10-17|2026-06-03/);
   });
 
   test("Phase 11 legal identity is unchanged", () => {

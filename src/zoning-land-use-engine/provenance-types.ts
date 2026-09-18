@@ -37,6 +37,29 @@ export interface E85DocumentLocator {
   page?: number;
 }
 
+/**
+ * PHASE 12C.2A (optional, additive): machine-readable identification of the
+ * legal instrument that established an evidence item's `temporal` window,
+ * kept strictly distinct from `E85Provenance.documentLocator` — that field
+ * locates the VALUE in the current consolidated text (e.g. "§3.1.1.2"); this
+ * one locates the AMENDING instrument that made 3.1.1.2 read that way and
+ * says when it took effect. Neither overwrites the other, and both are
+ * legally meaningful on their own. Present only when `effectiveDateBasis` is
+ * `AMENDMENT_DATE_KNOWN` (or another basis a reviewer can point to a specific
+ * instrument for); a `SOURCE_STATED`/`PUBLICATION_DATE_INFERRED`/`UNKNOWN`
+ * basis has no instrument to name and omits this field. Jurisdiction-neutral:
+ * every field reuses `E85DocumentLocator`, so no jurisdiction vocabulary
+ * appears here — only in the locator values an adapter supplies.
+ */
+export interface E85TemporalAuthority {
+  /** The amending instrument itself, e.g. `{ bylawOrDocumentId: "<amendment number>" }`. Never the source's own `sourceId` — the instrument need not be a registered E85 source. */
+  instrument: E85DocumentLocator;
+  /** The specific clause of the instrument that establishes or replaces this proposition, when narrower than the instrument as a whole. */
+  propositionLocator?: E85DocumentLocator;
+  /** The clause establishing when the instrument (and so this proposition) came into force. */
+  commencementLocator: E85DocumentLocator;
+}
+
 /** A structured pointer into a GIS dataset, distinct from a document locator — many zoning determinations (e.g. overlay boundaries) are resolved spatially rather than textually. */
 export interface E85GisLocator {
   /** Identifier of the GIS dataset/layer, e.g. a municipal open-data layer name. */
@@ -90,6 +113,8 @@ export interface E85Provenance {
   overlayDesignation?: string;
   /** What established the effective date used to select this evidence — see `effectiveDateBasis` values in evidence-types.ts. Free text describing the specific basis found (e.g. "Council adoption date printed on consolidation cover page"). */
   effectiveDateBasisNote?: string;
+  /** PHASE 12C.2A (optional, additive): machine-readable amending-instrument identity backing an `AMENDMENT_DATE_KNOWN` `temporal` window. See `E85TemporalAuthority`. */
+  temporalAuthority?: E85TemporalAuthority;
   /** Optional URL for convenience/traceability only — NEVER the sole identity of this provenance record (Phase 2 correction 9). May go stale; that does not invalidate the rest of the record. */
   url?: string;
   /** Free-text note describing any interpretive judgment made in reading the source (e.g. "table column header ambiguous between FSR and floor area — read literally as FSR"). */

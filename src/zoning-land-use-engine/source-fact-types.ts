@@ -23,10 +23,11 @@
  * recognize a term must say so (`UNSUPPORTED_SOURCE_CONCEPT`), and that is
  * only possible while terms stay discrete strings.
  */
-import type { E85DocumentLocator } from "./provenance-types";
+import type { E85DocumentLocator, E85TemporalAuthority } from "./provenance-types";
 import type { E85RuleFamily } from "./rule-family-types";
 import type { E85ApplicabilityDimension, E85NumericBound } from "./rule-applicability-types";
 import type { E85RequirementChoiceMode, E85RequirementReferenceRole } from "./regulatory-requirement-types";
+import type { E85TemporalWindow } from "./evidence-types";
 
 /**
  * PHASE 12B.2 — which proposals a source statement governs, in the SOURCE's
@@ -127,6 +128,32 @@ export interface E85StructuredSourceFact {
   requirement?: E85StructuredFactRequirement;
   /** Where in the document this fact is stated. Carried straight into provenance. */
   locator: E85DocumentLocator;
+  /**
+   * PHASE 12C.2 (optional, additive): this fact's OWN legal effective window,
+   * when an amending instrument distinct from the document's own
+   * publication/consolidation stamp establishes one. Absent means the fact
+   * falls back to the document version's derived temporal window exactly as
+   * every earlier phase behaved — this field never narrows or overrides that
+   * fallback implicitly, an adapter must read it explicitly.
+   *
+   * This is a proposition date, not a definition/dependency date: if this
+   * fact's current wording depends on a term defined or amended elsewhere
+   * (e.g. by a different by-law, on a different date), that dependency date
+   * does NOT belong here — it belongs in `notes`/provenance as audit context,
+   * because attaching it here would make E85 select or exclude this fact on a
+   * date that governs a term the fact merely uses, not the fact's own
+   * enactment.
+   */
+  temporal?: E85TemporalWindow;
+  /**
+   * PHASE 12C.2A (optional, additive): machine-readable identity of the
+   * amending instrument backing `temporal`, when `temporal.effectiveDateBasis`
+   * is `AMENDMENT_DATE_KNOWN`. A date literal plus that basis enum value is
+   * not by itself auditable back to a specific instrument/clause; this field
+   * is what makes it so, without requiring a human to have read a report or
+   * comment to know why. See `E85TemporalAuthority`.
+   */
+  temporalAuthority?: E85TemporalAuthority;
   /** Extractor's note on any ambiguity encountered while reading. Surfaces as an adapter finding; never silently dropped. */
   notes?: string;
 }

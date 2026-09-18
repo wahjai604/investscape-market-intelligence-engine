@@ -308,12 +308,25 @@ describe("E85 Phase 6 end-to-end — the Phase 5 pilot bundle composes like any 
 
   test("the pilot's own temporal gap and licence limitation survive composition untouched", () => {
     const composed = compose([pilotPack(), syntheticCompanion()]);
-    // Phase 5A established that this source states no effective date; composing
-    // it with another instrument must not quietly supply one.
+    // Phase 5A established that this source states no effective date by
+    // default; composing it with another instrument must not quietly supply
+    // one where none is proven. Phase 12C.2 proved one specific date (By-law
+    // 14747, 2026-06-30) for the current §3.1.1 multiple-dwelling FSR — that
+    // proven date must ALSO survive composition untouched, exactly as the
+    // UNKNOWN case does for everything else.
     // Phase 12B.2: the pilot's FSR is scoped, so it is traced under its scoped concept key.
     const traced = traceE85EffectiveConcept(composed, buildE85ConceptKey("DENSITY", "maxFsr", undefined, "use=multiple_dwelling;dwellingUnits=..8"));
     expect(traced?.value).toBe(1);
-    expect(traced?.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
+    expect(traced?.temporal).toEqual({ effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" });
+    // PHASE 12C.2A §24: the machine-readable amendment-instrument authority behind
+    // that date must also survive composition inspectable, not just the date itself,
+    // and must not have been promoted into precedence (this pack still lands as BASE
+    // and composes with no conflict against the unrelated synthetic companion).
+    expect(traced?.provenance.temporalAuthority).toEqual({
+      instrument: { bylawOrDocumentId: "14747" },
+      propositionLocator: { bylawOrDocumentId: "14747", clause: "4(d)" },
+      commencementLocator: { bylawOrDocumentId: "14747", section: "37" },
+    });
     expect(composed.readinessLimitations.map((l) => l.packId)).toContain("pilot");
     expect(composed.readinessLimitations[0].blockers).toContain("LICENSE");
   });

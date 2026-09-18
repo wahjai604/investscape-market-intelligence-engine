@@ -41,7 +41,9 @@ export type E85NormalizationFindingCode =
   /** An identical fact appeared more than once in the extract and was normalized only once, so a repeated read can never masquerade as corroboration. */
   | "DUPLICATE_SOURCE_FACT_IGNORED"
   /** The stated unit is not one this concept accepts (e.g. a height in SPACES), so no conversion was attempted. */
-  | "UNIT_UNSUPPORTED_FOR_CONCEPT";
+  | "UNIT_UNSUPPORTED_FOR_CONCEPT"
+  /** PHASE 12C.2A: an extractor's note (`E85StructuredSourceFact.notes`) was carried forward as an audit-only finding. INFO only — a note never changes whether a fact was normalized or what its outcome was. */
+  | "SOURCE_NOTE_PRESERVED";
 
 /**
  * How the finding affects the bundle.

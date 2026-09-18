@@ -53,11 +53,21 @@
  *                     §3.2 storeys stay withheld because §3.2.2.10 (p.13) limits
  *                     the third storey to a partial storey.
  *
- * All temporal authority remains UNKNOWN (Phase 12C).
+ * PHASE 12C.2 — the current §3.1.1 density/unit-cap/affordable-housing block
+ * (density-002/005/006, requirement-001/002) carries its OWN proven
+ * `temporal` window (By-law 14747, effective 2026-06-30), established from the
+ * amending instrument itself, never from this June-2026 consolidation stamp.
+ * Every other fact below still carries no `temporal` (falls back to the
+ * source version's UNKNOWN basis): the direct-evidence gate could not verify
+ * their presence in By-law 13817's Schedule A, whose attached schedule is
+ * scanned images rather than extractable text, so no date is assigned to them
+ * from numeric-value continuity alone.
  *
  * This file is not a test (jest matches `*.test.ts` only).
  */
 import type { E85StructuredSourceDocument, E85StructuredSourceFact } from "../../../src/zoning-land-use-engine";
+import type { E85TemporalWindow } from "../../../src/zoning-land-use-engine/evidence-types";
+import type { E85TemporalAuthority } from "../../../src/zoning-land-use-engine/provenance-types";
 import { adapters } from "../../../src/zoning-land-use-engine";
 
 const { VANCOUVER_R1_1_SOURCE_ID, VANCOUVER_R1_1_VERSION_ID, VANCOUVER_R1_1_ZONE, VANCOUVER_JURISDICTION_ID } = adapters.vancouver;
@@ -130,6 +140,30 @@ export const FACT_CONDITIONAL_MULTIPLE_DWELLING: E85StructuredSourceFact = {
   locator: { section: "2.1", table: USE_TABLE, row: MULTIPLE_DWELLING_TERM, page: 3 },
 };
 
+/**
+ * PHASE 12C.2 — §3.1.1 was struck and wholly replaced by By-law 14747 clause
+ * 4(d), in force per its own §37 commencement clause on 2026-06-30. This is
+ * the proposition's OWN effective date, distinct from the June-2026 schedule
+ * consolidation stamp: 14747 is the amending instrument, not merely a
+ * republication of unchanged text.
+ */
+const S311_REPLACEMENT_TEMPORAL: E85TemporalWindow = { effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" };
+
+/**
+ * PHASE 12C.2A — machine-readable authority backing `S311_REPLACEMENT_TEMPORAL`:
+ * By-law 14747 clause 4(d) struck and replaced §3.1.1 wholesale; its own §37
+ * commencement clause brings that replacement into force on 2026-06-30. Kept
+ * distinct from each fact's `documentLocator` (which points at the CURRENT
+ * consolidated clause, e.g. "3.1.1.2") — this points at the AMENDING
+ * instrument instead, so a reviewer can answer "why 2026-06-30?" from the
+ * normalized evidence alone, with no report or comment required.
+ */
+const S311_REPLACEMENT_AUTHORITY: E85TemporalAuthority = {
+  instrument: { bylawOrDocumentId: "14747" },
+  propositionLocator: { bylawOrDocumentId: "14747", clause: "4(d)" },
+  commencementLocator: { bylawOrDocumentId: "14747", section: "37" },
+};
+
 /** §3.1.1.2 (as substituted by By-law 14747): maximum FSR 1.00 for §3.1 multiple dwellings. */
 export const FACT_FSR_MULTIPLE_DWELLING: E85StructuredSourceFact = {
   factId: "r1-1-density-002",
@@ -140,6 +174,8 @@ export const FACT_FSR_MULTIPLE_DWELLING: E85StructuredSourceFact = {
   unit: "RATIO",
   applicability: MD_SCOPE,
   locator: { section: "3.1.1.2", page: 8 },
+  temporal: S311_REPLACEMENT_TEMPORAL,
+  temporalAuthority: S311_REPLACEMENT_AUTHORITY,
 };
 
 /** §3.2.1.1: 0.70 for duplex and duplex with secondary suite. */
@@ -176,6 +212,8 @@ export const FACT_UNITS_RENTAL: E85StructuredSourceFact = {
   unit: "DWELLING_UNITS",
   applicability: { ...MD_SCOPE, tenureTerms: [RENTAL_100_TERM], locators: { ...MD_SCOPE.locators, tenureCodes: { section: "3.1.1.3", clause: "(a)", page: 8 } } },
   locator: { section: "3.1.1.3", clause: "(a)", page: 8 },
+  temporal: S311_REPLACEMENT_TEMPORAL,
+  temporalAuthority: S311_REPLACEMENT_AUTHORITY,
 };
 
 /** §3.1.1.3(b)(i): any tenure other than residential rental -> maximum 6 dwelling units. */
@@ -188,6 +226,8 @@ export const FACT_UNITS_OTHER_TENURE: E85StructuredSourceFact = {
   unit: "DWELLING_UNITS",
   applicability: { ...MD_SCOPE, excludedTenureTerms: [RENTAL_100_TERM], locators: { ...MD_SCOPE.locators, excludedTenureCodes: { section: "3.1.1.3", clause: "(b)", page: 8 } } },
   locator: { section: "3.1.1.3", clause: "(b)(i)", page: 8 },
+  temporal: S311_REPLACEMENT_TEMPORAL,
+  temporalAuthority: S311_REPLACEMENT_AUTHORITY,
 };
 
 /** Opaque, adapter-level id for §3.1.1.3(b)(ii)(C). E85 does not resolve this geography; a caller affirms or denies it. */
@@ -228,6 +268,16 @@ export const FACT_REQUIREMENT_SOCIAL_HOUSING: E85StructuredSourceFact = {
     references: [{ role: "TERMS", target: { bylawOrDocumentId: "3575", schedule: SCHEDULE_J }, description: "affordable housing terms for required social housing, applied by section 3.1.1.1" }],
   },
   locator: { section: "3.1.1.3", clause: "(b)(ii)", page: 8 },
+  temporal: S311_REPLACEMENT_TEMPORAL,
+  temporalAuthority: S311_REPLACEMENT_AUTHORITY,
+  // DEPENDENCY, NOT A PROPOSITION DATE (Phase 12C.1B/12C.2): the governing
+  // Section 2 definition of "Social Housing" this alternative relies on was
+  // itself amended by By-law 14586, effective 2026-02-03 — before this
+  // proposition's own 2026-06-30 effective date, so no active interval exists
+  // where the current §3.1.1.3(b)(ii) text was in force under the pre-14586
+  // definition. Recorded as audit context only; it is never copied into
+  // `temporal` and never used to select or exclude this fact.
+  notes: "Governing definition dependency: Section 2 \"Social Housing\" was amended by By-law 14586, effective 2026-02-03. This is a definition/dependency date, not this obligation's own effectiveFrom (2026-06-30, By-law 14747).",
 };
 
 /** §3.1.1.3(b)(ii): "or a cash in lieu payment may be provided" — the other alternative. Its rate is Schedule J §8.1.1, not structured here. */
@@ -242,6 +292,8 @@ export const FACT_REQUIREMENT_CASH_IN_LIEU: E85StructuredSourceFact = {
     references: [{ role: "QUANTIFICATION", target: { bylawOrDocumentId: "3575", schedule: SCHEDULE_J, section: "8.1.1", page: 5 }, description: "cash in lieu rate table" }],
   },
   locator: { section: "3.1.1.3", clause: "(b)(ii)", page: 8 },
+  temporal: S311_REPLACEMENT_TEMPORAL,
+  temporalAuthority: S311_REPLACEMENT_AUTHORITY,
 };
 
 const REAR_SCOPE = { ...MD_SCOPE, buildingRoleTerms: [REAR_BUILDING_TERM], locators: { ...MD_SCOPE.locators, buildingRoles: { section: "3.1.2.5", clause: "(a)", page: 9 } } };

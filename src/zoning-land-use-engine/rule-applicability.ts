@@ -428,6 +428,57 @@ export function selectE85EvidenceForProposal<T>(
   return { applicable: partition.applies.filter((ev) => evaluateTemporalApplicability(ev.temporal, asOfDate) === "APPLIES") };
 }
 
+/**
+ * PHASE 12C.2 — CURRENT-ONLY ANTI-LOOK-AHEAD helper. `selectE85EvidenceForProposal`
+ * silently returns `applicable: []` with NO finding when every scope-applicable
+ * item is temporally excluded (NOT_YET_EFFECTIVE/EXPIRED) — by design, so each
+ * family evaluator can decide its own honest final answer for that condition
+ * (e.g. USE already resolves an honest UNKNOWN status; DENSITY/DIMENSIONAL had
+ * no such fallback and silently produced no finding at all, which is the actual
+ * defect this phase fixes). This helper gives a family evaluator the facts to
+ * build that answer without duplicating the temporal-vs-scope classification
+ * logic above. It deliberately excludes evidence with an UNDETERMINED
+ * (unknown) temporal basis — that is the pre-existing, distinct
+ * EFFECTIVE_DATE_UNKNOWN condition each caller already detects on its own.
+ */
+export function e85TemporallyExcludedOnly<T>(items: readonly E85Evidence<T>[], context: E85ApplicabilityContext, asOfDate: string): readonly E85Evidence<T>[] {
+  const partition = partitionE85EvidenceByApplicability(items, context);
+  const status = (ev: E85Evidence<T>) => evaluateTemporalApplicability(ev.temporal, asOfDate);
+  const excluded = partition.applies.filter((ev) => status(ev) === "NOT_YET_EFFECTIVE" || status(ev) === "EXPIRED");
+  const live = partition.applies.some((ev) => status(ev) === "APPLIES");
+  const unresolvedBasis = partition.applies.some((ev) => status(ev) === "UNDETERMINED");
+  return live || unresolvedBasis ? [] : excluded;
+}
+
+/**
+ * Builds the GAP finding for the CURRENT-ONLY anti-look-ahead condition: every
+ * scope-applicable value for `field` is proven to govern this proposal, but
+ * none is in force as of `asOfDate` and no historical predecessor is
+ * structured. A family evaluator calls this only after its own selection
+ * already produced no finding and no applicable evidence — `excluded` must be
+ * the result of `e85TemporallyExcludedOnly`, and an empty `excluded` means
+ * this condition does not hold (caller should not call this function then).
+ */
+export function e85HistoricalRuleNotStructuredGap<T>(family: E85RuleFamily, field: string, excluded: readonly E85Evidence<T>[], asOfDate: string): E85EvaluationFinding {
+  const notYetEffective = excluded.filter((ev) => evaluateTemporalApplicability(ev.temporal, asOfDate) === "NOT_YET_EFFECTIVE").length;
+  const expired = excluded.length - notYetEffective;
+  return {
+    family,
+    field,
+    outcome: "GAP",
+    gap: {
+      reasonCode: "RULE_NOT_STRUCTURED",
+      reason:
+        `${field}: ${excluded.length} scope-applicable rule value(s) exist for this proposal, but none is in force as of ${asOfDate} ` +
+        `(${notYetEffective} not yet effective, ${expired} expired). E85's fact model is CURRENT-ONLY: no historical predecessor rule is structured for this date, ` +
+        `so the current value cannot be assumed to have applied earlier and no historical value is available. This is an absence of structured rule content for the requested date, not an absence of law.`,
+      sourcesChecked: sortedUnique(excluded.map((ev) => ev.provenance.sourceId)),
+      checkedAt: new Date().toISOString(),
+      resolutionHint: "Structure the historical predecessor evidence in force on the requested date, if it is needed, or query a date on/after the current rule's effectiveFrom.",
+    },
+  };
+}
+
 /** The audit to attach to a RESOLVED finding whose value came from scoped evidence; undefined for unscoped evidence, so ordinary findings carry no extra noise. */
 export function e85ResolvedApplicabilityAudit(evidence: E85Evidence<unknown>): E85FindingApplicabilityAudit | undefined {
   const key = canonicalE85ApplicabilityKey(evidence.applicability);

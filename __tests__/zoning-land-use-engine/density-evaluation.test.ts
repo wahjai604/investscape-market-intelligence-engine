@@ -115,3 +115,65 @@ describe("density evaluation", () => {
     expect(fsrFinding?.resolvedValue).toBe(1.0);
   });
 });
+
+describe("density evaluation — current-only anti-look-ahead (Phase 12C.2A)", () => {
+  function datedFsrRule(value: number): E85DensityRule {
+    return {
+      family: "DENSITY",
+      jurisdictionId: "jx",
+      zoneDesignation: "R1-1",
+      maxFsr: {
+        value,
+        provenance: { sourceId: "src-1", documentLocator: { section: "3.1.1.2" } },
+        temporal: { effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" },
+      },
+    };
+  }
+
+  test("a day before the proven effective date, the current FSR does not leak backward and no silent absence occurs", () => {
+    const findings = evaluateDensity([datedFsrRule(1.0)], parcel({ siteAreaSqm: 500 }), "jx", "R1-1", "2026-06-29", undefined);
+    const fsrFinding = findings.find((f) => f.field === "maxFsr");
+    expect(fsrFinding).toBeDefined();
+    expect(fsrFinding?.resolvedValue).toBeUndefined();
+    expect(fsrFinding?.outcome).not.toBe("NO_RULE_FOR_PROPOSAL_SCOPE");
+    expect(fsrFinding?.outcome).toBe("GAP");
+    expect(fsrFinding?.gap?.reasonCode).toBe("RULE_NOT_STRUCTURED");
+    expect(fsrFinding?.gap?.reason).toMatch(/in force as of 2026-06-29/);
+    expect(fsrFinding?.gap?.reason).toMatch(/CURRENT-ONLY/);
+  });
+
+  test("on the proven effective date itself, the current FSR resolves", () => {
+    const findings = evaluateDensity([datedFsrRule(1.0)], parcel({ siteAreaSqm: 500 }), "jx", "R1-1", "2026-06-30", undefined);
+    const fsrFinding = findings.find((f) => f.field === "maxFsr");
+    expect(fsrFinding?.outcome).toBe("RESOLVED");
+    expect(fsrFinding?.resolvedValue).toBe(1.0);
+  });
+
+  function datedUnitsRule(value: number): E85DensityRule {
+    return {
+      family: "DENSITY",
+      jurisdictionId: "jx",
+      zoneDesignation: "R1-1",
+      maxDwellingUnits: {
+        value,
+        provenance: { sourceId: "src-1", documentLocator: { section: "3.1.1.3" } },
+        temporal: { effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" },
+      },
+    };
+  }
+
+  test("the current unit cap does not leak backward before its effective date; the historical predecessor is honestly unresolved, not zero and not unlimited", () => {
+    const findings = evaluateDensity([datedUnitsRule(8)], parcel({ siteAreaSqm: 500 }), "jx", "R1-1", "2026-06-29", undefined);
+    const unitsFinding = findings.find((f) => f.field === "maxDwellingUnits");
+    expect(unitsFinding?.outcome).toBe("GAP");
+    expect(unitsFinding?.resolvedValue).toBeUndefined();
+    expect(unitsFinding?.gap?.reasonCode).toBe("RULE_NOT_STRUCTURED");
+  });
+
+  test("the current unit cap applies on its effective date", () => {
+    const findings = evaluateDensity([datedUnitsRule(8)], parcel({ siteAreaSqm: 500 }), "jx", "R1-1", "2026-06-30", undefined);
+    const unitsFinding = findings.find((f) => f.field === "maxDwellingUnits");
+    expect(unitsFinding?.outcome).toBe("RESOLVED");
+    expect(unitsFinding?.resolvedValue).toBe(8);
+  });
+});
