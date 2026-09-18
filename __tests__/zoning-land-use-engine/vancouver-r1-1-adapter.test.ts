@@ -313,20 +313,25 @@ describe("Vancouver R1-1 — provenance preservation", () => {
     expect(bundle.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
   });
 
-  // PHASE 12C.2: some values now legitimately carry the proven 2026-06-30
-  // amendment date (By-law 14747), distinct from the source's own UNKNOWN
-  // basis asserted above. Every remaining value — none of which By-law 14747
-  // touches — must still carry no effective date at all.
-  test("every value outside By-law 14747's current §3.1.1 replacement still asserts no effective date", () => {
+  // PHASE 12C.2/12C.3A: values now legitimately carry a proven date, either
+  // 2026-06-30 (By-law 14747, the current §3.1.1 replacement) or 2023-10-17
+  // (By-law 13817, proven identical to Schedule A's original text). Only
+  // use-005 (Multiple Dwelling) remains UNKNOWN, because its current scope
+  // differs from what 2023 actually permitted for the 7-8 unit range
+  // (§2.2.7's rental-tenure qualifier — see vancouver-r1-1-facts.ts).
+  test("only use-005 (Multiple Dwelling) remains temporally UNKNOWN; every other value carries a proven date", () => {
     const bundle = normalized();
-    const s311Locators = new Set(["3.1.1.2", "3.1.1.3"]);
     for (const rule of bundle.rules) {
-      if (rule.family === "REQUIREMENT") continue; // the whole REQUIREMENT family here IS the §3.1.1.3(b)(ii) obligation.
+      if (rule.family === "REQUIREMENT") continue; // the whole REQUIREMENT family here is the proven 2026-06-30 obligation.
       const objects = Object.values(rule).filter((v): v is object => typeof v === "object" && v !== null);
-      const evidences = rule.family === "USE" ? rule.permissions : objects.flatMap((v) => ("temporal" in v ? [v as { temporal: unknown; provenance: { documentLocator: { section?: string } } }] : Object.values(v).filter((x): x is { temporal: unknown; provenance: { documentLocator: { section?: string } } } => typeof x === "object" && x !== null && "temporal" in x)));
+      const evidences =
+        rule.family === "USE"
+          ? rule.permissions
+          : objects.flatMap((v) => ("temporal" in v ? [v as { temporal: unknown }] : Object.values(v).filter((x): x is { temporal: unknown } => typeof x === "object" && x !== null && "temporal" in x)));
       for (const ev of evidences) {
-        if (s311Locators.has(ev.provenance.documentLocator?.section ?? "")) continue;
-        expect(ev.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
+        const isMultipleDwellingUse = rule.family === "USE" && (ev as E85Evidence<{ useCode: string }>).value.useCode === "multiple_dwelling";
+        if (isMultipleDwellingUse) expect(ev.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
+        else expect(ev.temporal).not.toEqual({ effectiveDateBasis: "UNKNOWN" });
       }
     }
   });
@@ -367,8 +372,9 @@ describe("Vancouver R1-1 — provenance preservation", () => {
   });
 });
 
-describe("Vancouver R1-1 — temporal authority is machine-auditable (Phase 12C.2A)", () => {
-  const EXPECTED_AUTHORITY = { instrument: { bylawOrDocumentId: "14747" }, propositionLocator: { bylawOrDocumentId: "14747", clause: "4(d)" }, commencementLocator: { bylawOrDocumentId: "14747", section: "37" } };
+describe("Vancouver R1-1 — temporal authority is machine-auditable (Phase 12C.2A / 12C.3A)", () => {
+  const EXPECTED_14747_AUTHORITY = { instrument: { bylawOrDocumentId: "14747" }, propositionLocator: { bylawOrDocumentId: "14747", clause: "4(d)" }, commencementLocator: { bylawOrDocumentId: "14747", section: "37" } };
+  const EXPECTED_13817_COMMENCEMENT = { bylawOrDocumentId: "13817", section: "29" };
 
   test("every AMENDMENT_DATE_KNOWN evidence item names its instrument, proposition clause and commencement clause — not just a date", () => {
     const bundle = normalized();
@@ -376,13 +382,16 @@ describe("Vancouver R1-1 — temporal authority is machine-auditable (Phase 12C.
       ...densityRules(bundle).flatMap((r) => [r.maxFsr, r.maxDwellingUnits].filter((e): e is E85Evidence<number> => e !== undefined && e.temporal.effectiveDateBasis === "AMENDMENT_DATE_KNOWN")),
       ...bundle.rules.flatMap((r) => (r.family === "REQUIREMENT" ? r.requirements.flatMap((i) => [i.requirement, ...(i.quantities ?? [])]) : [])).filter((e) => e.temporal.effectiveDateBasis === "AMENDMENT_DATE_KNOWN"),
     ];
-    // density-002, density-005, density-006, requirement-001, requirement-002, and requirement-001's own quantity evidence.
-    expect(dated.length).toBe(6);
+    // density-002, density-005, density-006, requirement-001, requirement-002, requirement-001's own
+    // quantity evidence (all 2026-06-30/14747), plus density-003/004 (2023-10-17/13817).
+    expect(dated.length).toBe(8);
     for (const ev of dated) {
-      expect(ev.provenance.temporalAuthority).toEqual(EXPECTED_AUTHORITY);
+      const authority = ev.provenance.temporalAuthority!;
+      expect(authority.commencementLocator).toEqual(ev.temporal.effectiveFrom === "2026-06-30" ? { bylawOrDocumentId: "14747", section: "37" } : EXPECTED_13817_COMMENCEMENT);
+      if (ev.temporal.effectiveFrom === "2026-06-30") expect(authority).toEqual(EXPECTED_14747_AUTHORITY);
+      else expect(authority.instrument).toEqual({ bylawOrDocumentId: "13817" });
       // Value provenance (the CURRENT consolidated clause) is never overwritten by amendment provenance.
       expect(ev.provenance.documentLocator?.bylawOrDocumentId).toBe("3575");
-      expect(ev.provenance.documentLocator?.section).toMatch(/^3\.1\.1\./);
     }
   });
 
@@ -391,17 +400,37 @@ describe("Vancouver R1-1 — temporal authority is machine-auditable (Phase 12C.
     const rule = bundle.rules.find((r) => r.family === "REQUIREMENT")!;
     if (rule.family !== "REQUIREMENT") throw new Error("expected REQUIREMENT");
     const item = rule.requirements.find((i) => i.requirement.value.rawSourceTerminology === "Social Housing")!;
-    expect(item.quantities?.[0]?.provenance.temporalAuthority).toEqual(EXPECTED_AUTHORITY);
+    expect(item.quantities?.[0]?.provenance.temporalAuthority).toEqual(EXPECTED_14747_AUTHORITY);
     expect(item.quantities?.[0]?.temporal).toEqual({ effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" });
   });
 
-  test("undated evidence (outside the §3.1.1 replacement) carries no temporalAuthority — it is not fabricated for an UNKNOWN basis", () => {
-    const bundle = normalized();
+  test("density-003 (2023-proven) carries its own distinct 13817 proposition locator, section 3.2.1.1, never the 14747 clause", () => {
     const dupFsr = fsr(normalized(), DUPLEX);
-    expect(dupFsr[0].temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
-    expect(dupFsr[0].provenance.temporalAuthority).toBeUndefined();
-    const otherHeight = dim(bundle, "maxHeightMetres", OTHER_USES);
-    expect(otherHeight[0].provenance.temporalAuthority).toBeUndefined();
+    expect(dupFsr[0].temporal).toEqual({ effectiveFrom: "2023-10-17", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" });
+    expect(dupFsr[0].provenance.temporalAuthority).toEqual({
+      instrument: { bylawOrDocumentId: "13817" },
+      propositionLocator: { schedule: "Schedule A", section: "3.2.1.1", page: 21 },
+      commencementLocator: EXPECTED_13817_COMMENCEMENT,
+    });
+  });
+
+  test("all eight DIMENSIONAL facts (dim-006 through dim-013) carry the proven 2023-10-17 window and 13817 temporal authority", () => {
+    const bundle = normalized();
+    const evidences = dimensionalRules(bundle).flatMap((r) => [r.maxHeightMetres, r.maxStoreys, r.maxSiteCoverageFraction, r.setbacksMetres?.front].filter((e): e is E85Evidence<number> => e !== undefined));
+    expect(evidences.length).toBe(8);
+    for (const ev of evidences) {
+      expect(ev.temporal).toEqual({ effectiveFrom: "2023-10-17", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" });
+      expect(ev.provenance.temporalAuthority?.instrument).toEqual({ bylawOrDocumentId: "13817" });
+      expect(ev.provenance.temporalAuthority?.commencementLocator).toEqual({ bylawOrDocumentId: "13817", section: "29" });
+      expect(ev.provenance.temporalAuthority?.propositionLocator?.schedule).toBe("Schedule A");
+    }
+  });
+
+  test("use-005 (Multiple Dwelling) remains temporally UNKNOWN with no temporalAuthority, because its current scope differs from the proven 2023 text", () => {
+    const bundle = normalized();
+    const md = useRule(bundle).permissions.find((e) => e.value.useCode === "multiple_dwelling")!;
+    expect(md.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
+    expect(md.provenance.temporalAuthority).toBeUndefined();
   });
 
   test("temporal authority does not enter the scoped concept identity — the concept key for a dated and an (otherwise identical) undated fact would be equal", () => {

@@ -38,6 +38,7 @@ import {
   E85ParcelReference,
   E85ParcelSpatialReference,
   E85PolicyVersion,
+  E85ProposalContext,
   E85RawSpatialFeatureRecord,
   E85RequestedAnalysis,
   E85RulePack,
@@ -356,6 +357,8 @@ interface DecideSpec {
   records?: readonly E85RawSpatialFeatureRecord[];
   legal?: readonly E85NormalizedRuleBundle[];
   parcel?: E85ParcelSpatialReference;
+  useCode?: string;
+  proposal?: E85ProposalContext;
 }
 
 function decide(spec: DecideSpec = {}): E85DecisionPackage {
@@ -372,7 +375,7 @@ function decide(spec: DecideSpec = {}): E85DecisionPackage {
     jurisdictionId: VANCOUVER_JURISDICTION_ID,
     zoneDesignation: "R1-1",
     // Phase 12B.2: the authoritative R1-1 §2.1 term is "Single Detached House".
-    useCode: "single_detached_house",
+    useCode: spec.useCode ?? "single_detached_house",
     asOfDate: "2026-09-14",
     requestedAnalyses: ALL_ANALYSES,
     policyVersion: policy(),
@@ -381,6 +384,7 @@ function decide(spec: DecideSpec = {}): E85DecisionPackage {
     resolvedAt: VANCOUVER_RESOLVED_AT,
     composedAt: COMPOSED_AT,
     assembledAt: ASSEMBLED_AT,
+    ...(spec.proposal === undefined ? {} : { proposal: spec.proposal }),
   });
 }
 
@@ -523,7 +527,14 @@ describe("E85 Phase 11 — real City geometry, real City law, synthetic parcel, 
     // BOTH sides are silent on legal effect: the layer publishes no effective
     // date, and the schedule prints "June 2026" with no adoption date. So the
     // identity join succeeds and the TEMPORAL join cannot be established.
-    const p = decide();
+    //
+    // PHASE 12C.3A: single_detached_house's own USE/DENSITY/DIMENSIONAL facts
+    // now carry individually proven dates (2023-10-17/2026-06-30), so they no
+    // longer demonstrate this bundle-level UNKNOWN gapping through to Phase 4.
+    // use-005 (Multiple Dwelling) is the one fact still genuinely temporally
+    // UNKNOWN (its current scope differs from the proven 2023 text —
+    // Phase 12C.3), so it is used here instead.
+    const p = decide({ useCode: "multiple_dwelling", proposal: { dwellingUnitCount: 6 } });
     expect(r11Bundle().temporal.effectiveDateBasis).toBe("UNKNOWN");
     expect(vancouverZoningDataset().versions[0].effectiveDateBasis).toBe("UNKNOWN");
 
@@ -533,9 +544,10 @@ describe("E85 Phase 11 — real City geometry, real City law, synthetic parcel, 
     if (phase4?.status !== "DATA_GAP") throw new Error(`expected Phase 4 DATA_GAP, got ${String(phase4?.status)}`);
     expect(phase4.gaps.some((g) => g.reasonCode === "EFFECTIVE_DATE_UNKNOWN")).toBe(true);
 
-    // No regulatory envelope is produced from undated rules.
+    // No USE value is produced for use-005 specifically, since it alone
+    // remains undated (density-002's maxFsr is separately, legitimately
+    // dated to 2026-06-30 by By-law 14747 and is expected to resolve).
     expect(p.phase4?.usePermission).toBeUndefined();
-    expect(p.phase4?.resolvedMaxFsr).toBeUndefined();
 
     // And the decision reports that, rather than a clean answer.
     expect(p.status).toBe("DATA_GAP");

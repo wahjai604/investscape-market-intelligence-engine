@@ -225,13 +225,15 @@ describe("E85 Phase 5A — temporal uncertainty survives into the bundle and dow
     }
   });
 
-  // PHASE 12C.2: the bundle mixes undated evidence (still exactly the
-  // UNKNOWN window this Phase 5A test line originally pinned) with the
-  // handful of facts By-law 14747 proves took effect on 2026-06-30. This test
-  // now checks that EVERY evidence item still carries an explicit `temporal`
-  // object of one of these two authoritative shapes — never a third,
-  // unaccounted-for shape, and never simply absent.
+  // PHASE 12C.2/12C.3A: the bundle mixes undated evidence (still exactly the
+  // UNKNOWN window this Phase 5A test line originally pinned) with the facts
+  // By-law 14747 proves took effect on 2026-06-30 and the facts By-law 13817
+  // proves took effect on 2023-10-17. This test now checks that EVERY
+  // evidence item still carries an explicit `temporal` object of one of
+  // these three authoritative shapes — never a fourth, unaccounted-for
+  // shape, and never simply absent.
   const KNOWN_2026_06_30 = { effectiveFrom: "2026-06-30", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" };
+  const KNOWN_2023_10_17 = { effectiveFrom: "2023-10-17", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" };
   test("every normalized value carries an accounted-for temporal window — not just the bundle header", () => {
     const bundle = normalized();
     for (const rule of bundle.rules) {
@@ -245,7 +247,7 @@ describe("E85 Phase 5A — temporal uncertainty survives into the bundle and dow
           ? rule.requirements.flatMap((item) => [item.requirement, ...(item.quantities ?? [])])
           : objects.flatMap((v) => ("temporal" in v ? [v as { temporal: unknown }] : Object.values(v).filter((x): x is { temporal: unknown } => typeof x === "object" && x !== null && "temporal" in x)));
       expect(evidences.length).toBeGreaterThan(0);
-      for (const ev of evidences) expect([{ effectiveDateBasis: "UNKNOWN" }, KNOWN_2026_06_30]).toContainEqual(ev.temporal);
+      for (const ev of evidences) expect([{ effectiveDateBasis: "UNKNOWN" }, KNOWN_2026_06_30, KNOWN_2023_10_17]).toContainEqual(ev.temporal);
     }
   });
 

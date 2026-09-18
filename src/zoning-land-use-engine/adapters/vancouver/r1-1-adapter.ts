@@ -370,16 +370,22 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
     // document version's bundle-wide window; absence falls back exactly as
     // every earlier phase behaved, so a bundle may mix dated and undated facts
     // without one date leaking onto the other's evidence.
+    //
+    // PHASE 12C.3A FIX — the announcement of a fact's own proven date must
+    // wait until the fact actually succeeds: pushing it unconditionally here
+    // (before the family-specific mapping below has any chance to fail)
+    // planted a stray INFO finding ahead of a fact's real GAP/failure finding
+    // for the SAME factId, so a caller reading the first finding for that
+    // fact saw the date announcement instead of the actual outcome. The date
+    // is instead folded into each success message below, exactly like
+    // `scopeNote` already is, so it appears if and only if the fact produced
+    // evidence.
     const factTemporal: E85TemporalWindow = fact.temporal ?? temporal;
-    if (fact.temporal !== undefined && fact.temporal.effectiveDateBasis !== "UNKNOWN") {
-      findings.push({
-        code: "TERM_MAPPED_EXACT",
-        severity: "INFO",
-        factId: fact.factId,
-        sourceTerm: fact.sourceTerm,
-        message: `Fact "${fact.factId}" carries its own proven effective date (${fact.temporal.effectiveFrom ?? "no effectiveFrom"}, basis ${fact.temporal.effectiveDateBasis}), distinct from source version "${document.versionId}"'s ${temporal.effectiveDateBasis === "UNKNOWN" ? "unknown" : "own"} temporal basis.`,
-      });
-    } else if (factTemporal.effectiveDateBasis === "UNKNOWN") {
+    const temporalNote =
+      fact.temporal !== undefined && fact.temporal.effectiveDateBasis !== "UNKNOWN"
+        ? ` Effective date: ${fact.temporal.effectiveFrom ?? "no effectiveFrom"} (basis ${fact.temporal.effectiveDateBasis}), proven independently of source version "${document.versionId}"'s ${temporal.effectiveDateBasis === "UNKNOWN" ? "unknown" : "own"} temporal basis.`
+        : "";
+    if (temporalNote === "" && factTemporal.effectiveDateBasis === "UNKNOWN") {
       undatedFactIds.push(fact.factId);
     }
 
@@ -426,7 +432,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         severity: "INFO",
         factId: fact.factId,
         sourceTerm: fact.sourceTerm,
-        message: `"${fact.sourceTerm}" for "${fact.sourceUseTerm}" mapped to ${status} (use code "${useCode}"); source wording preserved on the permission.${scopeNote}`,
+        message: `"${fact.sourceTerm}" for "${fact.sourceUseTerm}" mapped to ${status} (use code "${useCode}"); source wording preserved on the permission.${scopeNote}${temporalNote}`,
       });
       continue;
     }
@@ -513,7 +519,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
             : `, ${quantity.value.kind} = ${quantity.value.value} of "${quantity.value.basisTerm}"${quantity.provenance.interpretationNote ? ` (${quantity.provenance.interpretationNote} Source stated ${fact.numericValue} ${fact.unit}.)` : ""}`) +
           (requirement.choice === undefined ? "" : `; one alternative of ${requirement.choice.mode} choice "${requirement.choice.choiceGroupId}"`) +
           (unstructuredReferences.length === 0 ? "" : `; depends on ${unstructuredReferences.map((r) => `${r.description} [${r.role}]`).join(", ")}, located and NOT structured by this extract`) +
-          `.${scopeNote}`,
+          `.${scopeNote}${temporalNote}`,
       });
       continue;
     }
@@ -572,7 +578,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
       message:
         (converted.policyApplied
           ? `"${fact.sourceTerm}" mapped to ${mapping.family}.${mapping.field}. ${converted.policyApplied} Source stated ${fact.numericValue} ${fact.unit}.`
-          : `"${fact.sourceTerm}" mapped to ${mapping.family}.${mapping.field} = ${converted.value} (${fact.unit}), value unchanged.`) + scopeNote,
+          : `"${fact.sourceTerm}" mapped to ${mapping.family}.${mapping.field} = ${converted.value} (${fact.unit}), value unchanged.`) + scopeNote + temporalNote,
     });
 
     if (fact.condition !== undefined) {

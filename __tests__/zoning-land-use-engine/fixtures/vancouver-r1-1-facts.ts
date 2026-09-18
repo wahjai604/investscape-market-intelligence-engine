@@ -57,17 +57,36 @@
  * (density-002/005/006, requirement-001/002) carries its OWN proven
  * `temporal` window (By-law 14747, effective 2026-06-30), established from the
  * amending instrument itself, never from this June-2026 consolidation stamp.
- * Every other fact below still carries no `temporal` (falls back to the
- * source version's UNKNOWN basis): the direct-evidence gate could not verify
- * their presence in By-law 13817's Schedule A, whose attached schedule is
- * scanned images rather than extractable text, so no date is assigned to them
- * from numeric-value continuity alone.
+ *
+ * PHASE 12C.3/12C.3A — By-law 13817's Schedule A (the original, image-based
+ * 2023 R1-1 District Schedule) was visually rendered and inspected page by
+ * page. 13 of the remaining undated facts (use-001/003/004, density-003/004,
+ * dim-006 through dim-013) are proven, term-for-term and value-for-value,
+ * identical to the 2023 original with no intervening amendment found across
+ * the full evidence-folder scan — each now carries its OWN proven `temporal`
+ * window (By-law 13817, effective 2023-10-17 per its own §29 commencement
+ * clause), distinct per fact via its own 2023 Schedule A `propositionLocator`.
+ * By-law 13817 §29 also carries a narrow, application-specific grandfathering
+ * carve-out (preserving the pre-existing RS-schedules only for single-
+ * detached-house/single-detached-house-with-secondary-suite permit
+ * applications already complete and accepted on or before 2023-10-17); this
+ * does not defer the general 2023-10-17 effective date and is not encoded
+ * here.
+ *
+ * `use-005` (Multiple Dwelling, ≤8 units, Conditional) is deliberately KEPT
+ * UNKNOWN: the original Schedule A's own §2.2.7 restricts the 7-8 unit
+ * portion of that range to non-stratified, secured residential rental tenure
+ * — a scope-narrowing qualifier the current normalized fact does not carry.
+ * The current fact is therefore broader than the 2023 (and, so far as this
+ * evidence goes, still-current) legal proposition, so dating it would assert
+ * more than is proven. This is a separate fact-integrity question for a
+ * future audit, not something this phase resolves.
  *
  * This file is not a test (jest matches `*.test.ts` only).
  */
 import type { E85StructuredSourceDocument, E85StructuredSourceFact } from "../../../src/zoning-land-use-engine";
 import type { E85TemporalWindow } from "../../../src/zoning-land-use-engine/evidence-types";
-import type { E85TemporalAuthority } from "../../../src/zoning-land-use-engine/provenance-types";
+import type { E85DocumentLocator, E85TemporalAuthority } from "../../../src/zoning-land-use-engine/provenance-types";
 import { adapters } from "../../../src/zoning-land-use-engine";
 
 const { VANCOUVER_R1_1_SOURCE_ID, VANCOUVER_R1_1_VERSION_ID, VANCOUVER_R1_1_ZONE, VANCOUVER_JURISDICTION_ID } = adapters.vancouver;
@@ -100,6 +119,30 @@ const OTHER_USES_SCOPE = {
   locators: { excludedUseCodes: S32_HEADING },
 } as const;
 
+/**
+ * PHASE 12C.3A — shared effective window for every fact proven identical to
+ * By-law 13817's original 2023 Schedule A text. Every such fact ALSO takes
+ * its own, distinct `propositionLocator` (see `s13817Authority` below) —
+ * only the date and basis are shared, never the instrument clause, because
+ * §2.1's use rows, §3.1.2.5/.6, and §3.2.1.1/§3.2.2.x are all separate
+ * clauses of the same instrument, unlike 14747's single shared clause 4(d).
+ */
+const S13817_ORIGINAL_TEMPORAL: E85TemporalWindow = { effectiveFrom: "2023-10-17", effectiveDateBasis: "AMENDMENT_DATE_KNOWN" };
+
+/**
+ * Builds one fact's own By-law 13817 temporal authority: the instrument,
+ * this fact's own 2023 Schedule A locator (distinct per fact — visually
+ * verified against the rendered original, never assumed from the current
+ * consolidation's page numbering), and the shared §29 commencement clause.
+ */
+function s13817Authority(propositionLocator: E85DocumentLocator): E85TemporalAuthority {
+  return {
+    instrument: { bylawOrDocumentId: "13817" },
+    propositionLocator,
+    commencementLocator: { bylawOrDocumentId: "13817", section: "29" },
+  };
+}
+
 export const FACT_OUTRIGHT_SINGLE_DETACHED_HOUSE: E85StructuredSourceFact = {
   factId: "r1-1-use-001",
   family: "USE",
@@ -107,6 +150,8 @@ export const FACT_OUTRIGHT_SINGLE_DETACHED_HOUSE: E85StructuredSourceFact = {
   sourceTerm: "Outright Approval Use",
   sourceUseTerm: "Single Detached House",
   locator: { section: "2.1", table: USE_TABLE, row: "Single Detached House", page: 3 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "2.1", row: "Single Detached House", page: 13 }),
 };
 
 export const FACT_OUTRIGHT_DUPLEX: E85StructuredSourceFact = {
@@ -116,6 +161,8 @@ export const FACT_OUTRIGHT_DUPLEX: E85StructuredSourceFact = {
   sourceTerm: "Outright Approval Use",
   sourceUseTerm: DUPLEX_TERM,
   locator: { section: "2.1", table: USE_TABLE, row: DUPLEX_TERM, page: 2 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "2.1", row: DUPLEX_TERM, page: 12 }),
 };
 
 export const FACT_CONDITIONAL_DUPLEX_WITH_SUITE: E85StructuredSourceFact = {
@@ -125,6 +172,8 @@ export const FACT_CONDITIONAL_DUPLEX_WITH_SUITE: E85StructuredSourceFact = {
   sourceTerm: "Conditional Approval Use",
   sourceUseTerm: DUPLEX_WITH_SUITE_TERM,
   locator: { section: "2.1", table: USE_TABLE, row: DUPLEX_WITH_SUITE_TERM, page: 2 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "2.1", row: DUPLEX_WITH_SUITE_TERM, page: 12 }),
 };
 
 export const FACT_CONDITIONAL_MULTIPLE_DWELLING: E85StructuredSourceFact = {
@@ -188,6 +237,8 @@ export const FACT_FSR_DUPLEX: E85StructuredSourceFact = {
   unit: "RATIO",
   applicability: { useTerms: [DUPLEX_TERM, DUPLEX_WITH_SUITE_TERM], locators: { useCodes: { section: "3.2.1.1", page: 12 } } },
   locator: { section: "3.2.1.1", page: 12 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.2.1.1", page: 21 }),
 };
 
 /** §3.2.1.1: 0.60 for every other §3.2 use (i.e. not multiple dwelling per §3.2, not duplex per §3.2.1.1). */
@@ -200,6 +251,8 @@ export const FACT_FSR_OTHER_USES: E85StructuredSourceFact = {
   unit: "RATIO",
   applicability: { excludedUseTerms: [MULTIPLE_DWELLING_TERM, DUPLEX_TERM, DUPLEX_WITH_SUITE_TERM], locators: { excludedUseCodes: { section: "3.2.1.1", page: 12 } } },
   locator: { section: "3.2.1.1", page: 12 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.2.1.1", page: 21 }),
 };
 
 /** §3.1.1.3(a): 100% secured residential rental tenure -> maximum 8 dwelling units. */
@@ -309,6 +362,8 @@ export const FACT_HEIGHT_REAR_MD: E85StructuredSourceFact = {
   unit: "METRES",
   applicability: REAR_SCOPE,
   locator: { section: "3.1.2.5", clause: "(a)", page: 9 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.1.2.5", clause: "(a)", page: 18 }),
 };
 
 /** §3.1.2.5(a): rear buildings of a multiple dwelling — 2 storeys (same provision, same scope). */
@@ -321,6 +376,8 @@ export const FACT_STOREYS_REAR_MD: E85StructuredSourceFact = {
   unit: "STOREYS",
   applicability: REAR_SCOPE,
   locator: { section: "3.1.2.5", clause: "(a)", page: 9 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.1.2.5", clause: "(a)", page: 18 }),
 };
 
 /** §3.1.2.5(b): all other buildings of a multiple dwelling — 11.5 m. */
@@ -333,6 +390,8 @@ export const FACT_HEIGHT_OTHER_MD: E85StructuredSourceFact = {
   unit: "METRES",
   applicability: OTHER_MD_BUILDING_SCOPE,
   locator: { section: "3.1.2.5", clause: "(b)", page: 9 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.1.2.5", clause: "(b)", page: 18 }),
 };
 
 /** §3.1.2.5(b): all other buildings of a multiple dwelling — 3 storeys. */
@@ -345,6 +404,8 @@ export const FACT_STOREYS_OTHER_MD: E85StructuredSourceFact = {
   unit: "STOREYS",
   applicability: OTHER_MD_BUILDING_SCOPE,
   locator: { section: "3.1.2.5", clause: "(b)", page: 9 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.1.2.5", clause: "(b)", page: 18 }),
 };
 
 /** §3.2.2.3: maximum building height 11.5 m for §3.2 uses. The storeys limit in the same row is withheld (see §3.2.2.10). */
@@ -357,6 +418,8 @@ export const FACT_HEIGHT_OTHER_USES: E85StructuredSourceFact = {
   unit: "METRES",
   applicability: OTHER_USES_SCOPE,
   locator: { section: "3.2.2.3", page: 12 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.2.2.3", page: 21 }),
 };
 
 /** §3.1.2.6: minimum front yard depth for §3.1 multiple dwellings. */
@@ -369,6 +432,8 @@ export const FACT_FRONT_YARD_MD: E85StructuredSourceFact = {
   unit: "METRES",
   applicability: MD_SCOPE,
   locator: { section: "3.1.2.6", page: 9 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.1.2.6", page: 18 }),
 };
 
 /** §3.2.2.4: minimum front yard depth for §3.2 uses. */
@@ -381,6 +446,8 @@ export const FACT_FRONT_YARD_OTHER_USES: E85StructuredSourceFact = {
   unit: "METRES",
   applicability: OTHER_USES_SCOPE,
   locator: { section: "3.2.2.4", page: 12 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.2.2.4", page: 21 }),
 };
 
 /** §3.2.2.7: maximum site coverage 50% for §3.2 uses. Stated as a percentage on purpose, so the PERCENT -> FRACTION policy is exercised. */
@@ -393,6 +460,8 @@ export const FACT_SITE_COVERAGE_OTHER_USES_PERCENT: E85StructuredSourceFact = {
   unit: "PERCENT",
   applicability: OTHER_USES_SCOPE,
   locator: { section: "3.2.2.7", page: 12 },
+  temporal: S13817_ORIGINAL_TEMPORAL,
+  temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.2.2.7", page: 21 }),
 };
 
 export const R1_1_FACTS: readonly E85StructuredSourceFact[] = [

@@ -119,27 +119,34 @@ describe("E85 Phase 5 end-to-end — R1-1 facts through the adapter into Phase 4
     expect(bundle.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
   });
 
+  // PHASE 12C.3A: single_detached_house's own USE/DENSITY/DIMENSIONAL facts
+  // are now individually proven to 2023-10-17 (By-law 13817) or 2026-06-30
+  // (By-law 14747) — see vancouver-r1-1-facts.ts — so single_detached_house
+  // itself resolves cleanly at 2026-09-01. use-005 (Multiple Dwelling) is the
+  // one fact deliberately left temporally UNKNOWN (its current scope differs
+  // from the proven 2023 text — Phase 12C.3), so it is what now demonstrates
+  // the genuine, still-real temporal-uncertainty behaviour this section is about.
   test("Phase 4 reports the temporal uncertainty rather than resolving through it", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "single_detached_house" });
+    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
     expect(outcome.result.status).toBe("DATA_GAP");
     expect(gapCodes(outcome)).toContain("EFFECTIVE_DATE_UNKNOWN");
   });
 
   test("no rule value is asserted while its effective date is unestablished", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "single_detached_house" });
+    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
     expect(outcome.usePermission).toBeUndefined();
     expect(outcome.resolvedMaxFsr).toBeUndefined();
     expect("envelope" in outcome.result ? outcome.result.envelope : undefined).toBeUndefined();
   });
 
   test("the parcel and its identity still round-trip through the gapped result", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "single_detached_house" });
+    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
     expect(outcome.result.parcel.parcelReferenceId).toBe("pilot-parcel-1");
     expect(outcome.result.qualification.parcelMatch).toBe("high");
   });
 
   test("no architectural massing or financial figure appears in the result", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "single_detached_house" });
+    const outcome = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
     const serialized = JSON.stringify(outcome).toLowerCase();
     for (const forbidden of ["netsellablearea", "netrentablearea", "netbuildablearea", "massing", "revenue", "irr", "residuallandvalue", "constructioncost"]) {
       expect(serialized).not.toContain(forbidden);
@@ -257,8 +264,12 @@ describe("E85 Phase 12B.2 end-to-end — scoped rules govern only their own prop
     expect(capFor(RENTAL)?.applicability?.applicabilityKeys).toEqual([`use=multiple_dwelling;dwellingUnits=..8;tenure=${RENTAL}`]);
   });
 
+  // PHASE 12C.3A: density-004 (single_detached_house's FSR) now carries its
+  // OWN proven effective date (2023-10-17, By-law 13817), which always takes
+  // precedence over this bundle's hypothetical SOURCE_STATED control date —
+  // so the boundary this test demonstrates is density-004's own real date.
   test("an as-of date before the stated effective date is NOT resolved as in force", () => {
-    const outcome = evaluate({ rules: bundle.rules, useCode: "single_detached_house", asOfDate: "2026-06-01" });
+    const outcome = evaluate({ rules: bundle.rules, useCode: "single_detached_house", asOfDate: "2023-10-16" });
     expect(outcome.resolvedMaxFsr).toBeUndefined();
   });
 
@@ -345,8 +356,8 @@ describe("E85 Phase 5 end-to-end — repeated evaluation is stable", () => {
   });
 
   test("the pilot source's own gapped answer is equally stable across runs", () => {
-    const first = evaluate({ rules: normalizeR11().rules, useCode: "single_detached_house" });
-    const second = evaluate({ rules: normalizeR11().rules, useCode: "single_detached_house" });
+    const first = evaluate({ rules: normalizeR11().rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
+    const second = evaluate({ rules: normalizeR11().rules, useCode: "multiple_dwelling", requestedAnalyses: ["USE"], proposal: { dwellingUnitCount: 6 } });
     expect(first.result.status).toBe("DATA_GAP");
     expect(gapCodes(first)).toEqual(gapCodes(second));
   });
@@ -362,5 +373,54 @@ describe("E85 Phase 5 end-to-end — repeated evaluation is stable", () => {
     expect(p?.sourceId).toBe(VANCOUVER_R1_1_SOURCE.sourceId);
     expect(p?.sourceVersionId).toBe("2026-06-consolidation");
     expect(p?.adapterId).toBe(VANCOUVER_R1_1_ADAPTER_ID);
+  });
+});
+
+describe("E85 Phase 12C.3A — 2023-10-17 boundary (By-law 13817, visually proven facts)", () => {
+  const bundle = normalizeR11();
+
+  test.each([
+    ["single_detached_house", "PERMITTED"],
+    ["duplex", "PERMITTED"],
+    ["duplex_with_secondary_suite", "CONDITIONAL"],
+  ])("USE %s: not yet in force on 2023-10-16, resolved on 2023-10-17", (useCode, expectedStatus) => {
+    const before = evaluate({ rules: bundle.rules, useCode, requestedAnalyses: ["USE"], asOfDate: "2023-10-16" });
+    expect(before.usePermission?.status).toBe("UNKNOWN");
+    const onDate = evaluate({ rules: bundle.rules, useCode, requestedAnalyses: ["USE"], asOfDate: "2023-10-17" });
+    expect(onDate.usePermission?.status).toBe(expectedStatus);
+  });
+
+  test("DENSITY density-003/004: 0.70/0.60 unavailable on 2023-10-16, resolve on 2023-10-17", () => {
+    const beforeDuplex = evaluate({ rules: bundle.rules, useCode: "duplex", requestedAnalyses: ["DENSITY"], asOfDate: "2023-10-16" });
+    expect(beforeDuplex.resolvedMaxFsr).toBeUndefined();
+    const onDuplex = evaluate({ rules: bundle.rules, useCode: "duplex", requestedAnalyses: ["DENSITY"], asOfDate: "2023-10-17" });
+    expect(onDuplex.resolvedMaxFsr?.value).toBe(0.7);
+
+    const beforeSdh = evaluate({ rules: bundle.rules, useCode: "single_detached_house", requestedAnalyses: ["DENSITY"], asOfDate: "2023-10-16" });
+    expect(beforeSdh.resolvedMaxFsr).toBeUndefined();
+    const onSdh = evaluate({ rules: bundle.rules, useCode: "single_detached_house", requestedAnalyses: ["DENSITY"], asOfDate: "2023-10-17" });
+    expect(onSdh.resolvedMaxFsr?.value).toBe(0.6);
+  });
+
+  test("DIMENSIONAL representative facts (dim-006 rear MD height, dim-010 §3.2 height, dim-013 §3.2 site coverage): unavailable on 2023-10-16, resolve on 2023-10-17", () => {
+    const beforeMd = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["DIMENSIONAL"], proposal: { dwellingUnitCount: 6, buildingRole: "rear_building" }, asOfDate: "2023-10-16" });
+    expect(envelopeOf(beforeMd)?.maxHeightMetres).toBeUndefined();
+    const onMd = evaluate({ rules: bundle.rules, useCode: "multiple_dwelling", requestedAnalyses: ["DIMENSIONAL"], proposal: { dwellingUnitCount: 6, buildingRole: "rear_building" }, asOfDate: "2023-10-17" });
+    expect(envelopeOf(onMd)?.maxHeightMetres?.value).toBe(8.5);
+
+    const beforeSdh = evaluate({ rules: bundle.rules, useCode: "single_detached_house", requestedAnalyses: ["DIMENSIONAL"], asOfDate: "2023-10-16" });
+    expect(envelopeOf(beforeSdh)?.maxHeightMetres).toBeUndefined();
+    expect(envelopeOf(beforeSdh)?.maxSiteCoverageFraction).toBeUndefined();
+    const onSdh = evaluate({ rules: bundle.rules, useCode: "single_detached_house", requestedAnalyses: ["DIMENSIONAL"], asOfDate: "2023-10-17" });
+    expect(envelopeOf(onSdh)?.maxHeightMetres?.value).toBe(11.5);
+    expect(envelopeOf(onSdh)?.maxSiteCoverageFraction?.value).toBe(0.5);
+  });
+
+  test("the exact target date 2026-09-14: every 2023-dated fact resolves exactly as on 2023-10-17, no new EFFECTIVE_DATE_UNKNOWN", () => {
+    const outcome = evaluate({ rules: bundle.rules, useCode: "single_detached_house", asOfDate: "2026-09-14" });
+    expect(outcome.usePermission?.status).toBe("PERMITTED");
+    expect(outcome.resolvedMaxFsr?.value).toBe(0.6);
+    expect(envelopeOf(outcome)?.maxHeightMetres?.value).toBe(11.5);
+    expect(gapCodes(outcome)).not.toContain("EFFECTIVE_DATE_UNKNOWN");
   });
 });
