@@ -79,7 +79,11 @@ export type E85DataGapReasonCode =
   | "JURISDICTION_UNSUPPORTED"
   | "REQUIRED_SITE_DIMENSION_MISSING"
   | "SOURCE_LICENSING_RESTRICTED"
-  | "SPATIAL_REFERENCE_MISMATCH";
+  | "SPATIAL_REFERENCE_MISMATCH"
+  /** PHASE 12B.2: a scoped rule's applicability depends on a proposal fact (dwelling-unit count, building role, or tenure) that the request did not establish. */
+  | "PROPOSAL_CONTEXT_MISSING"
+  /** PHASE 12B.4: a scoped rule's applicability depends only on an external condition (for example a site-location predicate E85 does not resolve itself) that the request neither affirmed nor denied. Not a missing proposal attribute. */
+  | "EXTERNAL_CONDITION_UNDETERMINED";
 
 export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, string>> = {
   PARCEL_NOT_IDENTIFIED: "The parcel/site could not be identified from the information supplied.",
@@ -97,6 +101,8 @@ export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, s
   REQUIRED_SITE_DIMENSION_MISSING: "A site dimension required to evaluate this rule was not supplied and could not be resolved from other evidence.",
   SOURCE_LICENSING_RESTRICTED: "A source that would answer this request is known to exist but is not licensed/accessible for this use.",
   SPATIAL_REFERENCE_MISMATCH: "Geometries that needed to be compared declare different coordinate reference systems, and no transform between them has been performed.",
+  PROPOSAL_CONTEXT_MISSING: "A rule's applicability depends on a fact about the proposal that was not supplied, so whether the rule governs this proposal could not be determined.",
+  EXTERNAL_CONDITION_UNDETERMINED: "A rule's applicability depends on an external condition that was neither affirmed nor denied for this request, so whether the rule governs this proposal could not be determined.",
 };
 
 /**

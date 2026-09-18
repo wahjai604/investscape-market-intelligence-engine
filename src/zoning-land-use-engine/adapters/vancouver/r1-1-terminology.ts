@@ -25,6 +25,7 @@
  */
 import type { E85UsePermissionStatus } from "../../use-taxonomy";
 import type { E85SourceUnit } from "../../source-fact-types";
+import type { E85ObligationKind, E85RequirementCategory, E85RequirementQuantityKind } from "../../regulatory-requirement-types";
 
 /** Vancouver's two approval-path terms, mapped onto E85's generic statuses. Nothing maps to PROHIBITED or UNKNOWN: neither is a term the schedule's use table uses. */
 const VANCOUVER_USE_STATUS_TERMS: Readonly<Record<string, E85UsePermissionStatus>> = {
@@ -42,6 +43,7 @@ export const VANCOUVER_CONDITIONAL_APPROVAL_AUTHORITY = "Director of Planning";
 /** Which normalized rule field a Vancouver source term lands on, and which units that field will accept. */
 export type E85VancouverConceptMapping =
   | { family: "DENSITY"; field: "maxFsr"; acceptedUnits: readonly E85SourceUnit[] }
+  | { family: "DENSITY"; field: "maxDwellingUnits"; acceptedUnits: readonly E85SourceUnit[] }
   | { family: "DIMENSIONAL"; field: "maxHeightMetres"; acceptedUnits: readonly E85SourceUnit[] }
   | { family: "DIMENSIONAL"; field: "maxStoreys"; acceptedUnits: readonly E85SourceUnit[] }
   | { family: "DIMENSIONAL"; field: "maxSiteCoverageFraction"; acceptedUnits: readonly E85SourceUnit[] }
@@ -61,6 +63,7 @@ export type E85VancouverConceptMapping =
  */
 const VANCOUVER_CONCEPT_TERMS: Readonly<Record<string, E85VancouverConceptMapping>> = {
   "Floor Space Ratio": { family: "DENSITY", field: "maxFsr", acceptedUnits: ["RATIO"] },
+  "Maximum Number of Dwelling Units": { family: "DENSITY", field: "maxDwellingUnits", acceptedUnits: ["DWELLING_UNITS"] },
   Height: { family: "DIMENSIONAL", field: "maxHeightMetres", acceptedUnits: ["METRES"] },
   Storeys: { family: "DIMENSIONAL", field: "maxStoreys", acceptedUnits: ["STOREYS"] },
   "Site Coverage": { family: "DIMENSIONAL", field: "maxSiteCoverageFraction", acceptedUnits: ["FRACTION", "PERCENT"] },
@@ -91,8 +94,16 @@ export function mapVancouverConcept(sourceTerm: string): E85VancouverConceptMapp
  * a stable vocabulary instead of re-typing the by-law's wording.
  */
 const VANCOUVER_USE_CODE_TERMS: Readonly<Record<string, string>> = {
+  // Retained as vocabulary only (Phase 12B.2): the R1-1 District Schedule does
+  // not use this term, and no R1-1 fact claims it. Not redefined, not aliased.
   "One-Family Dwelling": "one_family_dwelling",
   "Multiple Dwelling": "multiple_dwelling",
+  // The R1-1 §2.1 row wording. Its dwelling-unit qualifier is NOT absorbed into
+  // the code: the fact carries it as structured applicability.
+  "Multiple Dwelling, containing no more than 8 dwelling units": "multiple_dwelling",
+  "Single Detached House": "single_detached_house",
+  Duplex: "duplex",
+  "Duplex with Secondary Suite": "duplex_with_secondary_suite",
   "Laneway House": "laneway_house",
   "Home Occupation": "home_occupation",
   "Child Day Care Facility": "child_day_care_facility",
@@ -101,6 +112,73 @@ const VANCOUVER_USE_CODE_TERMS: Readonly<Record<string, string>> = {
 /** Exact lookup of a Vancouver land-use name. Undefined means this adapter has no reviewed code for that use — reported as a finding, never guessed at. */
 export function mapVancouverUseCode(sourceUseTerm: string): string | undefined {
   return Object.prototype.hasOwnProperty.call(VANCOUVER_USE_CODE_TERMS, sourceUseTerm) ? VANCOUVER_USE_CODE_TERMS[sourceUseTerm] : undefined;
+}
+
+/** Vancouver's building-role wording → E85 building-role codes, used only as scoped-rule applicability data. */
+const VANCOUVER_BUILDING_ROLE_TERMS: Readonly<Record<string, string>> = {
+  "Rear Building": "rear_building",
+};
+
+/** Exact lookup of a Vancouver building-role term. Undefined means no reviewed code exists — reported, never guessed. */
+export function mapVancouverBuildingRole(sourceTerm: string): string | undefined {
+  return Object.prototype.hasOwnProperty.call(VANCOUVER_BUILDING_ROLE_TERMS, sourceTerm) ? VANCOUVER_BUILDING_ROLE_TERMS[sourceTerm] : undefined;
+}
+
+/** Vancouver's tenure wording → E85 tenure codes, used only as scoped-rule applicability data. */
+const VANCOUVER_TENURE_TERMS: Readonly<Record<string, string>> = {
+  "100% Residential Rental Tenure": "residential_rental_tenure_100_percent",
+};
+
+/** Exact lookup of a Vancouver tenure term. Undefined means no reviewed code exists — reported, never guessed. */
+export function mapVancouverTenure(sourceTerm: string): string | undefined {
+  return Object.prototype.hasOwnProperty.call(VANCOUVER_TENURE_TERMS, sourceTerm) ? VANCOUVER_TENURE_TERMS[sourceTerm] : undefined;
+}
+
+/**
+ * PHASE 12B.4 — Vancouver's names for regulatory obligations → generic
+ * requirement category, normalized code and obligation kind, plus the quantity
+ * kind and units a stated number may take. A term with no quantity kind accepts
+ * no number at all: its amount is established elsewhere, and that is recorded as
+ * an unstructured reference, never approximated.
+ */
+export interface E85VancouverRequirementMapping {
+  category: E85RequirementCategory;
+  requirementCode: string;
+  obligationKind: E85ObligationKind;
+  quantityKind?: E85RequirementQuantityKind;
+  acceptedQuantityUnits: readonly E85SourceUnit[];
+}
+
+const VANCOUVER_REQUIREMENT_TERMS: Readonly<Record<string, E85VancouverRequirementMapping>> = {
+  // "a minimum of 5% of the residential floor area must be developed as social housing"
+  "Social Housing": {
+    category: "AFFORDABLE_HOUSING",
+    requirementCode: "social_housing_floor_area",
+    obligationKind: "PROVIDE",
+    quantityKind: "MIN_FRACTION_OF_FLOOR_AREA",
+    acceptedQuantityUnits: ["PERCENT", "FRACTION"],
+  },
+  // "or a cash in lieu payment may be provided" — rate stated in Schedule J, not structured here.
+  "Cash in Lieu Payment": {
+    category: "AFFORDABLE_HOUSING",
+    requirementCode: "social_housing_cash_in_lieu",
+    obligationKind: "PAYMENT_IN_LIEU",
+    acceptedQuantityUnits: [],
+  },
+};
+
+/** Exact lookup of a Vancouver obligation term. Undefined means no reviewed mapping exists — reported, never guessed. */
+export function mapVancouverRequirement(sourceTerm: string): E85VancouverRequirementMapping | undefined {
+  return Object.prototype.hasOwnProperty.call(VANCOUVER_REQUIREMENT_TERMS, sourceTerm) ? VANCOUVER_REQUIREMENT_TERMS[sourceTerm] : undefined;
+}
+
+/** Converts a stated requirement quantity to a fraction. PERCENT → FRACTION is the only conversion, and it is declared. */
+export function convertVancouverRequirementQuantity(mapping: E85VancouverRequirementMapping, value: number, unit: E85SourceUnit): { ok: true; value: number; policyApplied?: string } | { ok: false } {
+  if (mapping.quantityKind === undefined || !mapping.acceptedQuantityUnits.includes(unit)) return { ok: false };
+  if (unit === "PERCENT") {
+    return { ok: true, value: value / 100, policyApplied: "A requirement share stated as a percentage was divided by 100 to produce the fraction that MIN_FRACTION_OF_FLOOR_AREA is defined in." };
+  }
+  return { ok: true, value };
 }
 
 /** Every land-use name this adapter can map, for diagnostics and tests. */

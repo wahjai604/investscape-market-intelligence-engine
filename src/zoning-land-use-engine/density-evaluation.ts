@@ -9,17 +9,31 @@
  * compatible FSR-derived cap are reported as DISTINCT findings, never
  * min()'d together. A conditional bonus is included only when its exact
  * condition string is present in the caller's affirmed conditions list.
+ *
+ * PHASE 12B.2: every density value is first selected by applicability scope
+ * against the proposal (`selectE85EvidenceForProposal`), BEFORE conflict
+ * detection, so values stated for different kinds of development never pool
+ * into a false conflict and a value stated for another kind of development is
+ * never applied to this one.
  */
 import type { E85RuleRecord, E85DensityRule } from "./rule-family-types";
+import type { E85Evidence } from "./evidence-types";
 import type { E85ParcelReference } from "./jurisdiction-types";
 import type { E85CallerContext } from "./request-types";
 import type { E85EvaluationFinding } from "./finding-types";
+import type { E85ApplicabilityContext } from "./rule-applicability-types";
 import { evaluateTemporalApplicability, matchesJurisdictionZone } from "./applicability";
 import { detectConflict } from "./conflict-detection";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
+import { e85ResolvedApplicabilityAudit, evaluateE85RuleApplicability, selectE85EvidenceForProposal } from "./rule-applicability";
 
 function applicableDensityRules(rules: readonly E85RuleRecord[], jurisdictionId: string, zoneDesignation: string): E85DensityRule[] {
   return rules.filter((r): r is E85DensityRule => r.family === "DENSITY" && matchesJurisdictionZone(r, jurisdictionId, zoneDesignation));
+}
+
+function auditOf(ev: E85Evidence<unknown>): Pick<E85EvaluationFinding, "applicability"> {
+  const audit = e85ResolvedApplicabilityAudit(ev);
+  return audit ? { applicability: audit } : {};
 }
 
 export function evaluateDensity(
@@ -29,15 +43,26 @@ export function evaluateDensity(
   zoneDesignation: string,
   asOfDate: string,
   callerContext: E85CallerContext | undefined,
+  applicabilityContext?: E85ApplicabilityContext,
 ): E85EvaluationFinding[] {
+  const context: E85ApplicabilityContext = applicabilityContext ?? {
+    ...(parcel.siteAreaSqm === undefined ? {} : { siteAreaSqm: parcel.siteAreaSqm }),
+    ...(callerContext?.satisfiedConditions === undefined ? {} : { satisfiedConditions: callerContext.satisfiedConditions }),
+    ...(callerContext?.unsatisfiedConditions === undefined ? {} : { unsatisfiedConditions: callerContext.unsatisfiedConditions }),
+  };
   const findings: E85EvaluationFinding[] = [];
   const densityRules = applicableDensityRules(rules, jurisdictionId, zoneDesignation);
 
   // --- maxFsr ---
-  const fsrEvidence = densityRules
-    .map((r) => r.maxFsr)
-    .filter((ev): ev is NonNullable<typeof ev> => ev !== undefined)
-    .filter((ev) => evaluateTemporalApplicability(ev.temporal, asOfDate) === "APPLIES");
+  const fsrSelection = selectE85EvidenceForProposal(
+    "DENSITY",
+    "maxFsr",
+    densityRules.map((r) => r.maxFsr).filter((ev): ev is NonNullable<typeof ev> => ev !== undefined),
+    context,
+    asOfDate,
+  );
+  if (fsrSelection.finding) findings.push(fsrSelection.finding);
+  const fsrEvidence = fsrSelection.applicable;
 
   let resolvedFsr: number | undefined;
   if (fsrEvidence.length > 0) {
@@ -68,6 +93,7 @@ export function evaluateDensity(
         },
         resolvedValue: ev.value,
         resolvedEvidence: ev as any,
+        ...auditOf(ev),
         // No envelopeContribution here: `maxFsr` itself has no field on
         // `E85RegulatoryEnvelope` (which is deliberately scoped to
         // BUILDABLE-ENVELOPE outputs, not every input rule value) — the FSR
@@ -111,15 +137,21 @@ export function evaluateDensity(
           evidence: { value: gfa, provenance: fsrEv.provenance, temporal: fsrEv.temporal },
           derivationNote: `Derived as maxFsr (${resolvedFsr}, source ${fsrEv.provenance.sourceId}) x parcel.siteAreaSqm (${parcel.siteAreaSqm}). Qualification floored to the FSR evidence's qualification; exact arithmetic does not upgrade it.`,
         },
+        ...auditOf(fsrEv),
       });
     }
   }
 
   // --- explicit GFA cap, reported distinctly, never min()'d with the FSR-derived figure ---
-  const gfaCapEvidence = densityRules
-    .map((r) => r.explicitMaxGfaSqm)
-    .filter((ev): ev is NonNullable<typeof ev> => ev !== undefined)
-    .filter((ev) => evaluateTemporalApplicability(ev.temporal, asOfDate) === "APPLIES");
+  const gfaSelection = selectE85EvidenceForProposal(
+    "DENSITY",
+    "explicitMaxGfaSqm",
+    densityRules.map((r) => r.explicitMaxGfaSqm).filter((ev): ev is NonNullable<typeof ev> => ev !== undefined),
+    context,
+    asOfDate,
+  );
+  if (gfaSelection.finding) findings.push(gfaSelection.finding);
+  const gfaCapEvidence = gfaSelection.applicable;
   if (gfaCapEvidence.length > 0) {
     const conflict = detectConflict(gfaCapEvidence, (a, b) => a === b);
     if (conflict.hasConflict) {
@@ -152,6 +184,48 @@ export function evaluateDensity(
         // silently reduced via min(). A caller wanting "the binding number"
         // combines them itself with full visibility into both.
         warning: `An explicit GFA cap (${ev.value} sqm) is stated by the source in addition to any FSR-derived figure; the two are reported separately and are not combined by the evaluator.`,
+        ...auditOf(ev),
+      });
+    }
+  }
+
+  // --- maximum dwelling units (Phase 12B.2): a regulatory output, reported as its own finding ---
+  const unitsSelection = selectE85EvidenceForProposal(
+    "DENSITY",
+    "maxDwellingUnits",
+    densityRules.map((r) => r.maxDwellingUnits).filter((ev): ev is NonNullable<typeof ev> => ev !== undefined),
+    context,
+    asOfDate,
+  );
+  if (unitsSelection.finding) findings.push(unitsSelection.finding);
+  if (unitsSelection.applicable.length > 0) {
+    const conflict = detectConflict(unitsSelection.applicable, (a, b) => a === b);
+    if (conflict.hasConflict) {
+      findings.push({
+        family: "DENSITY",
+        field: "maxDwellingUnits",
+        outcome: "MANUAL_REVIEW",
+        manualReview: {
+          reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
+          explanation: `${conflict.distinctValues.length} distinct maximum dwelling-unit values (${conflict.distinctValues.join(", ")}) govern this proposal in ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}, with no basis to prefer one.`,
+          evidenceConsidered: conflict.deduped.map((e) => e.provenance.sourceId),
+          flaggedAt: new Date().toISOString(),
+        },
+      });
+    } else {
+      const ev = conflict.deduped[0];
+      findings.push({
+        family: "DENSITY",
+        field: "maxDwellingUnits",
+        outcome: "RESOLVED",
+        qualification: {
+          evidenceQuality: deriveEvidenceQuality(ev.provenance),
+          ruleApplicability: deriveRuleApplicability(false),
+          parcelMatch: deriveParcelMatch(parcel, jurisdictionId, zoneDesignation),
+        },
+        resolvedValue: ev.value,
+        resolvedEvidence: ev as any,
+        ...auditOf(ev),
       });
     }
   }
@@ -163,11 +237,24 @@ export function evaluateDensity(
     const affirmed = (callerContext?.satisfiedConditions ?? []).includes(condition);
     const bonusEv = additionalFsr ?? additionalGfaSqm;
     if (!bonusEv) continue;
+    const scope = evaluateE85RuleApplicability(bonusEv.applicability, context);
+    if (scope.outcome === "NOT_APPLICABLE") continue;
     if (evaluateTemporalApplicability(bonusEv.temporal, asOfDate) !== "APPLIES") continue;
+    const field = additionalFsr ? "conditionalBonus:additionalFsr" : "conditionalBonus:additionalGfaSqm";
+    if (scope.outcome === "UNDETERMINED") {
+      findings.push({
+        family: "DENSITY",
+        field,
+        outcome: "CONDITIONAL_UNRESOLVED",
+        warning: `A conditional density bonus exists (condition "${condition}") but its applicability to this proposal could not be determined (missing: ${scope.missingDimensions.join(", ")}); it was NOT applied.`,
+        applicability: { applicabilityKeys: [scope.applicabilityKey], outcome: "UNDETERMINED", missingDimensions: scope.missingDimensions },
+      });
+      continue;
+    }
     if (affirmed) {
       findings.push({
         family: "DENSITY",
-        field: additionalFsr ? "conditionalBonus:additionalFsr" : "conditionalBonus:additionalGfaSqm",
+        field,
         outcome: "RESOLVED",
         qualification: {
           evidenceQuality: deriveEvidenceQuality(bonusEv.provenance),
@@ -176,11 +263,12 @@ export function evaluateDensity(
         },
         resolvedValue: bonusEv.value,
         warning: `Conditional density bonus (condition "${condition}") applied because the caller affirmed this condition is satisfied.`,
+        ...auditOf(bonusEv),
       });
     } else {
       findings.push({
         family: "DENSITY",
-        field: additionalFsr ? "conditionalBonus:additionalFsr" : "conditionalBonus:additionalGfaSqm",
+        field,
         outcome: "CONDITIONAL_UNRESOLVED",
         warning: `A conditional density bonus exists (condition "${condition}") but was NOT applied because the caller did not affirm this condition; base maxFsr/explicitMaxGfaSqm figures above are unconditional and exclude it.`,
       });

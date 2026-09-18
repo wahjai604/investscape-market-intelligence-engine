@@ -8,15 +8,23 @@
  * (distinct statuses for the same use, after dedup) escalates to
  * MANUAL_REVIEW_REQUIRED(CONFLICTING_AUTHORITATIVE_SOURCES) rather than
  * being resolved by array order or any implicit precedence.
+ *
+ * PHASE 12B.2: a permission may be scoped (e.g. to developments within a
+ * dwelling-unit bound). Scope is decided BEFORE temporal filtering and conflict
+ * detection. A permission proven not to govern this proposal is excluded, and
+ * if nothing else applies the answer is still UNKNOWN — never PROHIBITED. A
+ * permission whose scope the proposal context cannot decide is a GAP.
  */
 import type { E85RuleRecord } from "./rule-family-types";
 import type { E85Evidence } from "./evidence-types";
 import type { E85UsePermission } from "./use-taxonomy";
 import type { E85ParcelReference } from "./jurisdiction-types";
 import type { E85EvaluationFinding } from "./finding-types";
+import type { E85ApplicabilityContext } from "./rule-applicability-types";
 import { evaluateTemporalApplicability, matchesJurisdictionZone } from "./applicability";
 import { detectConflict } from "./conflict-detection";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
+import { e85ResolvedApplicabilityAudit, partitionE85EvidenceByApplicability, recognizedE85UseCodes, selectE85EvidenceForProposal } from "./rule-applicability";
 
 function sameUsePermission(a: E85UsePermission, b: E85UsePermission): boolean {
   return a.status === b.status;
@@ -29,35 +37,37 @@ export function evaluateUsePermission(
   zoneDesignation: string,
   useCode: string,
   asOfDate: string,
+  applicabilityContext?: E85ApplicabilityContext,
 ): E85EvaluationFinding {
-  const applicable: E85Evidence<E85UsePermission>[] = [];
+  const context: E85ApplicabilityContext = applicabilityContext ?? { useCode, recognizedUseCodes: recognizedE85UseCodes(rules, jurisdictionId, zoneDesignation) };
+  const field = `usePermission:${useCode}`;
+
+  const matching: E85Evidence<E85UsePermission>[] = [];
   for (const rule of rules) {
     if (rule.family !== "USE") continue;
     if (!matchesJurisdictionZone(rule, jurisdictionId, zoneDesignation)) continue;
     for (const ev of rule.permissions) {
-      if (ev.value.useCode !== useCode) continue;
-      const temporal = evaluateTemporalApplicability(ev.temporal, asOfDate);
-      if (temporal === "APPLIES") applicable.push(ev);
-      // NOT_YET_EFFECTIVE / EXPIRED / UNDETERMINED evidence is excluded from
-      // consideration entirely here (never guessed); an UNDETERMINED
-      // temporal basis on the ONLY otherwise-matching evidence is surfaced
-      // below as a gap rather than silently dropped with no trace.
+      if (ev.value.useCode === useCode) matching.push(ev);
     }
   }
+
+  const selection = selectE85EvidenceForProposal("USE", field, matching, context, asOfDate);
+  if (selection.finding?.outcome === "GAP") return selection.finding;
+  // NOT_YET_EFFECTIVE / EXPIRED / UNDETERMINED evidence is excluded from
+  // consideration entirely here (never guessed); an UNDETERMINED temporal basis
+  // on the ONLY otherwise-matching, in-scope evidence is surfaced below as a
+  // gap rather than silently dropped with no trace.
+  const applicable = [...selection.applicable];
 
   if (applicable.length === 0) {
     // Check whether the only reason nothing applies is an UNDETERMINED
     // temporal basis, so that case is distinguishable from genuine absence.
-    const undeterminedExists = rules.some(
-      (rule) =>
-        rule.family === "USE" &&
-        matchesJurisdictionZone(rule, jurisdictionId, zoneDesignation) &&
-        rule.permissions.some((ev) => ev.value.useCode === useCode && evaluateTemporalApplicability(ev.temporal, asOfDate) === "UNDETERMINED"),
-    );
+    const inScope = partitionE85EvidenceByApplicability(matching, context).applies;
+    const undeterminedExists = inScope.some((ev) => evaluateTemporalApplicability(ev.temporal, asOfDate) === "UNDETERMINED");
     if (undeterminedExists) {
       return {
         family: "USE",
-        field: `usePermission:${useCode}`,
+        field,
         outcome: "GAP",
         gap: {
           reasonCode: "EFFECTIVE_DATE_UNKNOWN",
@@ -68,17 +78,21 @@ export function evaluateUsePermission(
       };
     }
     // No applicable evidence found at all: UNKNOWN, never PROHIBITED by absence.
+    const outOfScope = selection.finding?.applicability;
     return {
       family: "USE",
-      field: `usePermission:${useCode}`,
+      field,
       outcome: "RESOLVED",
       qualification: {
         evidenceQuality: "low",
         ruleApplicability: "low",
         parcelMatch: deriveParcelMatch(parcel, jurisdictionId, zoneDesignation),
       },
-      warning: `No applicable use-permission evidence found for use "${useCode}" in ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}; resolved status is UNKNOWN (absence is never treated as PROHIBITED).`,
+      warning:
+        `No applicable use-permission evidence found for use "${useCode}" in ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}; resolved status is UNKNOWN (absence is never treated as PROHIBITED).` +
+        (outOfScope ? ` Permission evidence for this use exists only for other proposals (scope ${outOfScope.applicabilityKeys.map((k) => `{${k}}`).join(", ")}), which this proposal was proven not to fall within.` : ""),
       resolvedValue: { useCode, status: "UNKNOWN" } satisfies E85UsePermission,
+      ...(outOfScope ? { applicability: outOfScope } : {}),
     };
   }
 
@@ -86,7 +100,7 @@ export function evaluateUsePermission(
   if (conflict.hasConflict) {
     return {
       family: "USE",
-      field: `usePermission:${useCode}`,
+      field,
       outcome: "MANUAL_REVIEW",
       manualReview: {
         reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
@@ -98,9 +112,10 @@ export function evaluateUsePermission(
   }
 
   const resolved = conflict.deduped[0];
+  const audit = e85ResolvedApplicabilityAudit(resolved as E85Evidence<unknown>);
   return {
     family: "USE",
-    field: `usePermission:${useCode}`,
+    field,
     outcome: "RESOLVED",
     qualification: {
       evidenceQuality: deriveEvidenceQuality(resolved.provenance),
@@ -109,5 +124,6 @@ export function evaluateUsePermission(
     },
     resolvedValue: resolved.value,
     resolvedEvidence: resolved as E85Evidence<unknown>,
+    ...(audit ? { applicability: audit } : {}),
   };
 }

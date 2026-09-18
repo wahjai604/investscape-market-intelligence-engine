@@ -10,6 +10,7 @@
  * force on a given date.
  */
 import type { E85Provenance } from "./provenance-types";
+import type { E85RuleApplicability } from "./rule-applicability-types";
 
 /**
  * What grounds the effective-date value attached to a rule/evidence
@@ -52,4 +53,11 @@ export interface E85Evidence<T> {
   value: T;
   provenance: E85Provenance;
   temporal: E85TemporalWindow;
+  /**
+   * PHASE 12B.2 CONTRACT EXTENSION (optional, additive): which proposals this
+   * value governs. An independent axis from `value`, `temporal` and
+   * `provenance`. Absent means unscoped, which keeps exactly the meaning every
+   * earlier phase gave evidence. See rule-applicability-types.ts.
+   */
+  applicability?: E85RuleApplicability;
 }

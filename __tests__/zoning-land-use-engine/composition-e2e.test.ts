@@ -113,7 +113,7 @@ describe("E85 Phase 6 end-to-end — two packs through composition into Phase 4"
     }
     // Every element is an ordinary rule record.
     for (const rule of composed.effectiveRules) {
-      expect(["USE", "DENSITY", "DIMENSIONAL", "PARKING", "AMENITY", "OVERLAY"]).toContain(rule.family);
+      expect(["USE", "DENSITY", "DIMENSIONAL", "PARKING", "AMENITY", "OVERLAY", "REQUIREMENT"]).toContain(rule.family);
       expect(rule.jurisdictionId).toBe(JURISDICTION);
     }
   });
@@ -310,7 +310,9 @@ describe("E85 Phase 6 end-to-end — the Phase 5 pilot bundle composes like any 
     const composed = compose([pilotPack(), syntheticCompanion()]);
     // Phase 5A established that this source states no effective date; composing
     // it with another instrument must not quietly supply one.
-    const traced = traceE85EffectiveConcept(composed, buildE85ConceptKey("DENSITY", "maxFsr"));
+    // Phase 12B.2: the pilot's FSR is scoped, so it is traced under its scoped concept key.
+    const traced = traceE85EffectiveConcept(composed, buildE85ConceptKey("DENSITY", "maxFsr", undefined, "use=multiple_dwelling;dwellingUnits=..8"));
+    expect(traced?.value).toBe(1);
     expect(traced?.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
     expect(composed.readinessLimitations.map((l) => l.packId)).toContain("pilot");
     expect(composed.readinessLimitations[0].blockers).toContain("LICENSE");
@@ -318,7 +320,8 @@ describe("E85 Phase 6 end-to-end — the Phase 5 pilot bundle composes like any 
 
   test("a licence-unknown pilot still contributes every one of its rules", () => {
     const composed = compose([pilotPack(), syntheticCompanion()]);
-    expect(composed.effectiveRules.map((r) => r.family).sort()).toEqual(["DENSITY", "DIMENSIONAL", "PARKING", "USE"]);
+    // Scoped values reassemble into one record per scope, so families repeat.
+    expect([...new Set(composed.effectiveRules.map((r) => r.family))].sort()).toEqual(["DENSITY", "DIMENSIONAL", "PARKING", "REQUIREMENT", "USE"]);
   });
 
   test("no Vancouver rule is overridden, because no relation was stated", () => {

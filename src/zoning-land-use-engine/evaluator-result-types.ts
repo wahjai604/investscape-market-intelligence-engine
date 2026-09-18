@@ -17,6 +17,7 @@
 import type { E85Result } from "./result-types";
 import type { E85UsePermission } from "./use-taxonomy";
 import type { E85Evidence } from "./evidence-types";
+import type { E85RequirementOutcome } from "./regulatory-requirement-types";
 
 export interface E85UsePermissionOutcome {
   useCode: string;
@@ -44,4 +45,12 @@ export interface E85EvaluationOutcome {
   parking?: readonly E85KeyedNumericOutcome[];
   amenity?: readonly { key: string; value: string; evidence: E85Evidence<string> }[];
   overlays?: readonly E85OverlayOutcome[];
+  /**
+   * PHASE 12B.4 (optional, additive): the regulatory obligations this proposal
+   * triggers, or whose triggering could not be decided. Present — possibly
+   * empty — exactly when REQUIREMENT was requested. Obligations proven not to
+   * apply are omitted. Quantities are the source's own figures, never applied to
+   * any project figure.
+   */
+  requirements?: readonly E85RequirementOutcome[];
 }

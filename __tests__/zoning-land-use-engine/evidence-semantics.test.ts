@@ -182,7 +182,11 @@ describe("E85 Phase 5A — the publication stamp is still reported, honestly lab
 
 describe("E85 Phase 5A — temporal uncertainty survives into the bundle and downstream", () => {
   test("the bundle carries an EFFECTIVE_DATE_UNKNOWN gap, as the basis enum requires", () => {
-    const gaps = normalized().findings.filter((f) => f.severity === "GAP");
+    const allGaps = normalized().findings.filter((f) => f.severity === "GAP");
+    // Phase 12B.2: the only other GAPs are the declared coverage gaps for
+    // provisions deliberately left unstructured — never a fact-level failure.
+    expect(allGaps.filter((f) => f.gap?.reasonCode !== "EFFECTIVE_DATE_UNKNOWN").every((f) => f.code === "SOURCE_SECTION_UNAVAILABLE")).toBe(true);
+    const gaps = allGaps.filter((f) => f.gap?.reasonCode === "EFFECTIVE_DATE_UNKNOWN");
     expect(gaps).toHaveLength(1);
     expect(gaps[0].code).toBe("SOURCE_VERSION_INCOMPLETE");
     expect(gaps[0].gap?.reasonCode).toBe("EFFECTIVE_DATE_UNKNOWN");
@@ -192,7 +196,7 @@ describe("E85 Phase 5A — temporal uncertainty survives into the bundle and dow
   });
 
   test("the gap explains the distinction rather than merely stating a value is missing", () => {
-    const gap = normalized().findings.find((f) => f.severity === "GAP")?.gap;
+    const gap = normalized().findings.find((f) => f.gap?.reasonCode === "EFFECTIVE_DATE_UNKNOWN")?.gap;
     expect(gap?.reason).toMatch(/identifies WHICH TEXT was read/i);
     expect(gap?.reason).toMatch(/does not state when the provisions took legal effect/i);
   });
@@ -207,7 +211,15 @@ describe("E85 Phase 5A — temporal uncertainty survives into the bundle and dow
   test("every normalized value carries the uncertain window — not just the bundle header", () => {
     const bundle = normalized();
     for (const rule of bundle.rules) {
-      const evidences = rule.family === "USE" ? rule.permissions : Object.values(rule).filter((v): v is { temporal: unknown } => typeof v === "object" && v !== null && "temporal" in v);
+      // Keyed maps (setbacks) are flattened, so a record holding only a scoped
+      // front yard is checked as rigorously as one holding a scalar.
+      const objects = Object.values(rule).filter((v): v is object => typeof v === "object" && v !== null);
+      const evidences =
+        rule.family === "USE"
+          ? rule.permissions
+          : rule.family === "REQUIREMENT"
+          ? rule.requirements.flatMap((item) => [item.requirement, ...(item.quantities ?? [])])
+          : objects.flatMap((v) => ("temporal" in v ? [v as { temporal: unknown }] : Object.values(v).filter((x): x is { temporal: unknown } => typeof x === "object" && x !== null && "temporal" in x)));
       expect(evidences.length).toBeGreaterThan(0);
       for (const ev of evidences) expect(ev.temporal).toEqual({ effectiveDateBasis: "UNKNOWN" });
     }
@@ -283,7 +295,7 @@ describe("E85 Phase 5A — access and licensing are independent axes", () => {
 describe("E85 Phase 5A — a licence limitation does not fabricate or withhold source content", () => {
   test("normalization still succeeds and produces every rule family", () => {
     const bundle = normalized();
-    expect(bundle.rules.map((r) => r.family).sort()).toEqual(["DENSITY", "DIMENSIONAL", "USE"]);
+    expect([...new Set(bundle.rules.map((r) => r.family))].sort()).toEqual(["DENSITY", "DIMENSIONAL", "REQUIREMENT", "USE"]);
   });
 
   test("no rule value differs from the PUBLIC_REUSE control — licensing changes rights, not facts", () => {
@@ -445,6 +457,9 @@ describe("E85 Phase 5A — qualification stays split across the layer that can a
   test("evidence quality and rule applicability are still both answered", () => {
     const q = normalized().qualification;
     expect(q.evidenceQuality).toBe("high");
-    expect(q.ruleApplicability).toBe("moderate");
+    // Phase 12B.2: the rear-building height is now structured applicability
+    // (building role), not a caller-affirmed condition, so no fact in the
+    // corrected extract is condition-dependent.
+    expect(q.ruleApplicability).toBe("high");
   });
 });

@@ -43,10 +43,13 @@ import type {
 } from "./composition-types";
 import type { E85CompositionFinding } from "./composition-findings";
 import type { E85RuleConceptContribution, E85OverlayDeclaration, E85RuleConceptKey } from "./rule-concept-identity";
-import { decomposeE85Rules, reassembleE85Rules, conceptKeyFamily } from "./rule-concept-identity";
+import { decomposeE85Rules, reassembleE85Rules, conceptKeyFamily, conceptKeyBase } from "./rule-concept-identity";
 import { createE85PrecedenceRegistry } from "./precedence-resolution";
 import { evidenceIdentityKey } from "./rule-identity";
+import { e85ApplicabilityScopesProvenDisjoint } from "./rule-applicability";
 import { floorQualificationTiers } from "./qualification-types";
+import type { E85RegulatoryRequirement } from "./regulatory-requirement-types";
+import { e85RequirementAgreementKey } from "./regulatory-requirement";
 
 /** Deterministic, key-sorted serialization used only for comparison keys. Never persisted, never shown. */
 function stableKey(value: unknown): string {
@@ -71,6 +74,9 @@ function stableKey(value: unknown): string {
  */
 function valueAgreementKey(family: E85RuleFamily, value: unknown): string {
   if (family === "USE") return stableKey((value as E85UsePermission).status);
+  // Phase 12B.4: an obligation agrees on what it regulates (category, code,
+  // kind, choice membership), not on its wording or its cross-references.
+  if (family === "REQUIREMENT" && value !== null && typeof value === "object" && "requirementCode" in value) return e85RequirementAgreementKey(value as E85RegulatoryRequirement);
   return stableKey(value);
 }
 
@@ -129,7 +135,11 @@ function displaces(
   const applicable = (relations: readonly E85PrecedenceRelation[]): E85PrecedenceRelation[] =>
     relations.filter((r) => r.conditionalOn === undefined || affirmed.has(r.conditionalOn));
 
-  for (const relation of applicable(registry.relationsFor(x.packId, y.packId, family, conceptKey))) {
+  // Precedence is stated about the regulated concept, not about one scope of it,
+  // so relations are looked up on the base (unscoped) key. For unscoped concepts
+  // the base key IS the key, so existing precedence behaviour is unchanged.
+  const precedenceKey = conceptKeyBase(conceptKey);
+  for (const relation of applicable(registry.relationsFor(x.packId, y.packId, family, precedenceKey))) {
     if (relation.type === "OVERRIDES") return relation;
     if (relation.type === "NARROWS") {
       const winner = narrowsWinner(relation, x.evidence.value, y.evidence.value);
@@ -139,7 +149,7 @@ function displaces(
   // A NARROWS stated in the other direction still decides this pair — it says
   // "within this scope the more restrictive governs", which is symmetric once
   // declared, unlike OVERRIDES which names a specific winner.
-  for (const relation of applicable(registry.relationsFor(y.packId, x.packId, family, conceptKey))) {
+  for (const relation of applicable(registry.relationsFor(y.packId, x.packId, family, precedenceKey))) {
     if (relation.type === "NARROWS") {
       const winner = narrowsWinner(relation, y.evidence.value, x.evidence.value);
       if (winner === "Y") return relation;
@@ -281,14 +291,75 @@ export function composeE85RulePacks(packs: readonly E85RulePack[], options: E85C
     groups.set(c.conceptKey, list);
   }
 
+  // --- scoped concepts: coexistence requires PROVEN disjointness ---
+  // Each scoped key starts as its own unit. Keys sharing a base concept are
+  // joined whenever their scopes are NOT proven disjoint (unscoped overlaps
+  // every scope; opaque condition ids never prove anything). A joined component
+  // whose values all agree stays as separate units — nothing contradicts — while
+  // one whose values differ is reconciled as a single unit under ordinary
+  // agreement / precedence / conflict semantics, so overlap is never a way to
+  // escape a conflict. Unscoped-only input yields exactly the original groups.
+  const units = new Map<E85RuleConceptKey, E85RuleConceptContribution[]>();
+  const keysByBase = new Map<E85RuleConceptKey, E85RuleConceptKey[]>();
+  for (const key of [...groups.keys()].sort()) {
+    const base = conceptKeyBase(key);
+    keysByBase.set(base, [...(keysByBase.get(base) ?? []), key]);
+  }
+  for (const [base, keys] of [...keysByBase.entries()].sort((a, b) => byString(a[0], b[0]))) {
+    if (keys.length === 1) {
+      units.set(keys[0], groups.get(keys[0])!);
+      continue;
+    }
+    const scopeOf = (key: E85RuleConceptKey) => groups.get(key)![0].evidence.applicability;
+    const parent = keys.map((_, i) => i);
+    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    for (let i = 0; i < keys.length; i++) {
+      for (let j = i + 1; j < keys.length; j++) {
+        if (!e85ApplicabilityScopesProvenDisjoint(scopeOf(keys[i]), scopeOf(keys[j]))) parent[find(j)] = find(i);
+      }
+    }
+    const components = new Map<number, E85RuleConceptKey[]>();
+    keys.forEach((key, i) => components.set(find(i), [...(components.get(find(i)) ?? []), key]));
+
+    const baseFamily = conceptKeyFamily(base);
+    let allDisjoint = true;
+    let mergedUnits = 0;
+    for (const members of [...components.values()].sort((a, b) => byString(a[0], b[0]))) {
+      if (members.length === 1) {
+        units.set(members[0], groups.get(members[0])!);
+        continue;
+      }
+      allDisjoint = false;
+      const merged = members.flatMap((key) => groups.get(key)!);
+      if (sortedUnique(merged.map((c) => valueAgreementKey(baseFamily, c.evidence.value))).length === 1) {
+        for (const key of members) units.set(key, groups.get(key)!);
+      } else {
+        units.set(mergedUnits === 0 ? base : members[0], merged);
+        mergedUnits++;
+      }
+    }
+    if (allDisjoint) {
+      findings.push({
+        code: "SCOPED_CONCEPTS_DISJOINT",
+        severity: "INFO",
+        conceptKey: base,
+        family: baseFamily,
+        packIds: sortedUnique(keys.flatMap((key) => groups.get(key)!.map((c) => c.packId))),
+        message:
+          `${base} is stated under ${keys.length} applicability scopes (${keys.map((key) => key.slice(base.length)).join(", ")}) that are proven disjoint. ` +
+          `Each value governs only its own proposals, so none is treated as contradicting another.`,
+      });
+    }
+  }
+
   const effective: E85RuleConceptContribution[] = [];
   const suppressed: E85SuppressedRuleRecord[] = [];
   const unresolvedConflicts: E85CompositionConflict[] = [];
   const appliedRelations = new Map<string, E85PrecedenceRelation>();
 
-  for (const conceptKey of [...groups.keys()].sort()) {
+  for (const conceptKey of [...units.keys()].sort()) {
     const family = conceptKeyFamily(conceptKey);
-    const raw = groups.get(conceptKey)!;
+    const raw = units.get(conceptKey)!;
 
     // (a) Collapse byte-identical evidence. A bundle supplied twice is one
     //     authority speaking once, never two agreeing.

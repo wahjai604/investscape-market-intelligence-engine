@@ -17,9 +17,10 @@ import type { E85DataGap } from "./data-gap-types";
 import type { E85ManualReviewRecord } from "./manual-review-types";
 import type { E85Evidence } from "./evidence-types";
 import type { E85RegulatoryEnvelope } from "./envelope-types";
+import type { E85FindingApplicabilityAudit } from "./rule-applicability-types";
 
-/** One finding's disposition. RESOLVED = safe to surface as a fact. CONDITIONAL_UNRESOLVED = a rule exists but its condition was not affirmed by caller context, so no value is surfaced (not a gap, not a review — simply "not applicable without more information," surfaced only as an optional warning). CONFLICT / GAP / MANUAL_REVIEW drive result status per result-status.ts. */
-export type E85FindingOutcome = "RESOLVED" | "CONDITIONAL_UNRESOLVED" | "GAP" | "MANUAL_REVIEW";
+/** One finding's disposition. RESOLVED = safe to surface as a fact. CONDITIONAL_UNRESOLVED = a rule exists but its condition was not affirmed by caller context, so no value is surfaced (not a gap, not a review — simply "not applicable without more information," surfaced only as an optional warning). CONFLICT / GAP / MANUAL_REVIEW drive result status per result-status.ts. NO_RULE_FOR_PROPOSAL_SCOPE (Phase 12B.2) = the source states this concept only for proposals other than this one, every such scope having been PROVEN not to apply; informational only — no evidence is missing, so it is not a gap, and no value is implied (never zero, never unlimited). */
+export type E85FindingOutcome = "RESOLVED" | "CONDITIONAL_UNRESOLVED" | "GAP" | "MANUAL_REVIEW" | "NO_RULE_FOR_PROPOSAL_SCOPE";
 
 export interface E85EnvelopeContribution {
   field: keyof E85RegulatoryEnvelope;
@@ -51,4 +52,6 @@ export interface E85EvaluationFinding {
    */
   resolvedValue?: unknown;
   resolvedEvidence?: E85Evidence<unknown>;
+  /** PHASE 12B.2: present when scoped applicability decided or blocked this finding — the canonical scope key(s), the outcome, and the deciding or missing dimensions. Absent for unscoped evidence. */
+  applicability?: E85FindingApplicabilityAudit;
 }

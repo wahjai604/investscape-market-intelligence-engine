@@ -12,9 +12,19 @@
  *
  * A concept key names one regulated quantity: "DIMENSIONAL:maxHeightMetres",
  * "DIMENSIONAL:setbacksMetres[front]", "DENSITY:maxFsr",
- * "USE:permission[one_family_dwelling]". Height and storeys are different
+ * "USE:permission[single_detached_house]". Height and storeys are different
  * concepts. A front yard and a rear yard are different concepts. Two packs
  * stating maxHeightMetres are the same concept and must be reconciled.
+ *
+ * PHASE 12B.2 — SCOPED CONCEPTS. Evidence carrying an applicability scope gets
+ * that scope's canonical key appended in braces, e.g.
+ * "DENSITY:maxFsr{use=multiple_dwelling;dwellingUnits=..8}". The same concept
+ * under the same scope has the same key; under a different scope, a different
+ * key. Unscoped evidence gets no suffix, so every pre-existing key is unchanged
+ * byte for byte. `conceptKeyBase` recovers the unscoped concept for precedence
+ * and materiality. Whether differently-scoped keys may coexist is decided by
+ * the composer from PROVEN disjointness — a distinct key is not, by itself, a
+ * licence to coexist.
  *
  * This module decomposes `E85RuleRecord`s into atomic, concept-keyed
  * contributions and reassembles chosen contributions back into ordinary
@@ -36,9 +46,13 @@ import type {
   E85ParkingRule,
   E85AmenityRule,
   E85OverlayRule,
+  E85RequirementRule,
 } from "./rule-family-types";
 import type { E85Evidence } from "./evidence-types";
 import type { E85UsePermission } from "./use-taxonomy";
+import type { E85RegulatoryRequirement, E85RequirementItem, E85RequirementQuantity } from "./regulatory-requirement-types";
+import { canonicalE85ApplicabilityKey } from "./rule-applicability";
+import { e85RequirementIdentity, e85RequirementQuantitySubKey } from "./regulatory-requirement";
 
 /**
  * Stable identity of one regulated concept, e.g. "DENSITY:maxFsr". Opaque to
@@ -47,9 +61,19 @@ import type { E85UsePermission } from "./use-taxonomy";
  */
 export type E85RuleConceptKey = string;
 
-/** Builds a concept key from its family, field, and optional source-supplied sub-key (yard name, use code, parking/amenity key). */
-export function buildE85ConceptKey(family: E85RuleFamily, field: string, subKey?: string): E85RuleConceptKey {
-  return subKey === undefined ? `${family}:${field}` : `${family}:${field}[${subKey}]`;
+/** Builds a concept key from its family, field, optional source-supplied sub-key (yard name, use code, parking/amenity key), and optional canonical applicability scope key. */
+export function buildE85ConceptKey(family: E85RuleFamily, field: string, subKey?: string, applicabilityKey?: string): E85RuleConceptKey {
+  const base = subKey === undefined ? `${family}:${field}` : `${family}:${field}[${subKey}]`;
+  return applicabilityKey === undefined || applicabilityKey === "" ? base : `${base}{${applicabilityKey}}`;
+}
+
+/**
+ * The unscoped concept a key belongs to. An unscoped key always ends with a
+ * field name or a closing "]", and a canonical scope key can never contain a
+ * brace, so a trailing "}" unambiguously marks a scope suffix.
+ */
+export function conceptKeyBase(key: E85RuleConceptKey): E85RuleConceptKey {
+  return key.endsWith("}") ? key.slice(0, key.lastIndexOf("{")) : key;
 }
 
 /** The family a concept key belongs to, for family-scoped precedence and requested-analysis materiality. */
@@ -73,6 +97,8 @@ export interface E85RuleConceptContribution {
   field: string;
   /** Source-supplied sub-key, e.g. a yard name or use code. Undefined for scalar fields. */
   subKey?: string;
+  /** PHASE 12B.2: canonical applicability scope key of the evidence. Present only for scoped evidence. */
+  applicabilityKey?: string;
   /** Id of the rule pack that contributed this value. */
   packId: string;
   jurisdictionId: string;
@@ -107,11 +133,13 @@ function pushScalar(
   subKey?: string,
 ): void {
   if (evidence === undefined) return;
+  const applicabilityKey = canonicalE85ApplicabilityKey(evidence.applicability);
   out.push({
-    conceptKey: buildE85ConceptKey(family, field, subKey),
+    conceptKey: buildE85ConceptKey(family, field, subKey, applicabilityKey),
     family,
     field,
     ...(subKey !== undefined ? { subKey } : {}),
+    ...(applicabilityKey !== "" ? { applicabilityKey } : {}),
     packId,
     jurisdictionId: rule.jurisdictionId,
     zoneDesignation: rule.zoneDesignation,
@@ -147,6 +175,7 @@ export function decomposeE85Rule(rule: E85RuleRecord, packId: string): E85RuleDe
       pushScalar(contributions, r, packId, "DENSITY", "maxFsr", r.maxFsr);
       pushScalar(contributions, r, packId, "DENSITY", "maxDensityUnitsPerArea", r.maxDensityUnitsPerArea);
       pushScalar(contributions, r, packId, "DENSITY", "explicitMaxGfaSqm", r.explicitMaxGfaSqm);
+      pushScalar(contributions, r, packId, "DENSITY", "maxDwellingUnits", r.maxDwellingUnits);
       if (r.conditionalBonus) {
         // The condition is part of the concept key: a bonus available under one
         // condition is a different regulated thing from a bonus available under
@@ -185,6 +214,20 @@ export function decomposeE85Rule(rule: E85RuleRecord, packId: string): E85RuleDe
       }
       break;
     }
+    case "REQUIREMENT": {
+      // Phase 12B.4: one concept per obligation, keyed by category and code, and
+      // one sub-concept per stated quantity kind, so a quantity can agree or
+      // conflict independently and a future quantity kind never collides with it.
+      const r = rule as E85RequirementRule;
+      for (const item of r.requirements) {
+        const identity = e85RequirementIdentity(item.requirement.value);
+        pushScalar(contributions, r, packId, "REQUIREMENT", "obligation", item.requirement, undefined, identity);
+        for (const quantity of item.quantities ?? []) {
+          pushScalar(contributions, r, packId, "REQUIREMENT", "obligationQuantity", quantity, undefined, e85RequirementQuantitySubKey(identity, quantity.value.kind));
+        }
+      }
+      break;
+    }
     case "OVERLAY": {
       const r = rule as E85OverlayRule;
       overlays.push({ packId, jurisdictionId: r.jurisdictionId, zoneDesignation: r.zoneDesignation, overlayDesignation: r.overlayDesignation });
@@ -212,20 +255,8 @@ function sortedEntries<T>(record: Record<string, T>): [string, T][] {
   return Object.entries(record).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
-/**
- * Rebuilds ordinary `E85RuleRecord`s from chosen contributions, so Phase 4
- * consumes a plain rule array and cannot tell composition ran.
- *
- * Output is canonically ordered — families in a fixed order, keyed maps sorted
- * by key — so two permutations of the same input produce byte-identical rules.
- * Contributions are grouped by jurisdiction+zone, which composition has already
- * verified is a single pair.
- */
-export function reassembleE85Rules(contributions: readonly E85RuleConceptContribution[], overlays: readonly E85OverlayDeclaration[]): E85RuleRecord[] {
-  if (contributions.length === 0 && overlays.length === 0) return [];
-
-  const anchor = contributions[0] ?? overlays[0];
-  const base = { jurisdictionId: anchor.jurisdictionId, zoneDesignation: anchor.zoneDesignation };
+/** Rebuilds the non-overlay rule records for contributions that all share one applicability scope. */
+function reassembleScope(contributions: readonly E85RuleConceptContribution[], base: { jurisdictionId: string; zoneDesignation: string }): E85RuleRecord[] {
   const rules: E85RuleRecord[] = [];
 
   const byField = (field: string): E85RuleConceptContribution[] => contributions.filter((c) => c.field === field);
@@ -249,7 +280,8 @@ export function reassembleE85Rules(contributions: readonly E85RuleConceptContrib
   const maxFsr = scalar("maxFsr");
   const maxDensity = scalar("maxDensityUnitsPerArea");
   const explicitGfa = scalar("explicitMaxGfaSqm");
-  if (maxFsr || maxDensity || explicitGfa || bonusFsr || bonusGfa) {
+  const maxUnits = scalar("maxDwellingUnits");
+  if (maxFsr || maxDensity || explicitGfa || maxUnits || bonusFsr || bonusGfa) {
     const bonusCondition = bonusFsr?.carriedCondition ?? bonusGfa?.carriedCondition;
     const densityRule: E85DensityRule = {
       ...base,
@@ -257,6 +289,7 @@ export function reassembleE85Rules(contributions: readonly E85RuleConceptContrib
       ...(maxFsr ? { maxFsr: maxFsr as E85Evidence<number> } : {}),
       ...(maxDensity ? { maxDensityUnitsPerArea: maxDensity as E85Evidence<number> } : {}),
       ...(explicitGfa ? { explicitMaxGfaSqm: explicitGfa as E85Evidence<number> } : {}),
+      ...(maxUnits ? { maxDwellingUnits: maxUnits as E85Evidence<number> } : {}),
       ...(bonusCondition !== undefined
         ? {
             conditionalBonus: {
@@ -319,9 +352,57 @@ export function reassembleE85Rules(contributions: readonly E85RuleConceptContrib
     rules.push(amenityRule);
   }
 
+  // --- REQUIREMENT (Phase 12B.4) ---
+  // Quantities rejoin the obligation they were stated for. A quantity whose
+  // obligation did not survive composition (its concept was left in unresolved
+  // conflict) is not re-attached to anything: that conflict is recorded in the
+  // composition audit, and a quantity without its obligation states nothing.
+  const obligations = byField("obligation").sort((a, b) => (a.subKey! < b.subKey! ? -1 : a.subKey! > b.subKey! ? 1 : 0));
+  if (obligations.length > 0) {
+    const quantityContributions = byField("obligationQuantity");
+    const items: E85RequirementItem[] = obligations.map((o) => {
+      const quantities = quantityContributions
+        .filter((q) => q.subKey!.slice(0, q.subKey!.lastIndexOf("#")) === o.subKey)
+        .sort((a, b) => (a.subKey! < b.subKey! ? -1 : a.subKey! > b.subKey! ? 1 : 0))
+        .map((q) => q.evidence as E85Evidence<E85RequirementQuantity>);
+      return { requirement: o.evidence as E85Evidence<E85RegulatoryRequirement>, ...(quantities.length > 0 ? { quantities } : {}) };
+    });
+    const requirementRule: E85RequirementRule = { ...base, family: "REQUIREMENT", requirements: items };
+    rules.push(requirementRule);
+  }
+
+  return rules;
+}
+
+/**
+ * Rebuilds ordinary `E85RuleRecord`s from chosen contributions, so Phase 4
+ * consumes a plain rule array and cannot tell composition ran.
+ *
+ * Output is canonically ordered — families in a fixed order, keyed maps sorted
+ * by key — so two permutations of the same input produce byte-identical rules.
+ * Contributions are grouped by jurisdiction+zone, which composition has already
+ * verified is a single pair.
+ *
+ * PHASE 12B.2: contributions are reassembled per applicability scope (unscoped
+ * first, then scope keys in code-unit order), because one rule record holds
+ * one value per scalar field and two disjoint scopes legitimately state two.
+ * Input with no scoped evidence reassembles exactly as before.
+ */
+export function reassembleE85Rules(contributions: readonly E85RuleConceptContribution[], overlays: readonly E85OverlayDeclaration[]): E85RuleRecord[] {
+  if (contributions.length === 0 && overlays.length === 0) return [];
+
+  const anchor = contributions[0] ?? overlays[0];
+  const base = { jurisdictionId: anchor.jurisdictionId, zoneDesignation: anchor.zoneDesignation };
+  const rules: E85RuleRecord[] = [];
+
+  const scopes = [...new Set(contributions.map((c) => c.applicabilityKey ?? ""))].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  for (const scope of scopes) {
+    rules.push(...reassembleScope(contributions.filter((c) => (c.applicabilityKey ?? "") === scope), base));
+  }
+
   // --- OVERLAY: one rule per distinct designation, in designation order ---
   const descriptions = new Map<string, E85Evidence<string>>();
-  for (const c of byField("description")) descriptions.set(c.subKey!, c.evidence as E85Evidence<string>);
+  for (const c of contributions.filter((x) => x.field === "description")) descriptions.set(c.subKey!, c.evidence as E85Evidence<string>);
   const designations = [...new Set(overlays.map((o) => o.overlayDesignation))].sort();
   for (const designation of designations) {
     const description = descriptions.get(designation);

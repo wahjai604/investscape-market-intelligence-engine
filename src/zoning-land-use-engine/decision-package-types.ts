@@ -37,7 +37,7 @@ import type { E85EvaluationOutcome } from "./evaluator-result-types";
 import type { E85ParcelReference } from "./jurisdiction-types";
 import type { E85ManualReviewRecord } from "./manual-review-types";
 import type { E85PolicyVersion } from "./policy-types";
-import type { E85CallerContext, E85RequestedAnalysis } from "./request-types";
+import type { E85CallerContext, E85ProposalContext, E85RequestedAnalysis } from "./request-types";
 import type { E85OverallStatus } from "./result-status";
 import type { E85RuleFamily } from "./rule-family-types";
 import type { E85CompositionResult, E85RulePack } from "./composition-types";
@@ -271,6 +271,8 @@ export interface E85DecisionRequest {
    */
   availableRulePacks: readonly E85RulePack[];
   callerContext?: E85CallerContext;
+  /** PHASE 12B.2: proposal facts for scoped-rule applicability. Passed through to Phase 4 unchanged; Phase 9 does not interpret them and Phase 6 never receives them. */
+  proposal?: E85ProposalContext;
   /** Passed through to Phase 7 unchanged. */
   spatialRegistry?: E85SpatialDatasetRegistry;
   tolerance?: E85SpatialTolerance;

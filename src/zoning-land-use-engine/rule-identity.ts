@@ -28,6 +28,7 @@
  * conflict-detection.ts, never to this identity layer.
  */
 import type { E85Evidence } from "./evidence-types";
+import { canonicalE85ApplicabilityKey } from "./rule-applicability";
 
 /** Deterministic, order-independent stable serialization used only to build comparison keys. Never persisted, never shown to a user. */
 function stableStringify(value: unknown): string {
@@ -39,8 +40,18 @@ function stableStringify(value: unknown): string {
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`).join(",")}}`;
 }
 
-/** The deterministic identity key for one evidence item, per the strategy documented above. */
+/**
+ * The deterministic identity key for one evidence item, per the strategy documented above.
+ *
+ * PHASE 12B.2: scoped evidence additionally carries its canonical scope key AND
+ * its scope locators. The scope key keeps a value stated for one kind of
+ * proposal from collapsing into the same value stated for another; the locators
+ * keep two statements of one scope from different places in the source
+ * auditable as two pieces of evidence. Unscoped evidence adds nothing, so its
+ * identity is byte-identical to every earlier phase.
+ */
 export function evidenceIdentityKey<T>(evidence: E85Evidence<T>): string {
+  const applicabilityKey = canonicalE85ApplicabilityKey(evidence.applicability);
   return stableStringify({
     value: evidence.value,
     sourceId: evidence.provenance.sourceId,
@@ -49,6 +60,7 @@ export function evidenceIdentityKey<T>(evidence: E85Evidence<T>): string {
     effectiveFrom: evidence.temporal.effectiveFrom ?? null,
     effectiveTo: evidence.temporal.effectiveTo ?? null,
     effectiveDateBasis: evidence.temporal.effectiveDateBasis,
+    ...(applicabilityKey === "" ? {} : { applicability: { key: applicabilityKey, locators: evidence.applicability?.locators ?? null } }),
   });
 }
 

@@ -371,7 +371,8 @@ function decide(spec: DecideSpec = {}): E85DecisionPackage {
     parcel: parcelRef(parcel.parcelReferenceId),
     jurisdictionId: VANCOUVER_JURISDICTION_ID,
     zoneDesignation: "R1-1",
-    useCode: "one_family_dwelling",
+    // Phase 12B.2: the authoritative R1-1 §2.1 term is "Single Detached House".
+    useCode: "single_detached_house",
     asOfDate: "2026-09-14",
     requestedAnalyses: ALL_ANALYSES,
     policyVersion: policy(),
@@ -407,12 +408,15 @@ describe("E85 Phase 11 — real City geometry, real City law, synthetic parcel, 
     expect(considered.length).toBeGreaterThan(0);
 
     const use = considered.find((r) => r.family === "USE");
-    const permission = use?.permissions?.find((e) => e.value.useCode === "one_family_dwelling");
+    const permission = use?.permissions?.find((e) => e.value.useCode === "single_detached_house");
     expect(permission?.value.status).toBe("PERMITTED");
     expect(permission?.value.rawSourceTerminology).toBe("Outright Approval Use");
 
-    const density = considered.find((r) => r.family === "DENSITY");
-    expect(density?.maxFsr?.value).toBe(1);
+    // Phase 12B.2: FSR is stated per scope (§3.1 multiple dwelling 1.00, §3.2
+    // duplex 0.70, other §3.2 uses 0.60) — never as one zone-wide value.
+    const fsrValues = considered.flatMap((r) => (r.family === "DENSITY" && r.maxFsr ? [r.maxFsr.value] : [])).sort();
+    expect(fsrValues).toEqual([0.6, 0.7, 1]);
+    for (const r of considered) if (r.family === "DENSITY" && r.maxFsr) expect(r.maxFsr.applicability).toBeDefined();
 
     // And every one of them is traceable to the City's by-law, not to this file.
     expect(permission?.provenance.sourceId).toBe(VANCOUVER_R1_1_SOURCE_ID);
@@ -428,7 +432,7 @@ describe("E85 Phase 11 — real City geometry, real City law, synthetic parcel, 
       parcel: parcelRef("direct-check"),
       jurisdictionId: VANCOUVER_JURISDICTION_ID,
       zoneDesignation: "R1-1",
-      useCode: "one_family_dwelling",
+      useCode: "single_detached_house",
       asOfDate: "2026-09-14",
       requestedAnalyses: ALL_ANALYSES,
       policyVersion: policy(),
@@ -460,7 +464,25 @@ describe("E85 Phase 11 — real City geometry, real City law, synthetic parcel, 
     const viaPipeline = claims(p.phase4 as unknown as typeof direct);
     expect(viaPipeline).toEqual(claims(direct));
     // And it really is the substantive R1-1 content, not an empty set.
-    expect(viaPipeline).toEqual(["COVERAGE=0.5", "FRONT=4.9", "FSR=1", "HEIGHT=11.5", "STOREYS=3", "USE:multiple_dwelling=CONDITIONAL", "USE:one_family_dwelling=PERMITTED"]);
+    // Phase 12B.2 corrected content: scoped values appear once per legal scope,
+    // and §3.2 maximum storeys are withheld (§3.2.2.10 partial third storey).
+    expect(viaPipeline).toEqual([
+      "COVERAGE=0.5",
+      "FRONT=4.9",
+      "FRONT=4.9",
+      "FSR=0.6",
+      "FSR=0.7",
+      "FSR=1",
+      "HEIGHT=11.5",
+      "HEIGHT=11.5",
+      "HEIGHT=8.5",
+      "STOREYS=2",
+      "STOREYS=3",
+      "USE:duplex=PERMITTED",
+      "USE:duplex_with_secondary_suite=CONDITIONAL",
+      "USE:multiple_dwelling=CONDITIONAL",
+      "USE:single_detached_house=PERMITTED",
+    ]);
   });
 
   test("§21 SUPPORT trace answers both WHY this rule and WHY at this parcel", () => {

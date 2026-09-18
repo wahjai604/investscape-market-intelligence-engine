@@ -17,6 +17,7 @@
  */
 import type { E85Evidence } from "./evidence-types";
 import type { E85UsePermission } from "./use-taxonomy";
+import type { E85RequirementItem } from "./regulatory-requirement-types";
 
 /** Whether a jurisdiction supports a given rule family concept at all, independent of whether evidence exists for a specific parcel (Phase 2 correction 7). */
 export type E85RuleFamilySupport =
@@ -27,7 +28,7 @@ export type E85RuleFamilySupport =
   /** The jurisdiction has the concept, but E85 has not yet determined support/evidence for it. */
   | "SUPPORT_UNDETERMINED";
 
-export type E85RuleFamily = "USE" | "DENSITY" | "DIMENSIONAL" | "PARKING" | "AMENITY" | "OVERLAY";
+export type E85RuleFamily = "USE" | "DENSITY" | "DIMENSIONAL" | "PARKING" | "AMENITY" | "OVERLAY" | "REQUIREMENT";
 
 interface E85RuleRecordBase {
   jurisdictionId: string;
@@ -59,6 +60,15 @@ export interface E85DensityRule extends E85RuleRecordBase {
    * set this field.
    */
   explicitMaxGfaSqm?: E85Evidence<number>;
+  /**
+   * PHASE 12B.2 CONTRACT EXTENSION: the maximum number of dwelling units a
+   * development may contain, as a regulatory output stated by the source.
+   * Distinct from any dwelling-unit bound in an evidence item's
+   * `applicability` — a scope saying which developments a rule governs is not
+   * the same legal assertion as a cap on how many units one may build, even
+   * when the numbers coincide. Optional and additive only.
+   */
+  maxDwellingUnits?: E85Evidence<number>;
   /**
    * PHASE 4 CONTRACT CORRECTION: a conditional density bonus stated by the
    * source (e.g. "+0.2 FSR if affordable housing is provided"). The
@@ -130,7 +140,20 @@ export interface E85OverlayRule extends E85RuleRecordBase {
   description?: E85Evidence<string>;
 }
 
-export type E85RuleRecord = E85UseRule | E85DensityRule | E85DimensionalRule | E85ParkingRule | E85AmenityRule | E85OverlayRule;
+/**
+ * PHASE 12B.4 CONTRACT EXTENSION (additive): regulatory requirement rule — binding
+ * obligations imposed on an otherwise-entitled development (see
+ * regulatory-requirement-types.ts). Deliberately NOT a widening of
+ * `E85AmenityRule`, which keeps its own meaning. Each obligation and each stated
+ * quantity is its own evidence item, carrying its own applicability, provenance
+ * and temporal window.
+ */
+export interface E85RequirementRule extends E85RuleRecordBase {
+  family: "REQUIREMENT";
+  requirements: readonly E85RequirementItem[];
+}
+
+export type E85RuleRecord = E85UseRule | E85DensityRule | E85DimensionalRule | E85ParkingRule | E85AmenityRule | E85OverlayRule | E85RequirementRule;
 
 /** Per-jurisdiction, per-family support map — lets E85 state "this jurisdiction has no parking-bylaw concept" as a distinct fact from "we have no evidence yet." */
 export type E85RuleFamilyCoverage = Readonly<Record<E85RuleFamily, E85RuleFamilySupport>>;

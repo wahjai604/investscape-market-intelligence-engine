@@ -7,15 +7,27 @@
  * records the caller supplies as `rules` — no real-world numeric ratio is
  * ever hard-coded here. Missing evidence is never treated as "0 required."
  * A conditional amenity requirement is never assumed satisfied.
+ *
+ * PHASE 12B.2: each evidence item is selected by applicability scope first,
+ * exactly as in the other family evaluators.
  */
 import type { E85RuleRecord, E85ParkingRule, E85AmenityRule } from "./rule-family-types";
 import type { E85Evidence } from "./evidence-types";
 import type { E85ParcelReference } from "./jurisdiction-types";
 import type { E85CallerContext } from "./request-types";
 import type { E85EvaluationFinding } from "./finding-types";
-import { evaluateTemporalApplicability, matchesJurisdictionZone } from "./applicability";
-import { detectConflict } from "./conflict-detection";
+import type { E85ApplicabilityContext } from "./rule-applicability-types";
+import { matchesJurisdictionZone } from "./applicability";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
+import { e85ResolvedApplicabilityAudit, selectE85EvidenceForProposal } from "./rule-applicability";
+
+function defaultContext(parcel: E85ParcelReference, callerContext?: E85CallerContext): E85ApplicabilityContext {
+  return {
+    ...(parcel.siteAreaSqm === undefined ? {} : { siteAreaSqm: parcel.siteAreaSqm }),
+    ...(callerContext?.satisfiedConditions === undefined ? {} : { satisfiedConditions: callerContext.satisfiedConditions }),
+    ...(callerContext?.unsatisfiedConditions === undefined ? {} : { unsatisfiedConditions: callerContext.unsatisfiedConditions }),
+  };
+}
 
 function evaluateKeyedNumeric(
   family: "PARKING",
@@ -25,11 +37,19 @@ function evaluateKeyedNumeric(
   jurisdictionId: string,
   zoneDesignation: string,
   asOfDate: string,
+  context: E85ApplicabilityContext,
 ): E85EvaluationFinding[] {
   const findings: E85EvaluationFinding[] = [];
   if (!items) return findings;
-  for (const [key, ev] of Object.entries(items)) {
-    if (evaluateTemporalApplicability(ev.temporal, asOfDate) !== "APPLIES") continue;
+  for (const [key, item] of Object.entries(items)) {
+    const selection = selectE85EvidenceForProposal(family, `${fieldPrefix}:${key}`, [item], context, asOfDate);
+    if (selection.finding) {
+      findings.push(selection.finding);
+      continue;
+    }
+    const ev = selection.applicable[0];
+    if (ev === undefined) continue;
+    const audit = e85ResolvedApplicabilityAudit(ev);
     findings.push({
       family,
       field: `${fieldPrefix}:${key}`,
@@ -41,6 +61,7 @@ function evaluateKeyedNumeric(
       },
       resolvedValue: ev.value,
       resolvedEvidence: ev as any,
+      ...(audit ? { applicability: audit } : {}),
     });
   }
   return findings;
@@ -52,12 +73,14 @@ export function evaluateParking(
   jurisdictionId: string,
   zoneDesignation: string,
   asOfDate: string,
+  applicabilityContext?: E85ApplicabilityContext,
 ): E85EvaluationFinding[] {
+  const context = applicabilityContext ?? defaultContext(parcel);
   const parkingRules = rules.filter((r): r is E85ParkingRule => r.family === "PARKING" && matchesJurisdictionZone(r, jurisdictionId, zoneDesignation));
   const findings: E85EvaluationFinding[] = [];
   for (const r of parkingRules) {
-    findings.push(...evaluateKeyedNumeric("PARKING", "minSpacesPerUse", r.minSpacesPerUse, parcel, jurisdictionId, zoneDesignation, asOfDate));
-    findings.push(...evaluateKeyedNumeric("PARKING", "maxSpacesPerUse", r.maxSpacesPerUse, parcel, jurisdictionId, zoneDesignation, asOfDate));
+    findings.push(...evaluateKeyedNumeric("PARKING", "minSpacesPerUse", r.minSpacesPerUse, parcel, jurisdictionId, zoneDesignation, asOfDate, context));
+    findings.push(...evaluateKeyedNumeric("PARKING", "maxSpacesPerUse", r.maxSpacesPerUse, parcel, jurisdictionId, zoneDesignation, asOfDate, context));
   }
   return findings;
 }
@@ -69,13 +92,21 @@ export function evaluateAmenity(
   zoneDesignation: string,
   asOfDate: string,
   callerContext: E85CallerContext | undefined,
+  applicabilityContext?: E85ApplicabilityContext,
 ): E85EvaluationFinding[] {
+  const context = applicabilityContext ?? defaultContext(parcel, callerContext);
   const amenityRules = rules.filter((r): r is E85AmenityRule => r.family === "AMENITY" && matchesJurisdictionZone(r, jurisdictionId, zoneDesignation));
   const findings: E85EvaluationFinding[] = [];
   for (const r of amenityRules) {
     if (!r.requirements) continue;
-    for (const [key, ev] of Object.entries(r.requirements)) {
-      if (evaluateTemporalApplicability(ev.temporal, asOfDate) !== "APPLIES") continue;
+    for (const [key, item] of Object.entries(r.requirements)) {
+      const selection = selectE85EvidenceForProposal("AMENITY", `requirement:${key}`, [item], context, asOfDate);
+      if (selection.finding) {
+        findings.push(selection.finding);
+        continue;
+      }
+      const ev = selection.applicable[0];
+      if (ev === undefined) continue;
       const condition = r.requirementConditions?.[key];
       if (condition) {
         const affirmed = (callerContext?.satisfiedConditions ?? []).includes(condition);
@@ -89,6 +120,7 @@ export function evaluateAmenity(
           continue;
         }
       }
+      const audit = e85ResolvedApplicabilityAudit(ev);
       findings.push({
         family: "AMENITY",
         field: `requirement:${key}`,
@@ -100,6 +132,7 @@ export function evaluateAmenity(
         },
         resolvedValue: ev.value,
         resolvedEvidence: ev as any,
+        ...(audit ? { applicability: audit } : {}),
       });
     }
   }

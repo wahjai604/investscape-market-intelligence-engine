@@ -7,7 +7,7 @@
  * mutated.
  */
 import { E85DimensionalRule, adapters } from "../../src/zoning-land-use-engine";
-import { r11Document, R1_1_FACTS, deepFreeze, FACT_FSR, FACT_HEIGHT } from "./fixtures/vancouver-r1-1-facts";
+import { r11Document, R1_1_FACTS, deepFreeze, FACT_FSR_MULTIPLE_DWELLING as FACT_FSR, FACT_HEIGHT_OTHER_USES as FACT_HEIGHT } from "./fixtures/vancouver-r1-1-facts";
 
 const { vancouverR11Adapter, VANCOUVER_R1_1_SOURCE } = adapters.vancouver;
 
@@ -45,7 +45,9 @@ describe("determinism — input order", () => {
   });
 
   test("an arbitrary shuffle does not change the bundle", () => {
-    const shuffled = [R1_1_FACTS[4], R1_1_FACTS[0], R1_1_FACTS[7], R1_1_FACTS[2], R1_1_FACTS[6], R1_1_FACTS[1], R1_1_FACTS[5], R1_1_FACTS[3]];
+    // A full permutation of every fact (stride 5 is coprime with the fact count).
+    const shuffled = R1_1_FACTS.map((_, i) => R1_1_FACTS[(i * 5 + 3) % R1_1_FACTS.length]);
+    expect(new Set(shuffled).size).toBe(R1_1_FACTS.length);
     expect(bundleFor(shuffled)).toEqual(bundleFor(R1_1_FACTS));
   });
 
@@ -60,7 +62,7 @@ describe("determinism — duplicates", () => {
   test("an identical duplicated fact does not produce a duplicated rule", () => {
     const withDupe = bundleFor([...R1_1_FACTS, { ...FACT_FSR, factId: "r1-1-density-001-copy" }]);
     const density = withDupe.rules.filter((r) => r.family === "DENSITY");
-    expect(density).toHaveLength(1);
+    expect(density).toHaveLength(bundleFor(R1_1_FACTS).rules.filter((r) => r.family === "DENSITY").length);
     expect(withDupe.findings.filter((f) => f.code === "DUPLICATE_SOURCE_FACT_IGNORED")).toHaveLength(1);
   });
 

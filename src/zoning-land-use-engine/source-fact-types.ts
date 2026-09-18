@@ -25,6 +25,46 @@
  */
 import type { E85DocumentLocator } from "./provenance-types";
 import type { E85RuleFamily } from "./rule-family-types";
+import type { E85ApplicabilityDimension, E85NumericBound } from "./rule-applicability-types";
+import type { E85RequirementChoiceMode, E85RequirementReferenceRole } from "./regulatory-requirement-types";
+
+/**
+ * PHASE 12B.2 — which proposals a source statement governs, in the SOURCE's
+ * own vocabulary. The adapter maps these terms onto its normalized codes and
+ * refuses anything it cannot map. Every dimension present MUST carry a locator
+ * saying where the source states that part of the scope: scope is a legal
+ * assertion, and a scope with no source is not emitted.
+ */
+export interface E85StructuredFactApplicability {
+  useTerms?: readonly string[];
+  excludedUseTerms?: readonly string[];
+  dwellingUnits?: E85NumericBound;
+  buildingRoleTerms?: readonly string[];
+  excludedBuildingRoleTerms?: readonly string[];
+  siteAreaSqm?: E85NumericBound;
+  frontageMetres?: E85NumericBound;
+  tenureTerms?: readonly string[];
+  excludedTenureTerms?: readonly string[];
+  conditionIds?: readonly string[];
+  /** Keyed by the generic dimension each source term set is mapped onto. Required for every dimension present. */
+  locators?: Readonly<Partial<Record<E85ApplicabilityDimension, E85DocumentLocator>>>;
+}
+
+/**
+ * PHASE 12B.4 — the structural parts of a regulatory requirement as the source
+ * states them. The obligation itself is named by the fact's `sourceTerm`, which
+ * the adapter maps; a stated quantity uses `numericValue` + `unit`; the trigger
+ * uses `applicability`. There is deliberately no field for who elects between
+ * alternatives: nothing may be recorded that the source does not say.
+ */
+export interface E85StructuredFactRequirement {
+  /** The basis of the stated quantity in the source's own words, e.g. "residential floor area". Required whenever `numericValue` is present. */
+  quantityBasisTerm?: string;
+  /** Present when the source states this obligation as one alternative of a choice. `groupId` is shared by every alternative of that choice. */
+  choiceGroup?: { groupId: string; mode: E85RequirementChoiceMode };
+  /** Other instruments, or parts of one, this obligation depends on, located but not structured by this extract. */
+  references?: readonly { role: E85RequirementReferenceRole; target: E85DocumentLocator; description: string }[];
+}
 
 /**
  * Unit as the source states it. `NONE` is for genuinely unitless facts (a
@@ -45,6 +85,8 @@ export type E85SourceUnit =
   | "PERCENT"
   /** A count of parking/loading/bicycle spaces. */
   | "SPACES"
+  /** A whole-number count of dwelling units (Phase 12B.2). */
+  | "DWELLING_UNITS"
   | "NONE";
 
 /**
@@ -79,6 +121,10 @@ export interface E85StructuredSourceFact {
    * more favourable.
    */
   condition?: string;
+  /** PHASE 12B.2: the proposals this statement governs, in source vocabulary. Absent means the statement is unscoped. */
+  applicability?: E85StructuredFactApplicability;
+  /** PHASE 12B.4: for REQUIREMENT facts, the requirement's structural parts in source vocabulary. */
+  requirement?: E85StructuredFactRequirement;
   /** Where in the document this fact is stated. Carried straight into provenance. */
   locator: E85DocumentLocator;
   /** Extractor's note on any ambiguity encountered while reading. Surfaces as an adapter finding; never silently dropped. */

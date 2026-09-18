@@ -177,6 +177,9 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
       requestedAnalyses,
       policyVersion: request.policyVersion,
       ...(request.callerContext === undefined ? {} : { callerContext: request.callerContext }),
+      // Phase 12B.2: proposal facts pass through to Phase 4 untouched. Phase 9
+      // does not read or interpret them, and Phase 6 never receives them.
+      ...(request.proposal === undefined ? {} : { proposal: request.proposal }),
     });
     if (phase4.result.status === "MACHINE_RESOLVED_WITH_WARNINGS") warnings.push(...phase4.result.warnings.map((w) => `Phase 4: ${w}`));
   } else {

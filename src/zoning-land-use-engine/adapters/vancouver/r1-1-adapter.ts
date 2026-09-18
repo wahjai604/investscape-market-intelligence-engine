@@ -13,6 +13,15 @@
  * fact it could not convert. Its output is consumed by Phase 4's
  * `evaluateZoningAndLandUse`, which has no idea Vancouver exists.
  *
+ * PHASE 12B.2 — SCOPED FACTS. The R1-1 schedule states many concepts more than
+ * once for different kinds of development (§3.1 multiple dwellings, §3.2 all
+ * other uses). A fact's source-vocabulary scope is mapped here onto generic
+ * `E85RuleApplicability` and attached to the evidence. A scope term with no
+ * reviewed mapping, a scope dimension with no source locator, or an invalid
+ * scope makes the whole fact unresolved — a scoped statement is never emitted
+ * as though it were zone-wide. Scoped values of one field become separate rule
+ * records per scope, because one record holds one value per field.
+ *
  * DETERMINISM. The adapter never calls `Date.now()`; every timestamp comes
  * from the extract or the caller. Facts are processed in canonical `factId`
  * order, so input array order cannot change the output. Identical facts are
@@ -26,14 +35,19 @@ import type { E85SourceAdapter, E85AdapterIdentity, E85AdapterSupportDecision, E
 import { unsupportedReasonToGap } from "../../source-adapter-contract";
 import type { E85NormalizedRuleBundle, E85ConditionalRuleRecord, E85BundleQualification } from "../../normalized-bundle-types";
 import type { E85NormalizationFinding, E85UnresolvedSourceItem } from "../../normalization-finding-types";
-import type { E85RuleRecord, E85UseRule, E85DensityRule, E85DimensionalRule } from "../../rule-family-types";
+import type { E85RuleRecord, E85UseRule, E85DensityRule, E85DimensionalRule, E85RequirementRule } from "../../rule-family-types";
+import type { E85RegulatoryRequirement, E85RequirementItem, E85RequirementQuantity } from "../../regulatory-requirement-types";
+import { e85RequirementIdentity, validateE85RequirementItem } from "../../regulatory-requirement";
+import { evidenceIdentityKey } from "../../rule-identity";
 import type { E85Evidence, E85TemporalWindow } from "../../evidence-types";
 import type { E85Provenance } from "../../provenance-types";
 import type { E85UsePermission } from "../../use-taxonomy";
 import type { E85QualificationTier } from "../../qualification-types";
+import type { E85ApplicabilityDimension, E85RuleApplicability } from "../../rule-applicability-types";
 import { floorQualificationTiers } from "../../qualification-types";
 import { deriveEvidenceQuality } from "../../qualification-derivation";
 import { assessE85SourceReadiness } from "../../source-readiness-assessment";
+import { canonicalE85ApplicabilityKey, normalizeE85ApplicabilityCodes, validateE85RuleApplicability } from "../../rule-applicability";
 import {
   VANCOUVER_JURISDICTION_ID,
   VANCOUVER_R1_1_ZONE,
@@ -42,7 +56,18 @@ import {
   VANCOUVER_R1_1_ADAPTER_ID,
   VANCOUVER_R1_1_ADAPTER_VERSION,
 } from "./r1-1-source";
-import { mapVancouverUseStatus, mapVancouverUseCode, mapVancouverConcept, convertVancouverUnit, VANCOUVER_CONDITIONAL_APPROVAL_AUTHORITY } from "./r1-1-terminology";
+import {
+  mapVancouverUseStatus,
+  mapVancouverUseCode,
+  mapVancouverConcept,
+  mapVancouverBuildingRole,
+  mapVancouverTenure,
+  convertVancouverUnit,
+  mapVancouverRequirement,
+  convertVancouverRequirementQuantity,
+  VANCOUVER_CONDITIONAL_APPROVAL_AUTHORITY,
+} from "./r1-1-terminology";
+import type { E85VancouverConceptMapping } from "./r1-1-terminology";
 
 export const VANCOUVER_R1_1_ADAPTER_IDENTITY: E85AdapterIdentity = {
   adapterId: VANCOUVER_R1_1_ADAPTER_ID,
@@ -51,7 +76,7 @@ export const VANCOUVER_R1_1_ADAPTER_IDENTITY: E85AdapterIdentity = {
   supportedSourceIds: [VANCOUVER_R1_1_SOURCE_ID],
   supportedVersionIds: [VANCOUVER_R1_1_VERSION_ID],
   supportedZoneDesignations: [VANCOUVER_R1_1_ZONE],
-  supportedRuleFamilies: ["USE", "DENSITY", "DIMENSIONAL"],
+  supportedRuleFamilies: ["USE", "DENSITY", "DIMENSIONAL", "REQUIREMENT"],
 };
 
 /**
@@ -72,6 +97,8 @@ function factContentKey(fact: E85StructuredSourceFact): string {
     fact.textValue ?? null,
     fact.unit ?? null,
     fact.condition ?? null,
+    fact.applicability ?? null,
+    fact.requirement ?? null,
     loc.bylawOrDocumentId ?? null,
     loc.section ?? null,
     loc.clause ?? null,
@@ -114,6 +141,94 @@ function canHandle(document: E85StructuredSourceDocument, source: E85SourceDefin
     };
   }
   return { supported: true };
+}
+
+/** One normalized numeric value awaiting placement into a rule record. */
+interface ScopedScalar {
+  mapping: E85VancouverConceptMapping;
+  evidence: E85Evidence<number>;
+  scopeKey: string;
+}
+
+type ScopeMapping = { ok: true; applicability?: E85RuleApplicability; scopeKey: string } | { ok: false; message: string; code: E85NormalizationFinding["code"]; reasonCode: "RULE_NOT_STRUCTURED" | "USE_CLASSIFICATION_UNKNOWN" };
+
+/**
+ * Maps a fact's source-vocabulary scope onto generic applicability. Refuses —
+ * rather than drops — anything it cannot map or source: dropping a scope
+ * dimension would silently widen the rule.
+ */
+function mapFactApplicability(fact: E85StructuredSourceFact): ScopeMapping {
+  const scope = fact.applicability;
+  if (scope === undefined) return { ok: true, scopeKey: "" };
+
+  const unmapped: string[] = [];
+  const mapTerms = (terms: readonly string[] | undefined, mapper: (t: string) => string | undefined, label: string): string[] | undefined => {
+    if (terms === undefined) return undefined;
+    const out: string[] = [];
+    for (const term of terms) {
+      const code = mapper(term);
+      if (code === undefined) unmapped.push(`${label} "${term}"`);
+      else out.push(code);
+    }
+    return out;
+  };
+
+  const applicability: E85RuleApplicability = {
+    ...(scope.useTerms === undefined ? {} : { useCodes: mapTerms(scope.useTerms, mapVancouverUseCode, "use") }),
+    ...(scope.excludedUseTerms === undefined ? {} : { excludedUseCodes: mapTerms(scope.excludedUseTerms, mapVancouverUseCode, "use") }),
+    ...(scope.dwellingUnits === undefined ? {} : { dwellingUnits: scope.dwellingUnits }),
+    ...(scope.buildingRoleTerms === undefined ? {} : { buildingRoles: mapTerms(scope.buildingRoleTerms, mapVancouverBuildingRole, "building role") }),
+    ...(scope.excludedBuildingRoleTerms === undefined ? {} : { excludedBuildingRoles: mapTerms(scope.excludedBuildingRoleTerms, mapVancouverBuildingRole, "building role") }),
+    ...(scope.siteAreaSqm === undefined ? {} : { siteAreaSqm: scope.siteAreaSqm }),
+    ...(scope.frontageMetres === undefined ? {} : { frontageMetres: scope.frontageMetres }),
+    ...(scope.tenureTerms === undefined ? {} : { tenureCodes: mapTerms(scope.tenureTerms, mapVancouverTenure, "tenure") }),
+    ...(scope.excludedTenureTerms === undefined ? {} : { excludedTenureCodes: mapTerms(scope.excludedTenureTerms, mapVancouverTenure, "tenure") }),
+    ...(scope.conditionIds === undefined ? {} : { requiredConditionIds: scope.conditionIds }),
+    ...(scope.locators === undefined ? {} : { locators: scope.locators }),
+  };
+
+  if (unmapped.length > 0) {
+    const useProblem = unmapped.some((u) => u.startsWith("use "));
+    return {
+      ok: false,
+      code: "UNSUPPORTED_SOURCE_CONCEPT",
+      reasonCode: useProblem ? "USE_CLASSIFICATION_UNKNOWN" : "RULE_NOT_STRUCTURED",
+      message: `Fact "${fact.factId}" is scoped by ${unmapped.join(", ")}, which this adapter has no reviewed mapping for. The fact is not emitted, because emitting it without that scope would widen the rule beyond what the source states.`,
+    };
+  }
+
+  const problems = validateE85RuleApplicability(applicability);
+  if (problems.length > 0) {
+    return { ok: false, code: "AMBIGUOUS_SOURCE_INTERPRETATION", reasonCode: "RULE_NOT_STRUCTURED", message: `Fact "${fact.factId}" carries an invalid scope: ${problems.join(" ")}` };
+  }
+
+  const present: E85ApplicabilityDimension[] = [];
+  const codeDims: [E85ApplicabilityDimension, readonly string[] | undefined][] = [
+    ["useCodes", applicability.useCodes],
+    ["excludedUseCodes", applicability.excludedUseCodes],
+    ["buildingRoles", applicability.buildingRoles],
+    ["excludedBuildingRoles", applicability.excludedBuildingRoles],
+    ["tenureCodes", applicability.tenureCodes],
+    ["excludedTenureCodes", applicability.excludedTenureCodes],
+    ["requiredConditionIds", applicability.requiredConditionIds],
+  ];
+  for (const [d, codes] of codeDims) if (normalizeE85ApplicabilityCodes(codes).length > 0) present.push(d);
+  for (const d of ["dwellingUnits", "siteAreaSqm", "frontageMetres"] as const) {
+    const b = applicability[d];
+    if (b !== undefined && (b.min !== undefined || b.max !== undefined)) present.push(d);
+  }
+  const unsourced = present.filter((d) => applicability.locators?.[d] === undefined);
+  if (unsourced.length > 0) {
+    return {
+      ok: false,
+      code: "MISSING_REQUIRED_VALUE",
+      reasonCode: "RULE_NOT_STRUCTURED",
+      message: `Fact "${fact.factId}" states a scope with no source locator for ${unsourced.join(", ")}. Scope is itself a legal assertion, and a source-free scope is not emitted.`,
+    };
+  }
+
+  const scopeKey = canonicalE85ApplicabilityKey(applicability);
+  return scopeKey === "" ? { ok: true, scopeKey } : { ok: true, applicability, scopeKey };
 }
 
 function normalize(document: E85StructuredSourceDocument, source: E85SourceDefinition, options?: E85NormalizationOptions): E85NormalizationResult {
@@ -190,14 +305,8 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
   }
 
   const permissions: E85Evidence<E85UsePermission>[] = [];
-  const densityFields: { maxFsr?: E85Evidence<number> } = {};
-  const dimensionalFields: {
-    maxHeightMetres?: E85Evidence<number>;
-    maxStoreys?: E85Evidence<number>;
-    maxSiteCoverageFraction?: E85Evidence<number>;
-    minFrontageMetres?: E85Evidence<number>;
-    setbacksMetres?: Record<string, E85Evidence<number>>;
-  } = {};
+  const scalars: ScopedScalar[] = [];
+  const requirementItems: E85RequirementItem[] = [];
 
   for (const fact of facts) {
     if (fact.zoneDesignation !== document.zoneDesignation) {
@@ -225,6 +334,14 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
       );
       continue;
     }
+
+    const scope = mapFactApplicability(fact);
+    if (!scope.ok) {
+      addGap(fact, scope.code, scope.reasonCode, scope.message, "Add a reviewed mapping for the scope term, or supply the source locator for every scope dimension.");
+      continue;
+    }
+    const scoped = scope.applicability === undefined ? {} : { applicability: scope.applicability };
+    const scopeNote = scope.scopeKey === "" ? "" : ` Scope: {${scope.scopeKey}}.`;
 
     if (fact.family === "USE") {
       const status = mapVancouverUseStatus(fact.sourceTerm);
@@ -261,7 +378,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         ...(status === "CONDITIONAL" ? { approvalAuthority: VANCOUVER_CONDITIONAL_APPROVAL_AUTHORITY } : {}),
         ...(fact.condition ? { conditionsNote: fact.condition } : {}),
       };
-      permissions.push({ value: permission, provenance, temporal });
+      permissions.push({ value: permission, provenance, temporal, ...scoped });
       qualityTiers.push(deriveEvidenceQuality(provenance));
       applicabilityTiers.push(fact.condition ? "moderate" : "high");
       findings.push({
@@ -269,7 +386,94 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         severity: "INFO",
         factId: fact.factId,
         sourceTerm: fact.sourceTerm,
-        message: `"${fact.sourceTerm}" for "${fact.sourceUseTerm}" mapped to ${status} (use code "${useCode}"); source wording preserved on the permission.`,
+        message: `"${fact.sourceTerm}" for "${fact.sourceUseTerm}" mapped to ${status} (use code "${useCode}"); source wording preserved on the permission.${scopeNote}`,
+      });
+      continue;
+    }
+
+    if (fact.family === "REQUIREMENT") {
+      // Phase 12B.4. The obligation, its trigger (applicability) and any stated
+      // quantity each become evidence. Nothing the source does not state is
+      // added: no election actor, no amount for a rate held in another instrument.
+      const mapping = mapVancouverRequirement(fact.sourceTerm);
+      if (mapping === undefined) {
+        addGap(
+          fact,
+          "UNSUPPORTED_SOURCE_CONCEPT",
+          "RULE_NOT_STRUCTURED",
+          `Requirement term "${fact.sourceTerm}" has no reviewed mapping in this adapter; no obligation is inferred from similar wording.`,
+          "Add a reviewed mapping for this obligation after confirming its meaning against the by-law.",
+        );
+        continue;
+      }
+      if (fact.condition !== undefined) {
+        addGap(
+          fact,
+          "AMBIGUOUS_SOURCE_INTERPRETATION",
+          "RULE_NOT_STRUCTURED",
+          `Requirement "${fact.sourceTerm}" carries a free-text condition ("${fact.condition}"). A requirement's trigger must be structured applicability, so the obligation is not emitted.`,
+          "Restate the condition as structured applicability.",
+        );
+        continue;
+      }
+      const spec = fact.requirement ?? {};
+      let quantity: E85Evidence<E85RequirementQuantity> | undefined;
+      if (fact.numericValue !== undefined) {
+        if (mapping.quantityKind === undefined) {
+          addGap(fact, "UNIT_UNSUPPORTED_FOR_CONCEPT", "RULE_NOT_STRUCTURED", `"${fact.sourceTerm}" states the number ${fact.numericValue}, but this adapter has no reviewed quantity kind for that obligation; the number is not attached to it.`);
+          continue;
+        }
+        const converted = fact.unit === undefined ? { ok: false as const } : convertVancouverRequirementQuantity(mapping, fact.numericValue, fact.unit);
+        if (!converted.ok) {
+          addGap(fact, "UNIT_UNSUPPORTED_FOR_CONCEPT", "RULE_NOT_STRUCTURED", `Unit ${fact.unit ?? "(none)"} is not accepted for "${fact.sourceTerm}" (accepts ${mapping.acceptedQuantityUnits.join(", ")}); no conversion is attempted.`);
+          continue;
+        }
+        if (spec.quantityBasisTerm === undefined || spec.quantityBasisTerm.trim() === "") {
+          addGap(fact, "MISSING_REQUIRED_VALUE", "RULE_NOT_STRUCTURED", `"${fact.sourceTerm}" states ${fact.numericValue} ${fact.unit} but no basis it is a share of; a share of an unnamed quantity is not emitted.`, "Re-extract the basis the source names for this quantity.");
+          continue;
+        }
+        quantity = {
+          value: { kind: mapping.quantityKind, value: converted.value, basisTerm: spec.quantityBasisTerm },
+          provenance: baseProvenance(fact, converted.policyApplied),
+          temporal,
+          ...scoped,
+        };
+      }
+      const requirement: E85RegulatoryRequirement = {
+        category: mapping.category,
+        requirementCode: mapping.requirementCode,
+        obligationKind: mapping.obligationKind,
+        rawSourceTerminology: fact.sourceTerm,
+        ...(spec.choiceGroup === undefined ? {} : { choice: { choiceGroupId: spec.choiceGroup.groupId, mode: spec.choiceGroup.mode } }),
+        // This extract structures no referenced instrument, so every reference is unstructured.
+        ...(spec.references === undefined || spec.references.length === 0
+          ? {}
+          : { instrumentReferences: spec.references.map((r) => ({ role: r.role, target: r.target, description: r.description, structured: false })) }),
+      };
+      const provenance = baseProvenance(fact);
+      const item: E85RequirementItem = { requirement: { value: requirement, provenance, temporal, ...scoped }, ...(quantity === undefined ? {} : { quantities: [quantity] }) };
+      const problems = validateE85RequirementItem(item);
+      if (problems.length > 0) {
+        addGap(fact, "AMBIGUOUS_SOURCE_INTERPRETATION", "RULE_NOT_STRUCTURED", `Requirement fact "${fact.factId}" cannot be emitted: ${problems.join(" ")}`);
+        continue;
+      }
+      requirementItems.push(item);
+      qualityTiers.push(deriveEvidenceQuality(provenance));
+      applicabilityTiers.push("high");
+      const unstructuredReferences = (requirement.instrumentReferences ?? []).filter((r) => !r.structured);
+      findings.push({
+        code: quantity?.provenance.interpretationNote ? "TERM_MAPPED_BY_JURISDICTION_POLICY" : "TERM_MAPPED_EXACT",
+        severity: "INFO",
+        factId: fact.factId,
+        sourceTerm: fact.sourceTerm,
+        message:
+          `"${fact.sourceTerm}" mapped to REQUIREMENT ${e85RequirementIdentity(requirement)} (${requirement.obligationKind})` +
+          (quantity === undefined
+            ? ", with no structured quantity"
+            : `, ${quantity.value.kind} = ${quantity.value.value} of "${quantity.value.basisTerm}"${quantity.provenance.interpretationNote ? ` (${quantity.provenance.interpretationNote} Source stated ${fact.numericValue} ${fact.unit}.)` : ""}`) +
+          (requirement.choice === undefined ? "" : `; one alternative of ${requirement.choice.mode} choice "${requirement.choice.choiceGroupId}"`) +
+          (unstructuredReferences.length === 0 ? "" : `; depends on ${unstructuredReferences.map((r) => `${r.description} [${r.role}]`).join(", ")}, located and NOT structured by this extract`) +
+          `.${scopeNote}`,
       });
       continue;
     }
@@ -316,7 +520,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
     }
 
     const provenance = baseProvenance(fact, converted.policyApplied);
-    const evidence: E85Evidence<number> = { value: converted.value, provenance, temporal };
+    const evidence: E85Evidence<number> = { value: converted.value, provenance, temporal, ...scoped };
     qualityTiers.push(deriveEvidenceQuality(provenance));
     applicabilityTiers.push(fact.condition ? "moderate" : "high");
 
@@ -325,9 +529,10 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
       severity: "INFO",
       factId: fact.factId,
       sourceTerm: fact.sourceTerm,
-      message: converted.policyApplied
-        ? `"${fact.sourceTerm}" mapped to ${mapping.family}.${mapping.field}. ${converted.policyApplied} Source stated ${fact.numericValue} ${fact.unit}.`
-        : `"${fact.sourceTerm}" mapped to ${mapping.family}.${mapping.field} = ${converted.value} (${fact.unit}), value unchanged.`,
+      message:
+        (converted.policyApplied
+          ? `"${fact.sourceTerm}" mapped to ${mapping.family}.${mapping.field}. ${converted.policyApplied} Source stated ${fact.numericValue} ${fact.unit}.`
+          : `"${fact.sourceTerm}" mapped to ${mapping.family}.${mapping.field} = ${converted.value} (${fact.unit}), value unchanged.`) + scopeNote,
     });
 
     if (fact.condition !== undefined) {
@@ -345,13 +550,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
       continue;
     }
 
-    if (mapping.family === "DENSITY") {
-      densityFields.maxFsr = evidence;
-    } else if (mapping.field === "setback") {
-      dimensionalFields.setbacksMetres = { ...(dimensionalFields.setbacksMetres ?? {}), [mapping.yardName]: evidence };
-    } else {
-      dimensionalFields[mapping.field] = evidence;
-    }
+    scalars.push({ mapping, evidence, scopeKey: scope.scopeKey });
   }
 
   for (const section of document.unstructuredSections ?? []) {
@@ -403,29 +602,9 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
     const useRule: E85UseRule = { family: "USE", jurisdictionId: document.jurisdictionId, zoneDesignation: document.zoneDesignation, permissions };
     rules.push(useRule);
   }
-  if (densityFields.maxFsr) {
-    const densityRule: E85DensityRule = { family: "DENSITY", jurisdictionId: document.jurisdictionId, zoneDesignation: document.zoneDesignation, maxFsr: densityFields.maxFsr };
-    rules.push(densityRule);
-  }
-  if (
-    dimensionalFields.maxHeightMetres ||
-    dimensionalFields.maxStoreys ||
-    dimensionalFields.maxSiteCoverageFraction ||
-    dimensionalFields.minFrontageMetres ||
-    dimensionalFields.setbacksMetres
-  ) {
-    const dimensionalRule: E85DimensionalRule = {
-      family: "DIMENSIONAL",
-      jurisdictionId: document.jurisdictionId,
-      zoneDesignation: document.zoneDesignation,
-      ...(dimensionalFields.maxHeightMetres ? { maxHeightMetres: dimensionalFields.maxHeightMetres } : {}),
-      ...(dimensionalFields.maxStoreys ? { maxStoreys: dimensionalFields.maxStoreys } : {}),
-      ...(dimensionalFields.maxSiteCoverageFraction ? { maxSiteCoverageFraction: dimensionalFields.maxSiteCoverageFraction } : {}),
-      ...(dimensionalFields.minFrontageMetres ? { minFrontageMetres: dimensionalFields.minFrontageMetres } : {}),
-      ...(dimensionalFields.setbacksMetres ? { setbacksMetres: dimensionalFields.setbacksMetres } : {}),
-    };
-    rules.push(dimensionalRule);
-  }
+  rules.push(...buildScopedRules("DENSITY", scalars, document));
+  rules.push(...buildScopedRules("DIMENSIONAL", scalars, document));
+  rules.push(...buildRequirementRules(requirementItems, document));
 
   const qualification: E85BundleQualification = {
     evidenceQuality: qualityTiers.length > 0 ? floorQualificationTiers(...qualityTiers) : "low",
@@ -470,10 +649,89 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
   return { outcome: "NORMALIZED", bundle };
 }
 
-/** Builds a one-field rule record for a condition-dependent value, so an affirmed condition contributes exactly that value and nothing more. */
-function buildSingleFieldRule(mapping: NonNullable<ReturnType<typeof mapVancouverConcept>>, evidence: E85Evidence<number>, document: E85StructuredSourceDocument): E85RuleRecord {
+/** The slot a value occupies in a rule record; two values competing for one slot in one scope go into separate records rather than one silently overwriting the other. */
+function slotOf(mapping: E85VancouverConceptMapping): string {
+  return mapping.field === "setback" ? `setback:${mapping.yardName}` : mapping.field;
+}
+
+/**
+ * Builds rule records for one family: unscoped values first, then one group per
+ * scope key in code-unit order. Within a group, values are placed into the first
+ * record whose slot is still free, in canonical fact order.
+ */
+function buildScopedRules(family: "DENSITY" | "DIMENSIONAL", scalars: readonly ScopedScalar[], document: E85StructuredSourceDocument): E85RuleRecord[] {
   const base = { jurisdictionId: document.jurisdictionId, zoneDesignation: document.zoneDesignation };
-  if (mapping.family === "DENSITY") return { ...base, family: "DENSITY", maxFsr: evidence };
+  const ofFamily = scalars.filter((s) => s.mapping.family === family);
+  const scopeKeys = [...new Set(ofFamily.map((s) => s.scopeKey))].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const rules: E85RuleRecord[] = [];
+  for (const scopeKey of scopeKeys) {
+    const records: Map<string, E85Evidence<number>>[] = [];
+    for (const s of ofFamily.filter((x) => x.scopeKey === scopeKey)) {
+      const slot = slotOf(s.mapping);
+      let target = records.find((r) => !r.has(slot));
+      if (target === undefined) {
+        target = new Map();
+        records.push(target);
+      }
+      target.set(slot, s.evidence);
+    }
+    for (const r of records) {
+      if (family === "DENSITY") {
+        const densityRule: E85DensityRule = {
+          family: "DENSITY",
+          ...base,
+          ...(r.has("maxFsr") ? { maxFsr: r.get("maxFsr")! } : {}),
+          ...(r.has("maxDwellingUnits") ? { maxDwellingUnits: r.get("maxDwellingUnits")! } : {}),
+        };
+        rules.push(densityRule);
+      } else {
+        const setbacks: Record<string, E85Evidence<number>> = {};
+        for (const [slot, ev] of r) if (slot.startsWith("setback:")) setbacks[slot.slice("setback:".length)] = ev;
+        const dimensionalRule: E85DimensionalRule = {
+          family: "DIMENSIONAL",
+          ...base,
+          ...(r.has("maxHeightMetres") ? { maxHeightMetres: r.get("maxHeightMetres")! } : {}),
+          ...(r.has("maxStoreys") ? { maxStoreys: r.get("maxStoreys")! } : {}),
+          ...(r.has("maxSiteCoverageFraction") ? { maxSiteCoverageFraction: r.get("maxSiteCoverageFraction")! } : {}),
+          ...(r.has("minFrontageMetres") ? { minFrontageMetres: r.get("minFrontageMetres")! } : {}),
+          ...(Object.keys(setbacks).length > 0 ? { setbacksMetres: setbacks } : {}),
+        };
+        rules.push(dimensionalRule);
+      }
+    }
+  }
+  return rules;
+}
+
+/**
+ * Builds REQUIREMENT rule records in canonical obligation order (identity, then
+ * scope, then evidence identity). An obligation repeated under the same scope
+ * from a different place in the source goes into a separate record, so neither
+ * statement overwrites the other.
+ */
+function buildRequirementRules(items: readonly E85RequirementItem[], document: E85StructuredSourceDocument): E85RuleRecord[] {
+  const keyOf = (item: E85RequirementItem) => `${e85RequirementIdentity(item.requirement.value)}{${canonicalE85ApplicabilityKey(item.requirement.applicability)}}`;
+  const ordered = [...items].sort((a, b) => {
+    const ka = `${keyOf(a)}|${evidenceIdentityKey(a.requirement)}`;
+    const kb = `${keyOf(b)}|${evidenceIdentityKey(b.requirement)}`;
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
+  const records: E85RequirementItem[][] = [];
+  for (const item of ordered) {
+    let target = records.find((r) => !r.some((existing) => keyOf(existing) === keyOf(item)));
+    if (target === undefined) {
+      target = [];
+      records.push(target);
+    }
+    target.push(item);
+  }
+  return records.map((requirements): E85RequirementRule => ({ family: "REQUIREMENT", jurisdictionId: document.jurisdictionId, zoneDesignation: document.zoneDesignation, requirements }));
+}
+
+/** Builds a one-field rule record for a condition-dependent value, so an affirmed condition contributes exactly that value and nothing more. */
+function buildSingleFieldRule(mapping: E85VancouverConceptMapping, evidence: E85Evidence<number>, document: E85StructuredSourceDocument): E85RuleRecord {
+  const base = { jurisdictionId: document.jurisdictionId, zoneDesignation: document.zoneDesignation };
+  if (mapping.family === "DENSITY") return mapping.field === "maxDwellingUnits" ? { ...base, family: "DENSITY", maxDwellingUnits: evidence } : { ...base, family: "DENSITY", maxFsr: evidence };
   if (mapping.field === "setback") return { ...base, family: "DIMENSIONAL", setbacksMetres: { [mapping.yardName]: evidence } };
   return { ...base, family: "DIMENSIONAL", [mapping.field]: evidence } as E85DimensionalRule;
 }

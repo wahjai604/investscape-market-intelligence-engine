@@ -31,8 +31,33 @@ export type E85RequestedAnalysis = E85RuleFamily;
 export interface E85CallerContext {
   /** Named conditions the caller affirms ARE satisfied for this evaluation, using whatever condition-name vocabulary the supplied rule evidence uses (free-text, case-sensitive exact match only — no fuzzy matching). */
   satisfiedConditions?: readonly string[];
+  /**
+   * PHASE 12B.2 (optional, additive): condition ids the caller explicitly
+   * establishes are FALSE for this proposal. Used only by scoped-rule
+   * applicability (`E85RuleApplicability.requiredConditionIds`). A condition in
+   * neither list is UNKNOWN — never false by omission.
+   */
+  unsatisfiedConditions?: readonly string[];
   /** Overlay designations the caller flags as applicable to this parcel (e.g. from a source outside Rule-Only Mode's own discovery, since Rule-Only Mode never discovers overlays spatially itself). */
   overlaysApplicable?: readonly string[];
+}
+
+/**
+ * PHASE 12B.2 (optional, additive): facts about the proposal that scoped rules
+ * may depend on. Site area is NOT repeated here — it stays on
+ * `E85ParcelReference.siteAreaSqm` — and the use stays on
+ * `E85EvaluationRequest.useCode`. Every field is optional; a missing field
+ * leaves any scope depending on it UNDETERMINED, never false.
+ */
+export interface E85ProposalContext {
+  /** Total dwelling units in the proposed development. */
+  dwellingUnitCount?: number;
+  /** Role of the building being evaluated, in the building-role vocabulary the supplied rule evidence uses. One role per request. */
+  buildingRole?: string;
+  /** Tenure of the proposed residential floor area, in the tenure vocabulary the supplied rule evidence uses. */
+  tenureCode?: string;
+  /** Site frontage in metres. */
+  frontageMetres?: number;
 }
 
 /**
@@ -58,4 +83,6 @@ export interface E85EvaluationRequest {
   requestedAnalyses: readonly E85RequestedAnalysis[];
   policyVersion: E85PolicyVersion;
   callerContext?: E85CallerContext;
+  /** PHASE 12B.2 (optional): proposal facts used only to decide scoped-rule applicability. */
+  proposal?: E85ProposalContext;
 }

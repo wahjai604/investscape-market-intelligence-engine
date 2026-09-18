@@ -7,7 +7,9 @@
  * silently dropped.
  */
 import { createE85AdapterRegistry, createE85SourceRegistry, normalizeSourceDocument, E85DimensionalRule, E85StructuredSourceFact, adapters } from "../../src/zoning-land-use-engine";
-import { r11Document, EXTRACTED_AT, FACT_FSR, FACT_HEIGHT, FACT_OUTRIGHT_ONE_FAMILY } from "./fixtures/vancouver-r1-1-facts";
+// Phase 12B.2: the templates are now the corrected, scoped R1-1 facts. These
+// tests vary one field at a time, so the scope a template carries is incidental.
+import { r11Document, EXTRACTED_AT, FACT_FSR_OTHER_USES as FACT_FSR, FACT_HEIGHT_OTHER_USES as FACT_HEIGHT, FACT_OUTRIGHT_SINGLE_DETACHED_HOUSE } from "./fixtures/vancouver-r1-1-facts";
 
 const { vancouverR11Adapter, VANCOUVER_R1_1_SOURCE, VANCOUVER_R1_1_SOURCE_ID, VANCOUVER_JURISDICTION_ID } = adapters.vancouver;
 
@@ -29,7 +31,7 @@ describe("unknown source term", () => {
   });
 
   test("an unrecognized approval-path term is not silently PERMITTED, CONDITIONAL or PROHIBITED", () => {
-    const bundle = normalizeFacts([{ ...FACT_OUTRIGHT_ONE_FAMILY, factId: "unknown-use-1", sourceTerm: "Provisionally Tolerated Use" }]);
+    const bundle = normalizeFacts([{ ...FACT_OUTRIGHT_SINGLE_DETACHED_HOUSE, factId: "unknown-use-1", sourceTerm: "Provisionally Tolerated Use" }]);
     expect(bundle.rules).toHaveLength(0);
     expect(JSON.stringify(bundle)).not.toMatch(/"status":"(PERMITTED|CONDITIONAL|PROHIBITED)"/);
     const finding = bundle.findings.find((f) => f.factId === "unknown-use-1");
@@ -46,7 +48,7 @@ describe("unknown source term", () => {
   });
 
   test("an unrecognized land-use name is not approximated to a similar one", () => {
-    const bundle = normalizeFacts([{ ...FACT_OUTRIGHT_ONE_FAMILY, factId: "unknown-use-2", sourceUseTerm: "Two-Family Dwelling" }]);
+    const bundle = normalizeFacts([{ ...FACT_OUTRIGHT_SINGLE_DETACHED_HOUSE, factId: "unknown-use-2", sourceUseTerm: "Two-Family Dwelling" }]);
     expect(bundle.rules).toHaveLength(0);
     expect(bundle.findings.find((f) => f.factId === "unknown-use-2")?.message).toMatch(/not approximated/i);
   });
@@ -85,7 +87,7 @@ describe("missing required value", () => {
   });
 
   test("a use fact naming no land use is a gap, not an anonymous permission", () => {
-    const bundle = normalizeFacts([{ ...FACT_OUTRIGHT_ONE_FAMILY, factId: "no-use", sourceUseTerm: undefined }]);
+    const bundle = normalizeFacts([{ ...FACT_OUTRIGHT_SINGLE_DETACHED_HOUSE, factId: "no-use", sourceUseTerm: undefined }]);
     expect(bundle.rules).toHaveLength(0);
     expect(bundle.findings.find((f) => f.factId === "no-use")?.code).toBe("MISSING_REQUIRED_VALUE");
   });

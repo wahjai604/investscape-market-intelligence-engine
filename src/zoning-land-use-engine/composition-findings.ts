@@ -41,7 +41,9 @@ export type E85CompositionFindingCode =
   /** A precedence relation was declared but could not be used; carries the reason. The concepts it would have decided fall back to ordinary conflict handling. */
   | "PRECEDENCE_METADATA_REJECTED"
   /** A contributing pack carries a rights/coverage limitation. Reported only — licensing never suppresses a rule. */
-  | "SOURCE_READINESS_LIMITATION";
+  | "SOURCE_READINESS_LIMITATION"
+  /** PHASE 12B.2: one regulated concept is stated under several applicability scopes that are PROVEN disjoint, so the values coexist rather than conflict. */
+  | "SCOPED_CONCEPTS_DISJOINT";
 
 /**
  * How the finding affects the composed pack.

@@ -73,6 +73,19 @@ export * from "./result-status";
 export * from "./evaluator-result-types";
 export * from "./evaluator";
 
+// Phase 12B.2 — scoped rule applicability. An optional, jurisdiction-neutral
+// axis on E85Evidence stating which proposals a value governs, with a canonical
+// scope identity, three-valued evaluation, and proven-disjointness semantics.
+export * from "./rule-applicability-types";
+export * from "./rule-applicability";
+
+// Phase 12B.4 — regulatory requirements. A generic rule family for binding
+// obligations imposed on an otherwise-entitled development, triggered through
+// the Phase 12B.2 applicability axis and never priced.
+export * from "./regulatory-requirement-types";
+export * from "./regulatory-requirement";
+export * from "./requirement-evaluation";
+
 // Phase 5 — source adapters & registry. Generic contracts first; the
 // jurisdiction adapters are namespaced under `adapters` so no municipality's
 // vocabulary reaches this barrel's top level.

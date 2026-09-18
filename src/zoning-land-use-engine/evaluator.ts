@@ -42,6 +42,8 @@ import { evaluateOverlay } from "./overlay-evaluation";
 import { assembleEnvelope } from "./envelope-assembly";
 import { determineOverallStatus, isMaterial } from "./result-status";
 import { matchesJurisdictionZone } from "./applicability";
+import { buildE85ApplicabilityContext } from "./rule-applicability";
+import { evaluateRequirements } from "./requirement-evaluation";
 
 function collectQualification(findings: readonly E85EvaluationFinding[]): E85Qualification {
   const quals = findings.map((f) => f.qualification).filter((q): q is E85Qualification => q !== undefined);
@@ -60,25 +62,32 @@ export function evaluateZoningAndLandUse(request: E85EvaluationRequest): E85Eval
   const resolvedAt = new Date().toISOString();
 
   const findings: E85EvaluationFinding[] = [];
+  // Phase 12B.2: one proposal context, built only from what the request states,
+  // against which every scoped evidence item's applicability is decided.
+  const applicabilityContext = buildE85ApplicabilityContext(request);
 
   if (requestedAnalyses.includes("USE")) {
-    findings.push(evaluateUsePermission(rules, parcel, jurisdictionId, zoneDesignation, useCode, asOfDate));
+    findings.push(evaluateUsePermission(rules, parcel, jurisdictionId, zoneDesignation, useCode, asOfDate, applicabilityContext));
   }
   if (requestedAnalyses.includes("DENSITY")) {
-    findings.push(...evaluateDensity(rules, parcel, jurisdictionId, zoneDesignation, asOfDate, callerContext));
+    findings.push(...evaluateDensity(rules, parcel, jurisdictionId, zoneDesignation, asOfDate, callerContext, applicabilityContext));
   }
   if (requestedAnalyses.includes("DIMENSIONAL")) {
-    findings.push(...evaluateDimensional(rules, parcel, jurisdictionId, zoneDesignation, asOfDate));
+    findings.push(...evaluateDimensional(rules, parcel, jurisdictionId, zoneDesignation, asOfDate, applicabilityContext));
   }
   if (requestedAnalyses.includes("PARKING")) {
-    findings.push(...evaluateParking(rules, parcel, jurisdictionId, zoneDesignation, asOfDate));
+    findings.push(...evaluateParking(rules, parcel, jurisdictionId, zoneDesignation, asOfDate, applicabilityContext));
   }
   if (requestedAnalyses.includes("AMENITY")) {
-    findings.push(...evaluateAmenity(rules, parcel, jurisdictionId, zoneDesignation, asOfDate, callerContext));
+    findings.push(...evaluateAmenity(rules, parcel, jurisdictionId, zoneDesignation, asOfDate, callerContext, applicabilityContext));
   }
   if (requestedAnalyses.includes("OVERLAY")) {
     findings.push(...evaluateOverlay(rules, parcel, jurisdictionId, zoneDesignation, asOfDate, callerContext));
   }
+  // Phase 12B.4: evaluated only when requested, so a requirement gap can never
+  // block an analysis that did not ask about requirements.
+  const requirementEvaluation = requestedAnalyses.includes("REQUIREMENT") ? evaluateRequirements(rules, parcel, jurisdictionId, zoneDesignation, asOfDate, applicabilityContext) : undefined;
+  if (requirementEvaluation) findings.push(...requirementEvaluation.findings);
 
   const materialFindings = findings.filter((f) => isMaterial(f, requestedAnalyses));
   const gaps: E85DataGap[] = materialFindings.filter((f) => f.outcome === "GAP" && f.gap).map((f) => f.gap!);
@@ -167,6 +176,7 @@ export function evaluateZoningAndLandUse(request: E85EvaluationRequest): E85Eval
       return { overlayDesignation: v.overlayDesignation, description: v.description };
     });
   }
+  if (requirementEvaluation) outcome.requirements = requirementEvaluation.requirements;
 
   return outcome;
 }
