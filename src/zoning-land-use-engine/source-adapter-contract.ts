@@ -49,7 +49,11 @@ export interface E85AdapterIdentity {
   supportedVersionIds: readonly string[];
   /** Exact zone designations this adapter covers. */
   supportedZoneDesignations: readonly string[];
-  /** Rule families this adapter normalizes. A family outside this list yields UNSUPPORTED_SOURCE_CONCEPT rather than a partial guess. */
+  /**
+   * Rule families this adapter normalizes. A family outside this list yields UNSUPPORTED_SOURCE_CONCEPT rather than a partial guess.
+   * AUTHORITATIVE for decision-time coverage (Phase 9): means "this bundle claims to model the family at all", subject to ordinary
+   * within-family applicability/gaps/conflicts — never "a rule always applies" or "every fact in the family is structured".
+   */
   supportedRuleFamilies: readonly E85RuleFamily[];
 }
 

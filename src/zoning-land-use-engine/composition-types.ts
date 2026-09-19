@@ -54,6 +54,12 @@ export interface E85RulePack {
   sourceVersionId?: string;
   /** DESCRIPTIVE ONLY. Never read by precedence resolution — see precedence-types.ts. */
   role: E85CompositionRole;
+  /**
+   * Rule families this pack claims to model at all, carried from the originating bundle's `supportedRuleFamilies` (or stated directly by
+   * a hand-built pack). Composition unions this across contributing packs onto `E85ComposedRulePack.supportedRuleFamilies`; never inferred
+   * from `rules` here either.
+   */
+  supportedRuleFamilies: readonly E85RuleFamily[];
   /** Unconditional rules, safe to compose. */
   rules: readonly E85RuleRecord[];
   /** Condition-gated rules, held out of `rules` exactly as Phase 5 holds them out of a bundle. */
@@ -90,6 +96,7 @@ export function rulePackFromBundle(bundle: E85NormalizedRuleBundle, packId: stri
     sourceId: bundle.sourceId,
     sourceVersionId: bundle.sourceVersionId,
     role,
+    supportedRuleFamilies: bundle.supportedRuleFamilies,
     rules: bundle.rules,
     conditionalRules: bundle.conditionalRules,
     temporal: bundle.temporal,
@@ -271,6 +278,13 @@ export interface E85ComposedRulePack {
   conditionalRules: readonly E85ConditionalRuleRecord[];
   /** Pack ids that contributed, sorted. */
   contributingPackIds: readonly string[];
+  /**
+   * Rule families claimed as modeled by the CONTRIBUTING packs only (`contributingPackIds`) — a deterministic, sorted union of each
+   * pack's own `supportedRuleFamilies`. A pack that did not contribute is never credited, no matter what it declares. Used by Phase 9 to
+   * tell "this family was never modeled by anything in the decision" apart from "this family was modeled and had nothing to say" — never
+   * derived from `effectiveRules` or any other rule/finding count.
+   */
+  supportedRuleFamilies: readonly E85RuleFamily[];
   /** Source ids that contributed, sorted and deduplicated. */
   contributingSourceIds: readonly string[];
   /** Rules displaced by an explicit relation, with both sides preserved. */

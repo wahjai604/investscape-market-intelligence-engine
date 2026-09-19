@@ -20,7 +20,7 @@
  * condition holds — it cannot know, and guessing would mean choosing whichever
  * value happens to be more favourable.
  */
-import type { E85RuleRecord } from "./rule-family-types";
+import type { E85RuleFamily, E85RuleRecord } from "./rule-family-types";
 import type { E85TemporalWindow } from "./evidence-types";
 import type { E85Provenance } from "./provenance-types";
 import type { E85QualificationTier } from "./qualification-types";
@@ -70,6 +70,12 @@ export interface E85NormalizedRuleBundle {
   rules: readonly E85RuleRecord[];
   /** Condition-dependent rules, deliberately excluded from `rules`. */
   conditionalRules: readonly E85ConditionalRuleRecord[];
+  /**
+   * Rule families this bundle's adapter claims to model at all, copied verbatim from `E85AdapterIdentity.supportedRuleFamilies` — never
+   * inferred from which rules or findings happen to be present. Means "modeled, subject to ordinary within-family applicability/gaps/
+   * conflicts", never "a rule always applies" or "every fact in the family is structured". Authoritative for Phase 9 coverage checks.
+   */
+  supportedRuleFamilies: readonly E85RuleFamily[];
   /** Everything that happened during normalization, including successes, in deterministic order. */
   findings: readonly E85NormalizationFinding[];
   /** Source facts that produced no rule, so the bundle accounts for every input. */

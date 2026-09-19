@@ -106,7 +106,7 @@ export const VANCOUVER_R1_1_SOURCE: E85SourceDefinition = {
   licenseStatus: "LICENSE_UNKNOWN",
   adapterReadiness: "BUILT_VERIFIED",
   adapterId: VANCOUVER_R1_1_ADAPTER_ID,
-  supportedRuleFamilies: ["USE", "DENSITY", "DIMENSIONAL"],
+  supportedRuleFamilies: ["USE", "DENSITY", "DIMENSIONAL", "REQUIREMENT"],
   supportedZoneDesignations: [VANCOUVER_R1_1_ZONE],
   knownLimitations: [
     "Covers the R1-1 District Schedule only. No other Vancouver district schedule is registered, and no other municipality falls back to this source.",

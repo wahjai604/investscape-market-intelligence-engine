@@ -81,7 +81,16 @@ function evaluate(rules: readonly E85RuleRecord[], useCode: string, extra: Parti
 }
 
 function pack(packId: string, rules: readonly E85RuleRecord[]): E85RulePack {
-  return { packId, jurisdictionId: J, zoneDesignation: Z, sourceId: `${J}:${packId}`, role: "BASE", rules, conditionalRules: [] };
+  return {
+    packId,
+    jurisdictionId: J,
+    zoneDesignation: Z,
+    sourceId: `${J}:${packId}`,
+    role: "BASE",
+    supportedRuleFamilies: [...new Set(rules.map((r) => r.family))],
+    rules,
+    conditionalRules: [],
+  };
 }
 
 /* ================================================================== */

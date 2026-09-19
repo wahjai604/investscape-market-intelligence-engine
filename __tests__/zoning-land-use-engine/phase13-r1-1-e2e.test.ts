@@ -347,6 +347,19 @@ describe("E85 Phase 13.1 — real spatial->legal->composition->evaluation->decis
     expect(p.status).toBe("DATA_GAP");
   });
 
+  // PHASE 14.4A.1: REQUIREMENT is a family R1-1's adapter DOES declare (see
+  // FOUR_FAMILIES / VANCOUVER_R1_1_ADAPTER_IDENTITY), so an existing within-
+  // family DATA_GAP (Schedule J's cash-in-lieu quantity not being structured)
+  // must not double up with the new coverage check, which only fires for a
+  // family no contributing pack claims at all.
+  test("an existing within-family DATA_GAP does not also raise REQUESTED_FAMILY_NOT_SUPPORTED", () => {
+    const p = decide({ proposal: COHERENT_MD_PROPOSAL, callerContext: { satisfiedConditions: ALL_SATISFIED_CONDITIONS } });
+    expect(p.materiality.some((m) => m.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED")).toBe(false);
+    if (p.phase6?.outcome === "COMPOSED") {
+      expect(p.phase6.composed.supportedRuleFamilies).toEqual(["DENSITY", "DIMENSIONAL", "REQUIREMENT", "USE"]);
+    }
+  });
+
   test("DIMENSIONAL: the non-rear-building branch of the real §3.1.2.5(b)/§3.1.2.6 provisions resolves onto the envelope — height, storeys and front yard", () => {
     const p = decide({ proposal: COHERENT_MD_PROPOSAL, callerContext: { satisfiedConditions: ALL_SATISFIED_CONDITIONS } });
     if (p.phase4?.result.status !== "DATA_GAP") throw new Error("expected DATA_GAP");

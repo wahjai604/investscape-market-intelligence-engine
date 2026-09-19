@@ -350,6 +350,32 @@ export function assessE85DecisionMateriality(input: E85DecisionMaterialityInput)
       });
     }
 
+    // ---- Requested-family coverage. Only trustworthy when pack resolution is
+    //      completely clean: an unresolved pack's contents are UNKNOWN (see the
+    //      RULE_PACK_NOT_SUPPLIED block above), so it might have been the very
+    //      thing that would have covered a family the composed union appears to
+    //      lack. Comparing against the union in that state would misreport an
+    //      unknown as an affirmative "not supported". The existing
+    //      RULE_PACK_NOT_SUPPLIED blocker is already unscoped by family and
+    //      therefore already the conservative, correct signal for that case.
+    if (packResolution.unresolvedPackIds.length === 0) {
+      for (const family of requestedAnalyses) {
+        if (phase6.composed.supportedRuleFamilies.includes(family)) continue;
+        records.push({
+          sourceRef: `RULE_PACK_RESOLUTION:REQUESTED_FAMILY_NOT_SUPPORTED:${family}`,
+          sourcePhase: "RULE_PACK_RESOLUTION",
+          sourceCode: "REQUESTED_FAMILY_NOT_SUPPORTED",
+          kind: "COMPLETENESS",
+          materiality: "MATERIAL",
+          reason:
+            `Requested analysis family ${family} is not declared as supported by any contributing rule pack for this decision. ` +
+            `No contributing pack's adapter claims to model ${family} at all, so this is a coverage gap, not a within-family finding — ` +
+            `it does not affect the legal status of any family that WAS modeled.`,
+          families: [family],
+        });
+      }
+    }
+
     for (const problem of phase6.composed.precedenceProblems) {
       records.push({
         sourceRef: `COMPOSITION:${problem.code}:${problem.relationIds.slice().sort(byE85DecisionKey).join(",")}`,

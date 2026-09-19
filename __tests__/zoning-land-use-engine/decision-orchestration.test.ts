@@ -519,6 +519,132 @@ describe("E85 Phase 9 — Phase 6's materiality is reused, never re-derived", ()
     expect(p.phase6.composed.suppressed).toEqual([]);
     expect(p.phase6.composed.appliedRelations).toEqual([]);
   });
+
+  // PHASE 14.4A.1: DENSITY is a family both contributing packs here DO declare
+  // (the fixture derives it from the maxFsr field each supplies), so the real
+  // conflict must drive MANUAL_REVIEW_REQUIRED alone — no new coverage blocker
+  // double-counts alongside it.
+  test("a real within-family conflict does not also raise REQUESTED_FAMILY_NOT_SUPPORTED", () => {
+    const p = decide(conflictSpec(["DENSITY"]));
+    expect(p.materiality.some((m) => m.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED")).toBe(false);
+    expect(p.status).toBe("MANUAL_REVIEW_REQUIRED");
+  });
+});
+
+describe("E85 Phase 9 — a requested family no contributing pack ever claimed to model is a completeness blocker, not a legal gap", () => {
+  // PHASE 14.4A.1: `refburgh-rb-1` here declares support for USE only (the
+  // fixture derives `supportedRuleFamilies` from which fields the spec sets),
+  // so DENSITY was never claimed as modeled at all — not "modeled and silent".
+  const useOnlyPack = () => pack({ packId: "refburgh-rb-1", role: "BASE", usePermitted: "dwelling" });
+  const useOnly = (requestedAnalyses: readonly E85RequestedAnalysis[]) =>
+    decide({ records: [RECORD_A()], parcel: PARCEL_IN_RB_A(), packs: [useOnlyPack()], requestedAnalyses });
+
+  test("(a) requesting an unmodeled family alone produces the new blocker and PARTIAL", () => {
+    const p = useOnly(["DENSITY"]);
+    const [blocker] = p.blockers.filter((b) => b.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED");
+    expect(blocker).toBeDefined();
+    expect(blocker.materiality).toBe("MATERIAL");
+    expect(blocker.kind).toBe("COMPLETENESS");
+    expect(blocker.families).toEqual(["DENSITY"]);
+    expect(p.evaluationCompleteness).toBe("PARTIAL");
+  });
+
+  test("(b) requesting only a modeled family is unaffected: no new blocker, COMPLETE", () => {
+    const p = useOnly(["USE"]);
+    expect(p.materiality.some((m) => m.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED")).toBe(false);
+    expect(p.evaluationCompleteness).toBe("COMPLETE");
+    expect(p.blockers).toEqual([]);
+  });
+
+  test("(c) + (15, THE CENTRAL INVARIANT): a modeled family's clean legal result is untouched by an unmodeled family's blocker", () => {
+    const p = useOnly(["USE", "DENSITY"]);
+    // The modeled family resolves exactly as it would have alone.
+    expect(p.phase4?.usePermission?.status).toBe("PERMITTED");
+    expect(p.phase4?.resolvedMaxFsr).toBeUndefined();
+    // The unmodeled family is flagged, and only it.
+    const densityBlockers = p.blockers.filter((b) => b.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED");
+    expect(densityBlockers.map((b) => b.families)).toEqual([["DENSITY"]]);
+    // Completeness reflects the gap...
+    expect(p.evaluationCompleteness).toBe("PARTIAL");
+    // ...but the TERMINAL LEGAL STATUS is NOT converted to DATA_GAP or
+    // MANUAL_REVIEW_REQUIRED by a blocker of kind COMPLETENESS: it is invisible
+    // to determineE85DecisionStatus's kind-based switch, so status is decided
+    // by Phase 4's own (clean) conclusion about the family it DID evaluate.
+    expect(p.status).not.toBe("DATA_GAP");
+    expect(p.status).not.toBe("MANUAL_REVIEW_REQUIRED");
+    expect(["MACHINE_RESOLVED", "MACHINE_RESOLVED_WITH_WARNINGS"]).toContain(p.status);
+  });
+
+  test("(d) a family declared supported but with every rule NOT_APPLICABLE to this proposal raises no new blocker", () => {
+    // maxFsr is stated only under a condition that is never affirmed here, so
+    // the DENSITY rule exists, is scoped out, and produces nothing — but the
+    // pack still DECLARES density support, which is the only thing this check
+    // consults.
+    const conditioned = pack({
+      packId: "refburgh-rb-1",
+      role: "BASE",
+      usePermitted: "dwelling",
+      conditionalRules: [
+        {
+          condition: "Site is assembled under a comprehensive development permit",
+          sourceFactId: "fact-cd-fsr",
+          rule: { jurisdictionId: PACK_JURISDICTION, zoneDesignation: ZONE, family: "DENSITY", maxFsr: { value: 3.0, provenance: { sourceId: "refburgh-rb-1", documentLocator: { section: "3.9" } }, temporal: { effectiveFrom: "2024-01-01", effectiveDateBasis: "SOURCE_STATED" } } },
+        },
+      ],
+      supportedRuleFamilies: ["USE", "DENSITY"],
+    });
+    const p = decide({ records: [RECORD_A()], parcel: PARCEL_IN_RB_A(), packs: [conditioned], requestedAnalyses: ["USE", "DENSITY"] });
+    expect(p.materiality.some((m) => m.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED")).toBe(false);
+    expect(p.phase4?.resolvedMaxFsr).toBeUndefined();
+    expect(p.evaluationCompleteness).toBe("COMPLETE");
+  });
+
+  test("(g) multi-pack union: two packs each cover one requested family, contributing together — no blocker", () => {
+    const useOnly1 = pack({ packId: "refburgh-rb-1", role: "BASE", usePermitted: "dwelling" });
+    const dimensionalOnly = pack({ packId: "refburgh-dp-overlay", role: "OVERLAY", maxHeightMetres: 14, supportedRuleFamilies: ["DIMENSIONAL"] });
+    const p = decide({
+      records: [RECORD_A(), RECORD_OVERLAY()],
+      parcel: PARCEL_IN_RB_A_AND_OVERLAY(),
+      packs: [useOnly1, dimensionalOnly],
+      requestedAnalyses: ["USE", "DIMENSIONAL"],
+    });
+    expect(p.materiality.some((m) => m.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED")).toBe(false);
+    expect(p.evaluationCompleteness).toBe("COMPLETE");
+  });
+
+  test("(h) a pack that declares a family but does not CONTRIBUTE to this decision is never credited", () => {
+    // refburgh-dp-overlay declares DENSITY here but is never spatially linked to
+    // this parcel (only RECORD_A is offered, mapping to refburgh-rb-1 alone), so
+    // it never enters packResolution.resolved / contributingPackIds.
+    const nonContributing = pack({ packId: "refburgh-dp-overlay", role: "OVERLAY", frontSetback: 6, supportedRuleFamilies: ["DENSITY"] });
+    const p = decide({ records: [RECORD_A()], parcel: PARCEL_IN_RB_A(), packs: [useOnlyPack(), nonContributing], requestedAnalyses: ["USE", "DENSITY"] });
+    expect(p.packResolution.resolved.map((x) => x.packId)).toEqual(["refburgh-rb-1"]);
+    const [blocker] = p.blockers.filter((b) => b.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED");
+    expect(blocker).toBeDefined();
+    expect(blocker.families).toEqual(["DENSITY"]);
+  });
+
+  test("(i) an unresolved expected pack suppresses the new check entirely: only RULE_PACK_NOT_SUPPLIED fires", () => {
+    // No packs supplied at all: Phase 7 names "refburgh-rb-1" as applicable and
+    // nothing resolves it, so its coverage is UNKNOWN, not "supports nothing".
+    const p = decide({ records: [RECORD_A()], parcel: PARCEL_IN_RB_A(), packs: [], requestedAnalyses: ["USE", "DENSITY"] });
+    expect(p.packResolution.unresolvedPackIds).toEqual(["refburgh-rb-1"]);
+    expect(p.materiality.some((m) => m.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED")).toBe(false);
+    const [blocker] = p.blockers.filter((b) => b.sourceCode === "RULE_PACK_NOT_SUPPLIED");
+    expect(blocker).toBeDefined();
+    expect(p.status).toBe("DATA_GAP");
+  });
+
+  test("(j) a REFUSED composition suppresses the new check entirely: only the refusal blocker fires", () => {
+    const incompatible = [
+      pack({ packId: "refburgh-rb-1", role: "BASE", usePermitted: "dwelling" }),
+      { ...pack({ packId: "refburgh-dp-overlay", role: "OVERLAY", usePermitted: "dwelling" }), jurisdictionId: "xx-yy-elsewhere", zoneDesignation: "OTHER-1" },
+    ];
+    const p = decide({ records: [RECORD_A(), RECORD_OVERLAY()], parcel: PARCEL_IN_RB_A_AND_OVERLAY(), packs: incompatible, requestedAnalyses: ["USE", "DENSITY"] });
+    expect(p.phase6?.outcome).toBe("REFUSED");
+    expect(p.materiality.some((m) => m.sourceCode === "REQUESTED_FAMILY_NOT_SUPPORTED")).toBe(false);
+    expect(p.materiality.some((m) => m.sourceCode === "COMPOSITION_REFUSED")).toBe(true);
+  });
 });
 
 describe("E85 Phase 9 — partial work is kept and labelled", () => {

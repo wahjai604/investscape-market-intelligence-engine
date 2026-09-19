@@ -10,7 +10,7 @@
  * Not a test file (jest matches `*.test.ts` only); imported by the Phase 6
  * suites.
  */
-import type { E85RulePack, E85PrecedenceRelation, E85RuleRecord, E85Evidence, E85ConditionalRuleRecord, E85CompositionRole } from "../../../src/zoning-land-use-engine";
+import type { E85RulePack, E85PrecedenceRelation, E85RuleRecord, E85Evidence, E85ConditionalRuleRecord, E85CompositionRole, E85RuleFamily } from "../../../src/zoning-land-use-engine";
 
 export const JURISDICTION = "xx-yy-testburgh";
 export const ZONE = "TB-1";
@@ -50,6 +50,8 @@ export interface PackSpec {
   conditionalRules?: readonly E85ConditionalRuleRecord[];
   readinessBlockers?: readonly string[];
   qualification?: E85RulePack["qualification"];
+  /** Declared family support. Defaults to exactly the families this spec produces rules for — a reasonable stand-in for an adapter identity in a synthetic fixture. Override to test declared-but-not-fired coverage. */
+  supportedRuleFamilies?: readonly E85RuleFamily[];
 }
 
 /** Builds a rule pack from a terse spec, so each test states only what it varies. */
@@ -95,6 +97,7 @@ export function pack(spec: PackSpec): E85RulePack {
     sourceId,
     sourceVersionId: `${sourceId}-v1`,
     role: spec.role,
+    supportedRuleFamilies: spec.supportedRuleFamilies ?? [...new Set(rules.map((r) => r.family))],
     rules,
     conditionalRules: spec.conditionalRules ?? [],
     temporal: from === "UNKNOWN" ? { effectiveDateBasis: "UNKNOWN" } : { effectiveFrom: from, effectiveDateBasis: "SOURCE_STATED" },

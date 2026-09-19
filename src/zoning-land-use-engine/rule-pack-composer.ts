@@ -562,6 +562,10 @@ export function composeE85RulePacks(packs: readonly E85RulePack[], options: E85C
     conditionalRules: pendingConditional,
     contributingPackIds: sortedUnique(packs.map((p) => p.packId)),
     contributingSourceIds: sortedUnique(packs.map((p) => p.sourceId)),
+    // Union over the actual contributing packs only — the same set named by
+    // `contributingPackIds` above — sorted alphabetically for the same reason
+    // every other identity list here is (input order decides nothing).
+    supportedRuleFamilies: sortedUnique(packs.flatMap((p) => p.supportedRuleFamilies)) as readonly E85RuleFamily[],
     suppressed: [...suppressed].sort((a, b) => byString(a.conceptKey, b.conceptKey) || byString(a.suppressed.packId, b.suppressed.packId)),
     unresolvedConflicts: [...unresolvedConflicts].sort((a, b) => byString(a.conceptKey, b.conceptKey)),
     findings: [...findings].sort((a, b) => byString(a.code, b.code) || byString(a.conceptKey ?? "", b.conceptKey ?? "") || byString(a.message, b.message)),

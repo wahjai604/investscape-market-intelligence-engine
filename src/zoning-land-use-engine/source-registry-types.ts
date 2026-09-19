@@ -187,7 +187,11 @@ export interface E85SourceDefinition {
   adapterReadiness: E85SourceAdapterReadiness;
   /** `E85AdapterIdentity.adapterId` bound to this source, when one exists. Absent means no adapter — an explicit adaptation gap, never a fallback to another source's adapter. */
   adapterId?: string;
-  /** Rule families this source is known to state. A family absent here is not "prohibited" — it is simply not covered by this document. */
+  /**
+   * Rule families this source is known to state. A family absent here is not "prohibited" — it is simply not covered by this document.
+   * DISCOVERY/QUERY METADATA ONLY: never authoritative at decision time — see `E85AdapterIdentity.supportedRuleFamilies`, which actually
+   * gates normalization and is what Phase 9 coverage checks rely on.
+   */
   supportedRuleFamilies: readonly E85RuleFamily[];
   /** Zone designations this source covers, matched EXACTLY. Undefined means the source is not zone-scoped (e.g. a whole by-law) rather than "covers every zone". */
   supportedZoneDesignations?: readonly string[];

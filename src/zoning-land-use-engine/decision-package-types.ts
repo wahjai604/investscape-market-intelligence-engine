@@ -100,8 +100,18 @@ export type E85DecisionMateriality =
   /** Relevance could not be established either way. Blocks a clean answer, and is NEVER silently read as NON_MATERIAL. */
   | "UNDETERMINED";
 
-/** Which terminal vocabulary an upstream problem speaks, carried so status derivation never has to guess. */
-export type E85DecisionBlockerKind = "GAP" | "MANUAL_REVIEW";
+/**
+ * Which terminal vocabulary an upstream problem speaks, carried so status derivation never has to guess.
+ *
+ * `COMPLETENESS` is deliberately distinct from `GAP`. `GAP` is a legal-vocabulary signal that `decision-status.ts` maps straight onto
+ * `DATA_GAP` regardless of which upstream code produced it. A requested analysis family that no contributing pack ever claimed to model
+ * (`REQUESTED_FAMILY_NOT_SUPPORTED`) is an ORCHESTRATION completeness fact — the decision is not the whole answer — not a legal
+ * statement about the family that WAS modeled and resolved. Using `GAP` for it would silently convert an unrelated family's clean
+ * PERMITTED/DENIED status into DATA_GAP, which is exactly the cross-contamination Phase 9 exists to prevent. `COMPLETENESS` blocks
+ * `evaluationCompleteness` (via `isE85DecisionBlocking`, which is materiality-based) but is invisible to `determineE85DecisionStatus`'s
+ * kind-based switch, so it can never move the terminal status.
+ */
+export type E85DecisionBlockerKind = "GAP" | "MANUAL_REVIEW" | "COMPLETENESS";
 
 /**
  * One upstream problem, and Phase 9's finding about whether it matters here.

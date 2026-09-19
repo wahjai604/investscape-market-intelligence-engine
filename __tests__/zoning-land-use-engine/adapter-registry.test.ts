@@ -80,6 +80,7 @@ const zorptownAdapter: E85SourceAdapter = {
         },
       ],
       conditionalRules: [],
+      supportedRuleFamilies: ["USE"],
       findings: [],
       unresolvedSourceItems: [],
       readiness: {

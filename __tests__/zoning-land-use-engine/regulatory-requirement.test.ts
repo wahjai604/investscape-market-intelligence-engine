@@ -128,7 +128,16 @@ function gapCodes(outcome: ReturnType<typeof evaluate>): string[] {
 }
 
 function pack(packId: string, rules: readonly E85RuleRecord[]): E85RulePack {
-  return { packId, jurisdictionId: J, zoneDesignation: Z, sourceId: `${J}:${packId}`, role: "BASE", rules, conditionalRules: [] };
+  return {
+    packId,
+    jurisdictionId: J,
+    zoneDesignation: Z,
+    sourceId: `${J}:${packId}`,
+    role: "BASE",
+    supportedRuleFamilies: [...new Set(rules.map((r) => r.family))],
+    rules,
+    conditionalRules: [],
+  };
 }
 
 function composed(packs: E85RulePack[]) {

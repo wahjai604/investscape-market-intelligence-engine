@@ -680,6 +680,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
     temporal,
     rules,
     conditionalRules,
+    supportedRuleFamilies: VANCOUVER_R1_1_ADAPTER_IDENTITY.supportedRuleFamilies,
     findings,
     unresolvedSourceItems: unresolved,
     readiness,

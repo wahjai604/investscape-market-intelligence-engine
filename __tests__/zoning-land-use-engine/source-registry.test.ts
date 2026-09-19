@@ -157,6 +157,15 @@ describe("E85 source registry — scoped queries", () => {
     expect(registry?.listForRuleFamily(VANCOUVER_JURISDICTION_ID, "PARKING")).toEqual([]);
   });
 
+  // PHASE 14.4A.1: the registry's `supportedRuleFamilies` had drifted from the
+  // adapter identity's (missing REQUIREMENT), making R1-1 undiscoverable for a
+  // family it actually normalizes. Fixed at the source-registry-entry level
+  // only — this is discovery/query metadata, never authoritative at decision
+  // time (see `E85AdapterIdentity.supportedRuleFamilies`).
+  test("rule-family filtering now finds R1-1 for REQUIREMENT, matching its adapter identity", () => {
+    expect(registry?.listForRuleFamily(VANCOUVER_JURISDICTION_ID, "REQUIREMENT").map((s) => s.sourceId)).toEqual([VANCOUVER_R1_1_SOURCE_ID]);
+  });
+
   test("findE85SourceVersion is exact — no nearest-consolidation fallback", () => {
     expect(findE85SourceVersion(VANCOUVER_R1_1_SOURCE, VANCOUVER_R1_1_VERSION_ID)?.versionId).toBe(VANCOUVER_R1_1_VERSION_ID);
     expect(findE85SourceVersion(VANCOUVER_R1_1_SOURCE, "2025-01-consolidation")).toBeUndefined();
