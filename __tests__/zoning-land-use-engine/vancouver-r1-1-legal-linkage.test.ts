@@ -213,7 +213,7 @@ describe("E85 Phase 11 — the spatial→legal join is exact on every axis", () 
   test("a bundle from another source is rejected", () => {
     const other = { ...r11Bundle(), sourceId: "ca-bc-vancouver:parking-bylaw-6059" };
     expect(vancouverZoningLinkPolicyFromLegalBundles([other])).toEqual({});
-    expect(auditVancouverLegalLinkage([other]).rejected[0].reason).toBe("SOURCE_NOT_R1_1_DISTRICT_SCHEDULE");
+    expect(auditVancouverLegalLinkage([other]).rejected[0].reason).toBe("SOURCE_NOT_REGISTERED_DISTRICT_SCHEDULE");
   });
 
   test("a bundle from an unverified consolidation is rejected", () => {
@@ -225,7 +225,7 @@ describe("E85 Phase 11 — the spatial→legal join is exact on every axis", () 
   test("a bundle for another zone is rejected", () => {
     const otherZone = { ...r11Bundle(), zoneDesignation: "RM-4" };
     expect(vancouverZoningLinkPolicyFromLegalBundles([otherZone])).toEqual({});
-    expect(auditVancouverLegalLinkage([otherZone]).rejected[0].reason).toBe("ZONE_NOT_R1_1");
+    expect(auditVancouverLegalLinkage([otherZone]).rejected[0].reason).toBe("ZONE_NOT_REGISTERED");
   });
 
   test("the same instrument supplied twice yields one pack id, not two", () => {
