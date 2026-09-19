@@ -160,6 +160,8 @@ export function evaluateZoningAndLandUse(request: E85EvaluationRequest): E85Eval
   if (fsrFinding) outcome.resolvedMaxFsr = { value: fsrFinding.resolvedValue as number, evidence: fsrFinding.resolvedEvidence as any };
   const gfaCapFinding = findings.find((f) => f.family === "DENSITY" && f.field === "explicitMaxGfaSqm" && f.outcome === "RESOLVED");
   if (gfaCapFinding) outcome.explicitMaxGfaSqm = { value: gfaCapFinding.resolvedValue as number, evidence: gfaCapFinding.resolvedEvidence as any };
+  const dwellingUnitsFinding = findings.find((f) => f.family === "DENSITY" && f.field === "maxDwellingUnits" && f.outcome === "RESOLVED");
+  if (dwellingUnitsFinding) outcome.resolvedMaxDwellingUnits = { value: dwellingUnitsFinding.resolvedValue as number, evidence: dwellingUnitsFinding.resolvedEvidence as any };
 
   const parkingFindings = findings.filter((f) => f.family === "PARKING" && f.outcome === "RESOLVED");
   if (parkingFindings.length > 0) {

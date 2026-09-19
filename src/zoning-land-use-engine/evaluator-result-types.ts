@@ -41,6 +41,13 @@ export interface E85EvaluationOutcome {
   result: E85Result;
   usePermission?: E85UsePermissionOutcome;
   resolvedMaxFsr?: { value: number; evidence: E85Evidence<number> };
+  /**
+   * Promoted the same way as `resolvedMaxFsr`: the RESOLVED DENSITY finding for
+   * `maxDwellingUnits`, when one exists. `density-evaluation.ts` already
+   * computes this finding in full (value + evidence); this field only exposes
+   * it on the outcome so a caller does not have to reach into `findings`.
+   */
+  resolvedMaxDwellingUnits?: { value: number; evidence: E85Evidence<number> };
   explicitMaxGfaSqm?: { value: number; evidence: E85Evidence<number> };
   parking?: readonly E85KeyedNumericOutcome[];
   amenity?: readonly { key: string; value: string; evidence: E85Evidence<string> }[];

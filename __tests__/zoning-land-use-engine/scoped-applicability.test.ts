@@ -386,6 +386,36 @@ describe("Phase 4 request-time selection", () => {
     expect(findings[0].applicability).toEqual({ applicabilityKeys: ["use=apartment;dwellingUnits=..8"], outcome: "NOT_APPLICABLE", decidingDimensions: ["useCodes"] });
   });
 
+  test("resolvedMaxDwellingUnits is promoted onto the outcome exactly as resolvedMaxFsr is", () => {
+    const unitsRules: E85RuleRecord[] = [
+      uses("house"),
+      { family: "DENSITY", jurisdictionId: J, zoneDesignation: Z, maxDwellingUnits: ev(8, undefined, "3.1.1.3") },
+    ];
+    const outcome = evaluate(unitsRules, "house");
+    expect(outcome.resolvedMaxDwellingUnits?.value).toBe(8);
+    expect(outcome.resolvedMaxDwellingUnits?.evidence.provenance.sourceId).toBe(`${J}:land-code`);
+  });
+
+  test("conflicting maxDwellingUnits evidence goes to MANUAL_REVIEW, never populating resolvedMaxDwellingUnits", () => {
+    const conflictingRules: E85RuleRecord[] = [
+      uses("house"),
+      { family: "DENSITY", jurisdictionId: J, zoneDesignation: Z, maxDwellingUnits: ev(8, undefined, "3.1.1.3.a", `${J}:instrument-a`) },
+      { family: "DENSITY", jurisdictionId: J, zoneDesignation: Z, maxDwellingUnits: ev(6, undefined, "3.1.1.3.b", `${J}:instrument-b`) },
+    ];
+    const outcome = evaluate(conflictingRules, "house");
+    expect(outcome.resolvedMaxDwellingUnits).toBeUndefined();
+    expect(outcome.result.status).toBe("MANUAL_REVIEW_REQUIRED");
+  });
+
+  test("a NOT_APPLICABLE/no-rule maxDwellingUnits scope never populates resolvedMaxDwellingUnits", () => {
+    const scopedRules: E85RuleRecord[] = [
+      uses("house", "apartment"),
+      { family: "DENSITY", jurisdictionId: J, zoneDesignation: Z, maxDwellingUnits: ev(8, APARTMENT, "3.1") },
+    ];
+    const outcome = evaluate(scopedRules, "house");
+    expect(outcome.resolvedMaxDwellingUnits).toBeUndefined();
+  });
+
   test("unscoped rules evaluate exactly as before, with or without proposal context", () => {
     const rules = [uses("house"), density(ev(0.75)), height(ev(10))];
     const plain = evaluate(rules, "house");

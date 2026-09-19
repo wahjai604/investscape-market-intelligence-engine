@@ -21,6 +21,7 @@
  */
 import type { E85RuleRecord, E85RuleFamily } from "./rule-family-types";
 import type { E85ConditionalRuleRecord, E85BundleQualification, E85NormalizedRuleBundle } from "./normalized-bundle-types";
+import type { E85NormalizationFinding } from "./normalization-finding-types";
 import type { E85CompositionRole, E85PrecedenceRelation, E85PrecedenceProblem } from "./precedence-types";
 import type { E85RuleConceptKey, E85RuleConceptContribution } from "./rule-concept-identity";
 import type { E85TemporalWindow } from "./evidence-types";
@@ -69,6 +70,15 @@ export interface E85RulePack {
   readiness?: E85SourceReadinessAssessment;
   /** ISO 8601 timestamp this pack was normalized. Used only to derive a deterministic `composedAt` when the caller supplies none — never as evidence of recency or precedence. */
   normalizedAt?: string;
+  /**
+   * Phase 5's own findings about how THIS source normalized, carried forward
+   * unchanged from `bundle.findings`. Audit-only: composition never reads this
+   * to decide anything, and it plays no part in conflict/precedence resolution.
+   * Present so a decision package assembled from this pack can still answer
+   * "what did Phase 5 observe about this source?" without composition having
+   * to invent a parallel channel for it.
+   */
+  sourceFindings?: readonly E85NormalizationFinding[];
 }
 
 /** Builds a rule pack from a Phase 5 normalized bundle. The role must be supplied by the caller: a bundle knows what it says, not how it ranks against other instruments. */
@@ -89,6 +99,7 @@ export function rulePackFromBundle(bundle: E85NormalizedRuleBundle, packId: stri
     qualification: bundle.qualification,
     readiness: bundle.readiness,
     normalizedAt: bundle.normalizedAt,
+    sourceFindings: bundle.findings,
   };
 }
 

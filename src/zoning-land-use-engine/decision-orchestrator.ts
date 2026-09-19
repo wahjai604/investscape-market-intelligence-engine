@@ -32,6 +32,7 @@ import type {
   E85DecisionEvaluationCompleteness,
   E85DecisionPackage,
   E85DecisionRequest,
+  E85DecisionSourceFinding,
   E85DecisionStageRecord,
   E85RulePackResolution,
 } from "./decision-package-types";
@@ -46,6 +47,29 @@ import type { E85SpatialApplicabilityResult } from "./spatial-applicability-type
 
 /** The empty resolution, for paths where no pack identity was ever produced. */
 const NO_PACKS: E85RulePackResolution = { resolved: [], unresolvedPackIds: [], conflictingPackIds: [], collapsedDuplicatePackIds: [] };
+
+/**
+ * Phase 5 source findings from ACTUALLY CONTRIBUTING packs only, traced back to
+ * their originating pack identity.
+ *
+ * Ordering follows `contributingPackIds` — Phase 6's own deterministic
+ * (sorted) pack ordering — then each pack's own `sourceFindings` order, so the
+ * result never depends on caller-supplied array order or object insertion
+ * order.
+ */
+function collectE85DecisionSourceFindings(phase6: E85CompositionResult | undefined, packResolution: E85RulePackResolution): readonly E85DecisionSourceFinding[] {
+  if (phase6 === undefined || phase6.outcome !== "COMPOSED") return [];
+  const byPackId = new Map(packResolution.resolved.map((pack) => [pack.packId, pack]));
+  const out: E85DecisionSourceFinding[] = [];
+  for (const packId of phase6.composed.contributingPackIds) {
+    const pack = byPackId.get(packId);
+    if (pack === undefined || pack.sourceFindings === undefined) continue;
+    for (const finding of pack.sourceFindings) {
+      out.push({ packId: pack.packId, sourceId: pack.sourceId, ...(pack.sourceVersionId === undefined ? {} : { sourceVersionId: pack.sourceVersionId }), finding });
+    }
+  }
+  return out;
+}
 
 /**
  * Orchestrates one parcel decision.
@@ -92,6 +116,7 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
       materiality,
       blockers,
       warnings,
+      sourceFindings: [],
       stages,
       status: determineE85DecisionStatus({ materiality, warnings }),
       evaluationCompleteness: "NOT_EVALUATED",
@@ -232,6 +257,7 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
     materiality,
     blockers,
     warnings: sortedWarnings,
+    sourceFindings: collectE85DecisionSourceFindings(phase6, packResolution),
     stages: stages.sort((a, b) => byE85DecisionKey(a.stage, b.stage)),
     status: determineE85DecisionStatus({ materiality, ...(phase4 === undefined ? {} : { phase4 }), warnings: sortedWarnings }),
     evaluationCompleteness,

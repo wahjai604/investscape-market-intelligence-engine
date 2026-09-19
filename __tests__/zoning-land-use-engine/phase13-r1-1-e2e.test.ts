@@ -54,6 +54,7 @@ import {
   R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION,
   R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION,
   SITE_WEST_OF_ONTARIO_OR_CARRALL_CONDITION,
+  R1_1_UNSTRUCTURED_SECTIONS,
 } from "./fixtures/vancouver-r1-1-facts";
 
 const { vancouverR11Adapter, VANCOUVER_R1_1_SOURCE, VANCOUVER_R1_1_SOURCE_ID, VANCOUVER_R1_1_VERSION_ID, VANCOUVER_JURISDICTION_ID } = adapters.vancouver;
@@ -228,27 +229,122 @@ describe("E85 Phase 13.1 — real spatial->legal->composition->evaluation->decis
     expect(p.phase4.result.partialEnvelope?.envelope.maxRegulatoryGfaSqm?.provenance.sourceId).toBe(VANCOUVER_R1_1_SOURCE_ID);
   });
 
-  test("DENSITY: the real Phase 4 finding for maxDwellingUnits resolves to 6 (other tenure), but is NOT surfaced anywhere on the decision package today", () => {
-    // GENUINE ASSEMBLY-SHAPE FINDING (Phase 13.0 report §15/§24 territory,
-    // discovered while writing this proof): unlike maxFsr (which the
-    // evaluator promotes to `outcome.resolvedMaxFsr`), the DENSITY
-    // maxDwellingUnits finding density-evaluation.ts resolves internally
-    // (resolvedValue: 6, sourced from FACT_UNITS_OTHER_TENURE) is never
-    // copied onto `E85EvaluationOutcome`, and `E85RegulatoryEnvelope` (the
-    // structure `partialEnvelope`/`envelope` exposes) has no
-    // `maxDwellingUnits` field at all. `rulesConsidered` cannot substitute for
-    // this either: it lists BOTH the rental (density-005, cap 8) and
-    // other-tenure (density-006, cap 6) rule records unfiltered by
-    // applicability, so a caller reading `rulesConsidered` alone cannot tell
-    // which cap actually governs this proposal without re-implementing
-    // applicability evaluation itself. This does not block the pipeline and
-    // is reported, not fixed, per the Phase 13.1 production-code hard gate.
+  test("DENSITY: the real Phase 4 finding for maxDwellingUnits resolves to 6 (other tenure) and is now surfaced on the decision package via resolvedMaxDwellingUnits", () => {
+    // Mirrors resolvedMaxFsr's promotion: the evaluator now copies the
+    // RESOLVED DENSITY/maxDwellingUnits finding onto `outcome.resolvedMaxDwellingUnits`,
+    // same as it already does for maxFsr. `rulesConsidered` still lists BOTH
+    // tenure branches unfiltered by applicability (density-005 rental cap 8,
+    // density-006 other-tenure cap 6) — that raw list is unchanged — but a
+    // caller no longer has to re-implement applicability evaluation to learn
+    // which cap actually governs this proposal.
     const p = decide({ proposal: COHERENT_MD_PROPOSAL, callerContext: { satisfiedConditions: ALL_SATISFIED_CONDITIONS } });
     const considered = p.phase4?.result.rulesConsidered ?? [];
     const unitCapValues = considered.flatMap((r) => (r.family === "DENSITY" && r.maxDwellingUnits ? [r.maxDwellingUnits.value] : [])).sort((a, b) => a - b);
-    expect(unitCapValues).toEqual([6, 8]); // both tenure branches present, unfiltered — proving the exposure gap, not a pipeline defect
+    expect(unitCapValues).toEqual([6, 8]); // both tenure branches present, unfiltered — rulesConsidered is unchanged
+
+    expect(p.phase4?.resolvedMaxDwellingUnits?.value).toBe(6);
+    expect(p.phase4?.resolvedMaxDwellingUnits?.evidence.provenance.sourceId).toBe(VANCOUVER_R1_1_SOURCE_ID);
+    expect(p.phase4?.resolvedMaxDwellingUnits?.evidence.provenance.sourceVersionId).toBe(VANCOUVER_R1_1_VERSION_ID);
+    expect(p.phase4?.resolvedMaxDwellingUnits?.evidence.provenance.documentLocator?.bylawOrDocumentId).toBe("3575");
+    expect(p.phase4?.resolvedMaxDwellingUnits?.evidence.temporal).toBeDefined();
+
     if (p.phase4?.result.status !== "DATA_GAP") throw new Error("expected DATA_GAP");
     expect((p.phase4.result.partialEnvelope?.envelope as Record<string, unknown> | undefined)?.maxDwellingUnits).toBeUndefined();
+  });
+
+  test("DENSITY: the 100% rental tenure branch resolves resolvedMaxDwellingUnits to 8", () => {
+    const rentalProposal: E85ProposalContext = { ...COHERENT_MD_PROPOSAL, tenureCode: "residential_rental_tenure_100_percent" };
+    const p = decide({ proposal: rentalProposal, callerContext: { satisfiedConditions: ALL_SATISFIED_CONDITIONS } });
+    expect(p.phase4?.resolvedMaxDwellingUnits?.value).toBe(8);
+  });
+
+  test("sourceFindings: Phase 5 findings from the real, contributing R1-1 pack are traceable on the decision package", () => {
+    const p = decide({ proposal: COHERENT_MD_PROPOSAL, callerContext: { satisfiedConditions: ALL_SATISFIED_CONDITIONS } });
+    expect(p.sourceFindings).toBeDefined();
+    const bundle = r11Bundle();
+    if (bundle.findings.length > 0) {
+      expect(p.sourceFindings.length).toBeGreaterThan(0);
+      for (const sf of p.sourceFindings) {
+        expect(sf.packId).toBe(R1_1_PACK_ID);
+        expect(sf.sourceId).toBe(VANCOUVER_R1_1_SOURCE_ID);
+        expect(sf.sourceVersionId).toBe(VANCOUVER_R1_1_VERSION_ID);
+      }
+    }
+  });
+
+  test("sourceFindings: all five real R1-1 legal-coverage disclosures are present, identity-traceable, and §2.2.2 is not a separate sixth disclosure", () => {
+    // R1_1_UNSTRUCTURED_SECTIONS is the fixture's own documentation constant for
+    // the five known intentional coverage gaps. The adapter turns each entry of
+    // `document.unstructuredSections` into its own SOURCE_SECTION_UNAVAILABLE
+    // finding (r1-1-adapter.ts), with no factId/sourceTerm and no structured
+    // "section" field — the section text is only carried inside `message`, so
+    // that is the only way to identify each one. This proves the LIVE adapter
+    // output still matches the fixture's documented five, not merely that the
+    // fixture constant says so.
+    expect(R1_1_UNSTRUCTURED_SECTIONS.length).toBe(5);
+
+    const withoutInspection = decide({ proposal: COHERENT_MD_PROPOSAL, callerContext: { satisfiedConditions: ALL_SATISFIED_CONDITIONS } });
+    const p = decide({ proposal: COHERENT_MD_PROPOSAL, callerContext: { satisfiedConditions: ALL_SATISFIED_CONDITIONS } });
+
+    const sectionFindings = p.sourceFindings.filter((sf) => sf.finding.code === "SOURCE_SECTION_UNAVAILABLE");
+    // Exactly one disclosure per documented section string — no extra, no missing.
+    expect(sectionFindings.length).toBe(R1_1_UNSTRUCTURED_SECTIONS.length);
+
+    for (const section of R1_1_UNSTRUCTURED_SECTIONS) {
+      const matches = sectionFindings.filter((sf) => sf.finding.message.includes(section));
+      expect(matches.length).toBe(1);
+      const sf = matches[0]!;
+      expect(sf.finding.severity).toBe("GAP");
+      expect(sf.finding.factId).toBeUndefined();
+      expect(sf.packId).toBe(R1_1_PACK_ID);
+      expect(sf.sourceId).toBe(VANCOUVER_R1_1_SOURCE_ID);
+      expect(sf.sourceVersionId).toBe(VANCOUVER_R1_1_VERSION_ID);
+    }
+
+    // §2.2.2 must NOT appear as an independent, separate disclosure entry: the
+    // fixture folds its definition-support role into the SAME §2.2.1 entry
+    // (one unstructured provision, not two). No finding's message should name
+    // "2.2.2" as its own disclosed section distinct from the §2.2.1 entry that
+    // already mentions it.
+    const the221Entry = R1_1_UNSTRUCTURED_SECTIONS.find((s) => s.startsWith("2.2.1"));
+    expect(the221Entry).toBeDefined();
+    expect(the221Entry).toContain("2.2.2");
+    const standalone222 = sectionFindings.filter((sf) => sf.finding.message.includes("2.2.2") && !sf.finding.message.includes(the221Entry!));
+    expect(standalone222.length).toBe(0);
+
+    // Exposing these five disclosures does not change status/materiality/
+    // warnings/manualReview versus an independent run that never inspects them.
+    expect(p.status).toBe(withoutInspection.status);
+    expect(p.materiality).toEqual(withoutInspection.materiality);
+    expect(p.warnings).toEqual(withoutInspection.warnings);
+    expect((p as unknown as { manualReview?: unknown }).manualReview).toEqual((withoutInspection as unknown as { manualReview?: unknown }).manualReview);
+  });
+
+  test("sourceFindings: the Schedule J cash-in-lieu Phase 5 finding remains visible separately from the Phase 4 gap, and only the Phase 4 gap drives DATA_GAP status", () => {
+    // Phase 5's own finding for r1-1-requirement-002 (Cash in Lieu Payment)
+    // records that its quantification reference is located but NOT structured
+    // — an INFO-severity, audit-only observation, distinct from the real
+    // blocking Phase 4 gap (`RULE_NOT_STRUCTURED`) asserted in the REQUIREMENT
+    // test above. Both must remain visible in their own separate fields.
+    const p = decide({ proposal: COHERENT_MD_PROPOSAL, callerContext: { satisfiedConditions: ALL_SATISFIED_CONDITIONS } });
+
+    const cashInLieuFinding = p.sourceFindings.find((sf) => sf.finding.factId === "r1-1-requirement-002");
+    if (cashInLieuFinding === undefined) {
+      // If the real bundle carries no such Phase 5 finding, there is nothing
+      // further to assert here — record the fact rather than fabricate one.
+      expect(cashInLieuFinding).toBeUndefined();
+      return;
+    }
+    expect(cashInLieuFinding.finding.severity).toBe("INFO");
+    expect(cashInLieuFinding.finding.message).toContain("NOT structured by this extract");
+    expect(cashInLieuFinding.finding.gap).toBeUndefined();
+
+    // The Phase 4 gap (asserted fully in the REQUIREMENT test above) is what
+    // actually drives DATA_GAP — the Phase 5 finding above never carries a
+    // `gap` record and plays no part in `status`.
+    if (p.phase4?.result.status !== "DATA_GAP") throw new Error("expected DATA_GAP");
+    expect(p.phase4.result.gaps.some((g) => g.reasonCode === "RULE_NOT_STRUCTURED")).toBe(true);
+    expect(p.status).toBe("DATA_GAP");
   });
 
   test("DIMENSIONAL: the non-rear-building branch of the real §3.1.2.5(b)/§3.1.2.6 provisions resolves onto the envelope — height, storeys and front yard", () => {

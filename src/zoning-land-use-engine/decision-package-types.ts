@@ -41,6 +41,7 @@ import type { E85CallerContext, E85ProposalContext, E85RequestedAnalysis } from 
 import type { E85OverallStatus } from "./result-status";
 import type { E85RuleFamily } from "./rule-family-types";
 import type { E85CompositionResult, E85RulePack } from "./composition-types";
+import type { E85NormalizationFinding } from "./normalization-finding-types";
 import type { E85PrecedenceRelation } from "./precedence-types";
 import type { E85SpatialDatasetRegistry } from "./spatial-dataset-registry";
 import type { E85ParcelSpatialReference, E85SpatialApplicabilityResult, E85SpatialFeatureClass } from "./spatial-applicability-types";
@@ -190,6 +191,23 @@ export interface E85DecisionTraceEntry {
   detail: string;
 }
 
+/**
+ * One Phase 5 source finding, traced back to the exact contributing pack it
+ * came from.
+ *
+ * Identity-preserving on purpose: `packId`/`sourceId`/`sourceVersionId` mirror
+ * the same fields on `E85RulePack` exactly, so a reviewer can go from a finding
+ * on the decision package straight back to the pack (and therefore the
+ * bundle/adapter) that produced it, without composition or Phase 9 having to
+ * restate or re-derive that identity.
+ */
+export interface E85DecisionSourceFinding {
+  packId: string;
+  sourceId: string;
+  sourceVersionId?: string;
+  finding: E85NormalizationFinding;
+}
+
 /** Rule-pack identities Phase 7 named, matched against what the caller actually supplied. */
 export interface E85RulePackResolution {
   /** Packs resolved by EXACT id match, canonically ordered. */
@@ -234,6 +252,16 @@ export interface E85DecisionPackage {
   blockers: readonly E85DecisionMaterialityRecord[];
   /** Non-blocking caveats a caller should surface. */
   warnings: readonly string[];
+  /**
+   * Phase 5 source findings, carried forward from every pack that actually
+   * contributed to `phase6`'s composed result — never from an excluded,
+   * unresolved or non-selected pack. Audit-only: never merged into `warnings`
+   * or `gaps`, and never read by `status`, `materiality`, `manualReview` or
+   * `evaluationCompleteness`. Ordered by the same deterministic pack ordering
+   * Phase 6 already produces (`contributingPackIds`), then by each pack's own
+   * finding order — never by object insertion order.
+   */
+  sourceFindings: readonly E85DecisionSourceFinding[];
 
   stages: readonly E85DecisionStageRecord[];
   /** Derived in exactly one place from material blockers — see decision-status.ts. */

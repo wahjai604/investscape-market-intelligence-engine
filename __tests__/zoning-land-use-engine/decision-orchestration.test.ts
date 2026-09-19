@@ -64,6 +64,7 @@ import {
   snapshot,
 } from "./fixtures/spatial-snapshots";
 import { pack, COMPOSED_AT, ZONE, JURISDICTION as PACK_JURISDICTION } from "./fixtures/composition-packs";
+import type { E85NormalizationFinding } from "../../src/zoning-land-use-engine/normalization-finding-types";
 
 const ASSEMBLED_AT = "2026-03-01T00:00:00.000Z";
 const RESOLVED_AT = "2026-02-12T00:00:00.000Z";
@@ -740,6 +741,82 @@ describe("E85 Phase 9 — the decision echoes what it was asked", () => {
   });
 });
 
+
+describe("E85 Phase 9 — sourceFindings: Phase 5 findings carried through composition, audit-only", () => {
+  function finding(code: E85NormalizationFinding["code"], severity: E85NormalizationFinding["severity"], message: string): E85NormalizationFinding {
+    return { code, severity, message };
+  }
+
+  test("two contributing packs each contribute their own findings, in deterministic pack order", () => {
+    const base = pack({ packId: "refburgh-rb-1", role: "BASE", usePermitted: "dwelling", maxFsr: 1.5, maxHeightMetres: 14 });
+    const overlay = pack({ packId: "refburgh-dp-overlay", role: "OVERLAY", frontSetback: 6 });
+    const withFindings1 = { ...base, sourceFindings: [finding("TERM_MAPPED_EXACT", "INFO", "base mapped exactly")] };
+    const withFindings2 = { ...overlay, sourceFindings: [finding("SOURCE_NOTE_PRESERVED", "INFO", "overlay note")] };
+
+    const p = decide({ records: [RECORD_A(), RECORD_OVERLAY()], parcel: PARCEL_IN_RB_A_AND_OVERLAY(), packs: [withFindings1, withFindings2] });
+    if (p.phase6?.outcome !== "COMPOSED") throw new Error("expected COMPOSED");
+
+    expect(p.sourceFindings).toHaveLength(2);
+    expect(p.sourceFindings.map((sf) => sf.packId)).toEqual([...p.phase6.composed.contributingPackIds]);
+    for (const sf of p.sourceFindings) {
+      if (sf.packId === "refburgh-rb-1") {
+        expect(sf.sourceId).toBe(base.sourceId);
+        expect(sf.sourceVersionId).toBe(base.sourceVersionId);
+        expect(sf.finding.message).toBe("base mapped exactly");
+      } else {
+        expect(sf.packId).toBe("refburgh-dp-overlay");
+        expect(sf.sourceId).toBe(overlay.sourceId);
+        expect(sf.finding.message).toBe("overlay note");
+      }
+    }
+  });
+
+  test("a non-contributing pack's findings never leak into the final sourceFindings", () => {
+    // Only refburgh-rb-1 is applicable/resolved for this parcel; refburgh-rb-2
+    // and the overlay are supplied but never contribute to this decision.
+    const contributing = pack({ packId: "refburgh-rb-1", role: "BASE", usePermitted: "dwelling", maxFsr: 1.5, maxHeightMetres: 14 });
+    const nonContributing = { ...pack({ packId: "refburgh-rb-2", role: "BASE", usePermitted: "dwelling", maxFsr: 3.0, maxHeightMetres: 26 }), sourceFindings: [finding("UNSUPPORTED_SOURCE_CONCEPT", "GAP", "should never appear")] };
+    const withFindings = { ...contributing, sourceFindings: [finding("TERM_MAPPED_EXACT", "INFO", "should appear")] };
+
+    const p = decide({ records: [RECORD_A()], parcel: PARCEL_IN_RB_A(), packs: [withFindings, nonContributing] });
+    expect(p.sourceFindings.map((sf) => sf.finding.message)).toEqual(["should appear"]);
+    expect(p.sourceFindings.every((sf) => sf.packId !== "refburgh-rb-2")).toBe(true);
+  });
+
+  test("an unresolved (never-supplied) pack contributes no sourceFindings — resolution failure is not silently papered over", () => {
+    const p = decide({ records: [RECORD_A()], packs: [] });
+    expect(p.sourceFindings).toEqual([]);
+  });
+
+  test("a REFUSED composition yields an empty sourceFindings, never a partial/guessed one", () => {
+    const conflictingId = [
+      pack({ packId: "refburgh-rb-1", role: "BASE", usePermitted: "dwelling", maxFsr: 1.5, maxHeightMetres: 14 }),
+      { ...pack({ packId: "refburgh-rb-1", role: "BASE", usePermitted: "dwelling", maxFsr: 9.9, maxHeightMetres: 99 }), sourceFindings: [finding("TERM_MAPPED_EXACT", "INFO", "must not leak")] },
+    ];
+    const p = decide({ records: [RECORD_A()], packs: conflictingId });
+    expect(p.packResolution.conflictingPackIds).toEqual(["refburgh-rb-1"]);
+    expect(p.sourceFindings).toEqual([]);
+  });
+
+  test("sourceFindings do not affect status, materiality, blockers or warnings — they coexist with an unrelated Phase 4 gap untouched", () => {
+    const findingsPack = { ...pack({ packId: "refburgh-rb-1", role: "BASE", usePermitted: "dwelling", maxFsr: 1.5, maxHeightMetres: 14 }), sourceFindings: [finding("SOURCE_NOTE_PRESERVED", "INFO", "audit-only note")] };
+    const withNote = decide({ records: [RECORD_A()], packs: [findingsPack, pack({ packId: "refburgh-dp-overlay", role: "OVERLAY", frontSetback: 6 })] });
+    const withoutNote = decide({ records: [RECORD_A()] });
+
+    expect(withNote.sourceFindings.length).toBeGreaterThan(0);
+    // Identical status/materiality/warnings/blockers to the equivalent run
+    // without any sourceFindings attached — the field changes nothing else.
+    expect(withNote.status).toBe(withoutNote.status);
+    expect(withNote.warnings).toEqual(withoutNote.warnings);
+    expect(withNote.blockers).toEqual(withoutNote.blockers);
+    expect(withNote.evaluationCompleteness).toBe(withoutNote.evaluationCompleteness);
+  });
+
+  test("no sourceFindings on a pack yields no entries, never an invented empty-finding placeholder", () => {
+    const p = decide({ records: [RECORD_A()] });
+    expect(p.sourceFindings).toEqual([]);
+  });
+});
 
 describe("E85 Phase 9 — distinct problems about one subject all survive", () => {
   /**
