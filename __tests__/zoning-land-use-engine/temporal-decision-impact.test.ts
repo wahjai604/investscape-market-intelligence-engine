@@ -223,12 +223,12 @@ describe("E85 Phase 15.14 — disposition-policy contract", () => {
     });
   });
 
-  test("8. DISCLOSURE and MANUAL_REVIEW_REQUIRED are reserved union members with no mapping in this slice producing them", () => {
+  test("8. DISCLOSURE and MANUAL_REVIEW_REQUIRED are members of the closed disposition union", () => {
     // Both dispositions are part of the closed E85TemporalImpactDisposition
     // union (compile-time proof: this assignment would fail to typecheck if
-    // either literal were removed from the union), but no scenario in this
-    // slice's design maps to them — every legitimate conflict in scope
-    // resolves to DATA_GAP, per the module's own documented policy.
+    // either literal were removed from the union). DISCLOSURE has no mapping
+    // in this slice's design; MANUAL_REVIEW_REQUIRED is produced for AS_OF +
+    // CONFLICTING_TEMPORAL_EVIDENCE, per the module's own documented policy.
     const disclosure: E85TemporalImpactDisposition = "DISCLOSURE";
     const manualReview: E85TemporalImpactDisposition = "MANUAL_REVIEW_REQUIRED";
     expect(disclosure).toBe("DISCLOSURE");
@@ -424,7 +424,7 @@ describe("E85 Phase 15.14 — AS_OF mapping", () => {
     expect(impact.impactKind).not.toBe("CURRENT_REFERENCE_BASIS_UNAVAILABLE");
   });
 
-  test("22. CONFLICTING_TEMPORAL_EVIDENCE -> AS_OF_CONFLICTING_EVIDENCE / DATA_GAP", () => {
+  test("22. CONFLICTING_TEMPORAL_EVIDENCE -> AS_OF_CONFLICTING_EVIDENCE / MANUAL_REVIEW_REQUIRED", () => {
     const v1 = candidateResult({ sourceVersionId: "TEST-V1" }, closedValidity("2020-01-01", "2020-12-31"));
     const v2 = candidateResult({ sourceVersionId: "TEST-V2" }, closedValidity("2020-01-01", "2020-12-31"));
     const grouping = groupE85TemporalLineageMembers([member("TEST-LINEAGE-A", v1), member("TEST-LINEAGE-A", v2)]);
@@ -433,7 +433,13 @@ describe("E85 Phase 15.14 — AS_OF mapping", () => {
     if (result.requestKind !== "RESOLVED") throw new Error("expected RESOLVED");
     const impact = findImpact([...result.impacts], "TEST-LINEAGE-A");
     expect(impact.impactKind).toBe("AS_OF_CONFLICTING_EVIDENCE");
-    expect(impact.disposition).toBe("DATA_GAP");
+    expect(impact.disposition).toBe("MANUAL_REVIEW_REQUIRED");
+    expect(impact.policy).toEqual({
+      blockerRelevant: true,
+      completenessRecommendation: "PARTIAL",
+      machineResolvedEligible: false,
+      manualReviewRecommendation: "REQUIRED",
+    });
   });
 
   test("23. OUTSIDE_VALIDITY_INTERVAL -> AS_OF_OUTSIDE_VALIDITY_INTERVAL / DATA_GAP, never claims no law existed", () => {

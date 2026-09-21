@@ -61,11 +61,12 @@ import type { E85TemporalLineageGroup } from "./temporal-lineage-grouping";
 type E85TemporalNonReadyGroup = Exclude<E85TemporalLineageGroup, { readonly kind: "GROUP_READY" }>;
 
 /**
- * Closed, jurisdiction-neutral disposition vocabulary. `DISCLOSURE` and
- * `MANUAL_REVIEW_REQUIRED` are reserved: no mapping in this slice currently
- * produces them (every evidentiary conflict in scope resolves to
- * `DATA_GAP`), but both union members and their policy rows exist and are
- * exercised through the public result in tests.
+ * Closed, jurisdiction-neutral disposition vocabulary. `DISCLOSURE` is
+ * reserved: no mapping in this slice currently produces it. `MANUAL_REVIEW_
+ * REQUIRED` is produced for AS_OF + `CONFLICTING_TEMPORAL_EVIDENCE` only —
+ * conflicting credible temporal evidence requires human adjudication, unlike
+ * missing evidence (`DATA_GAP`). Both union members and their policy rows
+ * exist and are exercised through the public result in tests.
  */
 export type E85TemporalImpactDisposition = "NONE" | "DISCLOSURE" | "DATA_GAP" | "MANUAL_REVIEW_REQUIRED";
 
@@ -342,7 +343,7 @@ function mapSelectorDerived(
     case "INSUFFICIENT_TEMPORAL_EVIDENCE":
       return { ...buildBase(lineageId, request, "AS_OF_INSUFFICIENT_EVIDENCE", "DATA_GAP"), origin: "SELECTOR_DERIVED", selectorResult };
     case "CONFLICTING_TEMPORAL_EVIDENCE":
-      return { ...buildBase(lineageId, request, "AS_OF_CONFLICTING_EVIDENCE", "DATA_GAP"), origin: "SELECTOR_DERIVED", selectorResult };
+      return { ...buildBase(lineageId, request, "AS_OF_CONFLICTING_EVIDENCE", "MANUAL_REVIEW_REQUIRED"), origin: "SELECTOR_DERIVED", selectorResult };
     case "OUTSIDE_VALIDITY_INTERVAL":
       return { ...buildBase(lineageId, request, "AS_OF_OUTSIDE_VALIDITY_INTERVAL", "DATA_GAP"), origin: "SELECTOR_DERIVED", selectorResult };
     case "FUTURE_EFFECTIVE":
