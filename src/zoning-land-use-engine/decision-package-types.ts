@@ -48,6 +48,7 @@ import type { E85ParcelSpatialReference, E85SpatialApplicabilityResult, E85Spati
 import type { E85SpatialNormalizationResult } from "./spatial-source-adapter-contract";
 import type { E85SpatialRelation } from "./geometry-relations";
 import type { E85SpatialTolerance } from "./spatial-types";
+import type { E85TemporalRequest } from "./temporal-request-types";
 
 /**
  * The pipeline stages, named so a caller can see which ones ran.
@@ -56,8 +57,14 @@ import type { E85SpatialTolerance } from "./spatial-types";
  * because it fails in its own distinct way: Phase 7 can name an instrument that
  * the caller simply did not hand over, and that failure belongs to neither the
  * phase that named it nor the phase that would have consumed it.
+ *
+ * `TEMPORAL_REQUEST` (PHASE 15.16, Slice 3F-1) is not a pipeline stage in the
+ * same sense as the other five -- nothing runs FOR it. It exists solely to
+ * source-attribute the one honest disclosure this slice adds: that an
+ * explicit `temporalRequest` was accepted but not yet applied. It never
+ * appears in `E85DecisionPackage.stages`.
  */
-export type E85DecisionStage = "SPATIAL_NORMALIZATION" | "SPATIAL_APPLICABILITY" | "RULE_PACK_RESOLUTION" | "COMPOSITION" | "EVALUATION";
+export type E85DecisionStage = "SPATIAL_NORMALIZATION" | "SPATIAL_APPLICABILITY" | "RULE_PACK_RESOLUTION" | "COMPOSITION" | "EVALUATION" | "TEMPORAL_REQUEST";
 
 /**
  * What happened to a stage.
@@ -301,6 +308,16 @@ export interface E85DecisionRequest {
   zoneDesignation: string;
   useCode: string;
   asOfDate: string;
+  /**
+   * PHASE 15.16 (Slice 3F-1): the caller's explicit temporal intent, reconciled
+   * against `asOfDate` (above) via the existing `resolveE85TemporalRequest`.
+   * Optional, additive, and NOT a request for E85 to perform real temporal
+   * analysis: until source-version selection is wired, supplying this field
+   * only causes one honest `TEMPORAL_ANALYSIS_NOT_YET_APPLIED` disclosure to be
+   * added to `materiality`. A caller that omits it, including one that still
+   * supplies only the legacy `asOfDate`, sees no change in behavior.
+   */
+  temporalRequest?: E85TemporalRequest;
   requestedAnalyses: readonly E85RequestedAnalysis[];
   policyVersion: E85PolicyVersion;
   /**

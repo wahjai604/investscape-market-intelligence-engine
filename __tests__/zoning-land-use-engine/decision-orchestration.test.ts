@@ -43,6 +43,7 @@ import {
   E85SpatialSourceFinding,
   E85SpatialSourceFindingCode,
   E85SpatialSourceSeverity,
+  E85TemporalRequestError,
 } from "../../src/zoning-land-use-engine";
 import { referenceZoningDataset, referenceZoningSpatialAdapter } from "../../src/zoning-land-use-engine/adapters/spatial/reference";
 import {
@@ -1123,5 +1124,257 @@ describe("E85 Phase 9 — distinct problems about one subject all survive", () =
       expect(record.materiality).toBe("UNDETERMINED");
       expect(record.spatialRelation).toBeUndefined();
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PHASE 15.16C — compile-time reachability proof.
+//
+// `E85DecisionRequest.asOfDate` is REQUIRED. A genuinely typed request that
+// carries `temporalRequest: { mode: "CURRENT" }` therefore ALSO carries a
+// required legacy `asOfDate` — and the existing, unmodified
+// `resolveE85TemporalRequest` conflict rule (CURRENT conflicts with ANY
+// legacy date) means that state always throws. The only way to construct
+// "CURRENT with no legacy date" — the one shape that could let CURRENT
+// succeed — is to violate the type contract, which the line below proves the
+// compiler refuses to allow. If `asOfDate` is ever made optional without
+// updating this fixture, this file fails to compile and CI catches it.
+// ---------------------------------------------------------------------------
+const PHASE_15_16C_CURRENT_WITHOUT_ASOF_DATE: E85DecisionRequest = {
+  ...request({ records: [RECORD_A()] }),
+  // @ts-expect-error E85DecisionRequest requires asOfDate.
+  asOfDate: undefined,
+  temporalRequest: { mode: "CURRENT" },
+};
+void PHASE_15_16C_CURRENT_WITHOUT_ASOF_DATE;
+
+/**
+ * Compile-time positive control, for contrast with the fixture above: a
+ * matching `AS_OF` `temporalRequest` alongside the required legacy
+ * `asOfDate` DOES satisfy `E85DecisionRequest` with no error. This line is
+ * expected to type-check cleanly.
+ */
+const PHASE_15_16C_AS_OF_WITH_REQUIRED_ASOF_DATE: E85DecisionRequest = {
+  ...request({ records: [RECORD_A()] }),
+  temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" },
+};
+void PHASE_15_16C_AS_OF_WITH_REQUIRED_ASOF_DATE;
+
+describe("E85 Phase 15.16 (Slice 3F-1, revised 3F-1C) — explicit temporal-analysis-not-applied disclosure", () => {
+  /**
+   * PHASE 15.16E: `asOfDate` must never be assignable to `undefined` through
+   * this helper, on ANY path — including a caller who never mentions it.
+   * `Partial<Pick<..., "asOfDate" | ...>>` (the Phase 15.16D shape) failed
+   * this: because `exactOptionalPropertyTypes` is off, an optional
+   * `asOfDate?: string` still accepts a literal `asOfDate: undefined`, and
+   * object-spread order (`{ ...request(...), ...overrides }`) would let that
+   * explicit `undefined` erase the base request's required legacy date at
+   * runtime — reconstructing the exact false CURRENT-success shape Phase
+   * 15.16D was meant to close off.
+   *
+   * The fix is a pair of call signatures (overloads), not one optional
+   * field. `ValidRequestBaseOverrides` never declares an `asOfDate` key at
+   * all, so a caller who never mentions `asOfDate` (the common case) matches
+   * it as-is. A caller who DOES want a non-default `asOfDate` must match the
+   * second signature instead, `ValidRequestWithAsOfOverrides`, whose
+   * `asOfDate` is a plain required `string` — never optional, so it can
+   * never be satisfied by an explicit `undefined`. Each overload is checked
+   * against the call's object literal independently (with the object
+   * literal's own excess-property check applied per signature, unlike a
+   * plain union type, where an excess key valid on one branch can leak
+   * leniency into a sibling branch). An object literal that writes
+   * `asOfDate: undefined` therefore satisfies neither signature: it is an
+   * excess property against the first (which declares no `asOfDate` key),
+   * and `undefined` is not assignable to `string` against the second. There
+   * is no cast anywhere in this helper.
+   */
+  interface ValidRequestBaseOverrides {
+    temporalRequest?: E85DecisionRequest["temporalRequest"];
+    availableRulePacks?: E85DecisionRequest["availableRulePacks"];
+  }
+  interface ValidRequestWithAsOfOverrides extends ValidRequestBaseOverrides {
+    asOfDate: string;
+  }
+
+  function validRequest(overrides?: ValidRequestBaseOverrides): E85DecisionRequest;
+  function validRequest(overrides: ValidRequestWithAsOfOverrides): E85DecisionRequest;
+  function validRequest(overrides: ValidRequestBaseOverrides | ValidRequestWithAsOfOverrides = {}): E85DecisionRequest {
+    return { ...request({ records: [RECORD_A()] }), ...overrides };
+  }
+
+  function decideValid(overrides?: ValidRequestBaseOverrides): E85DecisionPackage;
+  function decideValid(overrides: ValidRequestWithAsOfOverrides): E85DecisionPackage;
+  function decideValid(overrides: ValidRequestBaseOverrides | ValidRequestWithAsOfOverrides = {}): E85DecisionPackage {
+    return assembleE85DecisionPackage(validRequest(overrides));
+  }
+
+  /**
+   * PHASE 15.16E — compile-time rejection proof: this helper's `asOfDate`
+   * override rejects an explicit `undefined`. Every other field in this
+   * literal is genuinely valid (a real `temporalRequest`), so the ONLY
+   * possible source of the expected error is `asOfDate: undefined` failing
+   * to satisfy either overload of `decideValid`/`validRequest`. This is a
+   * type-level fixture only — wrapped in an arrow function that is never
+   * invoked, so it has no runtime effect; TypeScript still type-checks an
+   * uninvoked function body.
+   */
+  const _phase1516eRejectsUndefinedAsOf = () =>
+    // @ts-expect-error asOfDate must be a genuine string when supplied to this helper; explicit `undefined` is rejected by both overloads.
+    decideValid({ asOfDate: undefined, temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+  void _phase1516eRejectsUndefinedAsOf;
+
+  /**
+   * Positive contrast for the proof above, using the exact same
+   * `temporalRequest` value: supplying a genuine `asOfDate` string matches
+   * the `ValidRequestWithAsOfOverrides` overload and type-checks cleanly.
+   * The equivalent call IS exercised at runtime by the "AS_OF plus a
+   * MATCHING legacy asOfDate" test below.
+   */
+  const _phase1516eAcceptsGenuineAsOf = () => decideValid({ asOfDate: "2026-02-12", temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+  void _phase1516eAcceptsGenuineAsOf;
+
+  const clean = () => decideValid();
+
+  const temporalBlocker = (p: E85DecisionPackage) => p.blockers.filter((b) => b.sourcePhase === "TEMPORAL_REQUEST");
+  const temporalMateriality = (p: E85DecisionPackage) => p.materiality.filter((m) => m.sourcePhase === "TEMPORAL_REQUEST");
+
+  describe("legacy compatibility — no behavior change without an explicit temporalRequest", () => {
+    test("no temporalRequest override: unchanged clean baseline", () => {
+      const p = clean();
+      expect(temporalMateriality(p)).toEqual([]);
+      expect(p.status).toBe("MACHINE_RESOLVED_WITH_WARNINGS");
+      expect(p.evaluationCompleteness).toBe("COMPLETE");
+    });
+
+    test("legacy asOfDate alone (asOfDate is always required) introduces no additional temporal disclosure", () => {
+      // Revised 3F-1 introduces no additional temporal disclosure for legacy
+      // asOfDate-only callers. This is not phrased as "byte-identical to a
+      // request with no date at all": asOfDate is REQUIRED on
+      // E85DecisionRequest, so that hypothetical state does not exist.
+      const p = decideValid({ asOfDate: "2026-02-12" });
+      expect(temporalMateriality(p)).toEqual([]);
+      expect(p.status).toBe("MACHINE_RESOLVED_WITH_WARNINGS");
+      expect(p.evaluationCompleteness).toBe("COMPLETE");
+    });
+  });
+
+  describe("CURRENT is deferred at the E85DecisionRequest boundary — intentional, fail-closed", () => {
+    // CURRENT has NO successful decision-orchestration path in revised 3F-1:
+    // `E85DecisionRequest.asOfDate` is required, so any genuinely typed
+    // request carrying `temporalRequest: { mode: "CURRENT" }` also carries a
+    // legacy `asOfDate`, and the existing (unmodified) resolver conflict rule
+    // rejects CURRENT plus any legacy date outright. This is not a defect to
+    // work around — it is the documented, intentional boundary for this
+    // slice; see the compile-time proof above for why no caller can reach
+    // around it.
+    test("CURRENT plus the required legacy asOfDate throws the existing deterministic temporal-request conflict error", () => {
+      expect(() => decideValid({ temporalRequest: { mode: "CURRENT" } })).toThrow(E85TemporalRequestError);
+    });
+
+    test("the conflict throws before any decision package, materiality, blocker or trace is constructed", () => {
+      let thrown: unknown;
+      try {
+        decideValid({ temporalRequest: { mode: "CURRENT" } });
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(E85TemporalRequestError);
+      expect((thrown as Error).message).toContain("CURRENT conflicts with legacy asOfDate");
+    });
+  });
+
+  describe("explicit AS_OF — the only reachable successful temporalRequest path", () => {
+    test("AS_OF plus a MATCHING legacy asOfDate is accepted; legacy fact filtering continues, and exactly one disclosure fires because temporalRequest was explicit", () => {
+      const p = decideValid({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+      const records = temporalMateriality(p);
+      expect(records).toHaveLength(1);
+      expect(records[0].sourceRef).toBe("TEMPORAL_REQUEST:TEMPORAL_ANALYSIS_NOT_YET_APPLIED:AS_OF:2026-02-12");
+      expect(records[0].sourceCode).toBe("TEMPORAL_ANALYSIS_NOT_YET_APPLIED");
+      expect(records[0].kind).toBe("GAP");
+      expect(records[0].materiality).toBe("MATERIAL");
+      expect(records[0].gap?.reasonCode).toBe("TEMPORAL_ANALYSIS_NOT_YET_APPLIED");
+      expect(records[0].reason).toContain("2026-02-12");
+      expect(records[0].reason).not.toMatch(/current law|source-version selected|manual review/i);
+
+      expect(temporalBlocker(p)).toHaveLength(1);
+      expect(p.evaluationCompleteness).toBe("PARTIAL");
+      expect(p.status).not.toBe("MACHINE_RESOLVED");
+      expect(p.status).toBe("DATA_GAP");
+      // Phase 4 still ran on the legacy asOfDate exactly as before.
+      expect(p.phase4?.resolvedMaxFsr?.value).toBe(1.5);
+    });
+
+    test("no trace entry is added, and no top-level package field is added", () => {
+      const withAsOf = decideValid({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+      const without = clean();
+      expect(withAsOf.trace).toEqual(without.trace);
+      expect(Object.keys(withAsOf).sort()).toEqual(Object.keys(without).sort());
+      expect((withAsOf as unknown as Record<string, unknown>)["temporalAnalysis"]).toBeUndefined();
+    });
+
+    test("AS_OF plus a CONFLICTING legacy asOfDate throws from the existing resolver", () => {
+      expect(() => decideValid({ asOfDate: "2026-02-13", temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } })).toThrow(E85TemporalRequestError);
+    });
+  });
+
+  describe("malformed temporalRequest at the runtime boundary", () => {
+    test("a malformed temporalRequest throws the existing deterministic temporal-request error", () => {
+      // Runtime-boundary test only: the explicit `as never` cast simulates a
+      // caller that bypasses the type system entirely (e.g. deserialized,
+      // unvalidated JSON) — the only realistic way this shape can arise.
+      // Ordinary valid-request construction elsewhere in this suite never
+      // uses a cast.
+      expect(() => decideValid({ temporalRequest: { mode: "SOMETIME" } as never })).toThrow(E85TemporalRequestError);
+    });
+  });
+
+  describe("deduplication and distinctness", () => {
+    test("different AS_OF dates produce distinct sourceRefs", () => {
+      const asOf1 = decideValid({ asOfDate: "2026-01-01", temporalRequest: { mode: "AS_OF", asOfDate: "2026-01-01" } });
+      const asOf2 = decideValid({ asOfDate: "2026-01-02", temporalRequest: { mode: "AS_OF", asOfDate: "2026-01-02" } });
+      const refs = [asOf1, asOf2].map((p) => temporalMateriality(p)[0].sourceRef);
+      expect(new Set(refs).size).toBe(2);
+      expect(refs).toEqual(["TEMPORAL_REQUEST:TEMPORAL_ANALYSIS_NOT_YET_APPLIED:AS_OF:2026-01-01", "TEMPORAL_REQUEST:TEMPORAL_ANALYSIS_NOT_YET_APPLIED:AS_OF:2026-01-02"]);
+    });
+
+    test("exactly one request yields exactly one package-level materiality record and one blocker after existing deduplication", () => {
+      const p = decideValid({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+      expect(temporalMateriality(p)).toHaveLength(1);
+      expect(temporalBlocker(p)).toHaveLength(1);
+    });
+  });
+
+  describe("regression — existing materiality/blockers/status precedence are preserved", () => {
+    test("an explicit temporalRequest does not erase or duplicate an unrelated upstream blocker", () => {
+      const p = decideValid({ availableRulePacks: [], temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+      const [packBlocker] = p.blockers.filter((b) => b.sourceCode === "RULE_PACK_NOT_SUPPLIED");
+      expect(packBlocker).toBeDefined();
+      expect(temporalBlocker(p)).toHaveLength(1);
+      expect(p.blockers.length).toBe(2);
+      // Both GAP-kind blockers coexist; the terminal status is still DATA_GAP.
+      expect(p.status).toBe("DATA_GAP");
+    });
+
+    test("Phase 14 C-2C / R1-1 style clean runs are unaffected when temporalRequest is absent", () => {
+      const p = clean();
+      expect(p.status).toBe("MACHINE_RESOLVED_WITH_WARNINGS");
+      expect(p.evaluationCompleteness).toBe("COMPLETE");
+    });
+  });
+
+  describe("static isolation — no clock, no re-derivation, no new claims", () => {
+    test("the resolved request never reaches Phase 4's asOfDate-driven evaluation beyond the legacy field", () => {
+      const p = decideValid({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+      // Same numeric result as the legacy-only run: nothing about resolution changed.
+      const legacyOnly = clean();
+      expect(p.phase4?.resolvedMaxFsr?.value).toBe(legacyOnly.phase4?.resolvedMaxFsr?.value);
+    });
+
+    test("the disclosure's gap carries no fabricated sourcesChecked and a caller-derived checkedAt, never a fresh clock read", () => {
+      const p = decideValid({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+      const [record] = temporalMateriality(p);
+      expect(record.gap?.sourcesChecked).toEqual([]);
+      expect(record.gap?.checkedAt).toBe(ASSEMBLED_AT);
+    });
   });
 });

@@ -83,7 +83,20 @@ export type E85DataGapReasonCode =
   /** PHASE 12B.2: a scoped rule's applicability depends on a proposal fact (dwelling-unit count, building role, or tenure) that the request did not establish. */
   | "PROPOSAL_CONTEXT_MISSING"
   /** PHASE 12B.4: a scoped rule's applicability depends only on an external condition (for example a site-location predicate E85 does not resolve itself) that the request neither affirmed nor denied. Not a missing proposal attribute. */
-  | "EXTERNAL_CONDITION_UNDETERMINED";
+  | "EXTERNAL_CONDITION_UNDETERMINED"
+  /**
+   * PHASE 15.16 (Slice 3F-1): the caller EXPLICITLY supplied a `temporalRequest`
+   * (CURRENT or AS_OF) on `E85DecisionRequest`, and E85 has not yet wired real
+   * temporal source-version selection into decision orchestration. Narrow and
+   * deliberate: this code means ONLY "the request was accepted but not applied
+   * yet" — it does NOT mean the effective date is unknown, that no candidate
+   * source-version exists, that no law existed, that current law could not be
+   * determined, that a spatial designation is invalid, that sources conflict, or
+   * that a rule family is unsupported. It is never emitted for a legacy
+   * `asOfDate`-only request, which continues to mean ordinary fact filtering as
+   * before this slice.
+   */
+  | "TEMPORAL_ANALYSIS_NOT_YET_APPLIED";
 
 export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, string>> = {
   PARCEL_NOT_IDENTIFIED: "The parcel/site could not be identified from the information supplied.",
@@ -103,6 +116,7 @@ export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, s
   SPATIAL_REFERENCE_MISMATCH: "Geometries that needed to be compared declare different coordinate reference systems, and no transform between them has been performed.",
   PROPOSAL_CONTEXT_MISSING: "A rule's applicability depends on a fact about the proposal that was not supplied, so whether the rule governs this proposal could not be determined.",
   EXTERNAL_CONDITION_UNDETERMINED: "A rule's applicability depends on an external condition that was neither affirmed nor denied for this request, so whether the rule governs this proposal could not be determined.",
+  TEMPORAL_ANALYSIS_NOT_YET_APPLIED: "The caller explicitly requested a temporal analysis (CURRENT or AS_OF), and this request was accepted but not yet applied: E85 has not yet wired real temporal source-version selection into decision orchestration.",
 };
 
 /**

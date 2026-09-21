@@ -24,12 +24,29 @@
  * one told only "blocked". The safety property is not that partial work is
  * refused; it is that partial work is LABELLED, and that a package carrying any
  * blocker can never report MACHINE_RESOLVED.
+ *
+ * A NOTE ON `temporalRequest` (PHASE 15.16, Slice 3F-1). This orchestrator now
+ * accepts an OPTIONAL `request.temporalRequest`, reconciles it against the
+ * legacy `asOfDate` using the existing, unchanged `resolveE85TemporalRequest`,
+ * and — ONLY when the caller EXPLICITLY supplied `temporalRequest` — adds
+ * exactly one honest, package-level, MATERIAL `GAP` disclosing that the
+ * requested temporal analysis was accepted but not yet applied. That is ALL
+ * this does. The resolved request is never passed to rule composition, legal
+ * linkage, a family evaluator, the temporal candidate selector, or the Slice
+ * 3E temporal-decision-impact mapper — none of that wiring exists yet. A
+ * legacy caller supplying only `asOfDate` (or nothing at all) sees no change:
+ * `hasExplicitTemporalRequest` is deliberately computed from the presence of
+ * `request.temporalRequest` itself, never from the resolver's output, because
+ * `resolveE85TemporalRequest` normalizes a legacy `asOfDate` alone into an
+ * AS_OF result too — and that normalization must not, by itself, opt a legacy
+ * caller into a new disclosure it never asked for.
  */
 import { composeE85RulePacks } from "./rule-pack-composer";
 import type { E85CompositionResult } from "./composition-types";
 import { assessE85DecisionMateriality } from "./decision-materiality";
 import type {
   E85DecisionEvaluationCompleteness,
+  E85DecisionMaterialityRecord,
   E85DecisionPackage,
   E85DecisionRequest,
   E85DecisionSourceFinding,
@@ -44,9 +61,44 @@ import { evaluateZoningAndLandUse } from "./evaluator";
 import type { E85EvaluationOutcome } from "./evaluator-result-types";
 import { resolveE85SpatialApplicability } from "./spatial-applicability";
 import type { E85SpatialApplicabilityResult } from "./spatial-applicability-types";
+import type { E85TemporalRequest } from "./temporal-request-types";
+import { resolveE85TemporalRequest } from "./temporal-request-types";
 
 /** The empty resolution, for paths where no pack identity was ever produced. */
 const NO_PACKS: E85RulePackResolution = { resolved: [], unresolvedPackIds: [], conflictingPackIds: [], collapsedDuplicatePackIds: [] };
+
+/**
+ * Builds the ONE package-level materiality record for an explicit
+ * `temporalRequest` (Phase 15.16, Slice 3F-1). Deterministic and clock-free:
+ * `assessedAt` is the caller-derived `assembledAt` already computed for this
+ * package, never a fresh read of the clock. Makes no claim about current law,
+ * source-version selection, spatial validity, or legal conflict — only that
+ * the request was accepted and not yet applied.
+ */
+function buildE85TemporalRequestNotAppliedRecord(resolved: E85TemporalRequest, assessedAt: string): E85DecisionMaterialityRecord {
+  const sourceRef =
+    resolved.mode === "CURRENT"
+      ? "TEMPORAL_REQUEST:TEMPORAL_ANALYSIS_NOT_YET_APPLIED:CURRENT"
+      : `TEMPORAL_REQUEST:TEMPORAL_ANALYSIS_NOT_YET_APPLIED:AS_OF:${resolved.asOfDate}`;
+  const detail =
+    resolved.mode === "CURRENT"
+      ? "The caller explicitly requested temporal mode CURRENT. E85 has not yet wired real temporal source-version selection into decision orchestration, so this request was accepted but not applied: no current-law determination was made, and any legacy asOfDate-based fact filtering is unaffected by this request."
+      : `The caller explicitly requested temporal mode AS_OF ("${resolved.asOfDate}"). E85 has not yet wired real temporal source-version selection into decision orchestration, so this request was accepted but not applied: no source-version was selected for this date, and any legacy asOfDate-based fact filtering is unaffected by this request.`;
+  return {
+    sourceRef,
+    sourcePhase: "TEMPORAL_REQUEST",
+    sourceCode: "TEMPORAL_ANALYSIS_NOT_YET_APPLIED",
+    kind: "GAP",
+    materiality: "MATERIAL",
+    reason: detail,
+    gap: {
+      reasonCode: "TEMPORAL_ANALYSIS_NOT_YET_APPLIED",
+      reason: detail,
+      sourcesChecked: [],
+      checkedAt: assessedAt,
+    },
+  };
+}
 
 /**
  * Phase 5 source findings from ACTUALLY CONTRIBUTING packs only, traced back to
@@ -83,6 +135,21 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
   const stages: E85DecisionStageRecord[] = [];
   const warnings: string[] = [];
 
+  // ---- PHASE 15.16 (Slice 3F-1): reconcile the temporal request boundary
+  //      BEFORE anything else runs, so a construction-time conflict (e.g.
+  //      CURRENT plus a legacy asOfDate) throws immediately rather than after
+  //      partial work. `hasExplicitTemporalRequest` is captured from the RAW
+  //      presence of `request.temporalRequest` — never from
+  //      `resolvedTemporalRequest.kind` — because the resolver also (and
+  //      correctly) turns a legacy `asOfDate` alone into a RESOLVED AS_OF
+  //      result, and that legacy-only normalization must never, by itself,
+  //      opt a caller into the new disclosure below. The resolved value itself
+  //      is used ONLY to build that disclosure's deterministic sourceRef/date;
+  //      it is never forwarded into composition, legal linkage, a family
+  //      evaluator, or the temporal candidate selector/mapper.
+  const hasExplicitTemporalRequest = request.temporalRequest !== undefined;
+  const resolvedTemporalRequest = resolveE85TemporalRequest(request.temporalRequest, request.asOfDate);
+
   // ---- Stage 1: Phase 8. Already run by the caller; recorded either way.
   stages.push({
     stage: "SPATIAL_NORMALIZATION",
@@ -106,6 +173,19 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
 
     const materiality = assessE85DecisionMateriality({ phase8: normalization, packResolution: NO_PACKS, requestedAnalyses, assessedAt: assembledAt });
     const blockers = e85DecisionBlockers(materiality);
+
+    // PHASE 15.16: the temporal-request disclosure is added to `materiality`
+    // and `blockers` (so status/completeness derive from it exactly like any
+    // other blocker), but deliberately NOT to the array handed to
+    // `buildE85DecisionTrace` — this slice adds no trace entry.
+    const materialityWithTemporal =
+      hasExplicitTemporalRequest && resolvedTemporalRequest.kind === "RESOLVED"
+        ? [...materiality, buildE85TemporalRequestNotAppliedRecord(resolvedTemporalRequest.request, assembledAt)].sort(
+            (a, b) => byE85DecisionKey(a.sourcePhase, b.sourcePhase) || byE85DecisionKey(a.sourceRef, b.sourceRef),
+          )
+        : materiality;
+    const blockersWithTemporal = hasExplicitTemporalRequest ? e85DecisionBlockers(materialityWithTemporal) : blockers;
+
     return {
       ...(request.decisionId === undefined ? {} : { decisionId: request.decisionId }),
       parcel: request.parcel,
@@ -113,12 +193,12 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
       requestedAnalyses,
       phase8: normalization,
       packResolution: NO_PACKS,
-      materiality,
-      blockers,
+      materiality: materialityWithTemporal,
+      blockers: blockersWithTemporal,
       warnings,
       sourceFindings: [],
       stages,
-      status: determineE85DecisionStatus({ materiality, warnings }),
+      status: determineE85DecisionStatus({ materiality: materialityWithTemporal, warnings }),
       evaluationCompleteness: "NOT_EVALUATED",
       trace: buildE85DecisionTrace({ packResolution: NO_PACKS, blockers }),
       assembledAt,
@@ -240,7 +320,21 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
     });
   }
 
-  const evaluationCompleteness: E85DecisionEvaluationCompleteness = phase4 === undefined ? "NOT_EVALUATED" : blockers.length > 0 ? "PARTIAL" : "COMPLETE";
+  // ---- PHASE 15.16 (Slice 3F-1): the temporal-request disclosure, added to
+  //      `materiality`/`blockers` only — never to the trace input below — so
+  //      status and evaluationCompleteness derive from it through the SAME
+  //      unmodified algorithms that already handle every other blocker, while
+  //      the EVALUATION stage text above (which already ran) and the trace
+  //      stay exactly as they would without this field.
+  const materialityWithTemporal =
+    hasExplicitTemporalRequest && resolvedTemporalRequest.kind === "RESOLVED"
+      ? [...materiality, buildE85TemporalRequestNotAppliedRecord(resolvedTemporalRequest.request, assembledAt)].sort(
+          (a, b) => byE85DecisionKey(a.sourcePhase, b.sourcePhase) || byE85DecisionKey(a.sourceRef, b.sourceRef),
+        )
+      : materiality;
+  const blockersWithTemporal = hasExplicitTemporalRequest ? e85DecisionBlockers(materialityWithTemporal) : blockers;
+
+  const evaluationCompleteness: E85DecisionEvaluationCompleteness = phase4 === undefined ? "NOT_EVALUATED" : blockersWithTemporal.length > 0 ? "PARTIAL" : "COMPLETE";
 
   const sortedWarnings = [...warnings].sort(byE85DecisionKey);
 
@@ -254,12 +348,12 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
     ...(phase6 === undefined ? {} : { phase6 }),
     ...(phase4 === undefined ? {} : { phase4 }),
     packResolution,
-    materiality,
-    blockers,
+    materiality: materialityWithTemporal,
+    blockers: blockersWithTemporal,
     warnings: sortedWarnings,
     sourceFindings: collectE85DecisionSourceFindings(phase6, packResolution),
     stages: stages.sort((a, b) => byE85DecisionKey(a.stage, b.stage)),
-    status: determineE85DecisionStatus({ materiality, ...(phase4 === undefined ? {} : { phase4 }), warnings: sortedWarnings }),
+    status: determineE85DecisionStatus({ materiality: materialityWithTemporal, ...(phase4 === undefined ? {} : { phase4 }), warnings: sortedWarnings }),
     evaluationCompleteness,
     trace: buildE85DecisionTrace({ packResolution, phase7, blockers }),
     assembledAt,

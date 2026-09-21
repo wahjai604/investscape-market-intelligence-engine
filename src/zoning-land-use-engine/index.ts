@@ -147,4 +147,9 @@ export * from "./decision-status";
 export * from "./decision-trace";
 export * from "./decision-orchestrator";
 
+// PHASE 15.16 (Slice 3F-1): the temporal request contract, now referenced by
+// E85DecisionRequest.temporalRequest and exported publicly so callers can
+// construct one.
+export * from "./temporal-request-types";
+
 export * as adapters from "./adapters";
