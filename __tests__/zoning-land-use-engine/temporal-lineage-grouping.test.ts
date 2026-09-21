@@ -940,3 +940,188 @@ describe("E85 Phase 15.10 — additional boundary coverage", () => {
     }
   });
 });
+
+// ===========================================================================
+// F. Phase 15.19B / Slice 3D-1.1 — runtime domain-invariant validation:
+// CANDIDATE outcome must carry validity.state "CLOSED".
+// ===========================================================================
+describe("E85 Phase 15.19B — CANDIDATE/validity.state domain invariant", () => {
+  // A. Positive control — honest CLOSED candidate, produced only via the
+  // real Slice 3C factory, continues to reach GROUP_READY and exposes
+  // selectorEligibleMembers.
+  test("92. honest CLOSED candidate via buildE85TemporalCandidateFromVersionValidity remains accepted -> GROUP_READY", () => {
+    const honest = candidateResult(); // uses CLOSED_VALIDITY by default
+    const result = groupE85TemporalLineageMembers([member("TEST-LINEAGE-A", honest)]);
+    const g = findGroup(result, "TEST-LINEAGE-A");
+    expect(g.kind).toBe("GROUP_READY");
+    if (g.kind === "GROUP_READY") {
+      expect(g.selectorEligibleMembers.length).toBe(1);
+      expect(g.selectorEligibleMembers[0].adapterResult.outcome).toBe("CANDIDATE");
+    }
+  });
+
+  // B. OPEN_UNRESEARCHED malformed pairing — the exact forgery shape from the
+  // Phase 15.19A audit's empirical proof.
+  test("93. forged CANDIDATE outcome paired with validity.state OPEN_UNRESEARCHED is rejected before GROUP_READY", () => {
+    const honestOpen = nonCandidateResult("OPEN_UNRESEARCHED");
+    if (honestOpen.outcome !== "OPEN_END_UNRESEARCHED") throw new Error("expected OPEN_END_UNRESEARCHED");
+    const honestClosed = candidateResult();
+    if (honestClosed.outcome !== "CANDIDATE") throw new Error("expected CANDIDATE");
+    // Narrowest possible forgery: take an honest CANDIDATE shape and swap in
+    // the OPEN_UNRESEARCHED validity object, exactly the runtime bypass the
+    // Phase 15.19A audit proved was previously accepted.
+    const forged: E85TemporalCandidateAdapterResult = { ...honestClosed, validity: honestOpen.validity };
+    expect(() => groupE85TemporalLineageMembers([member("TEST-LINEAGE-A", forged)])).toThrow(E85TemporalLineageError);
+    let thrown: unknown;
+    try {
+      groupE85TemporalLineageMembers([member("TEST-LINEAGE-A", forged)]);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(E85TemporalLineageError);
+    const message = (thrown as Error).message;
+    expect(message).toContain('outcome "CANDIDATE"');
+    expect(message).toContain('validity.state "CLOSED"');
+    expect(message).toContain("OPEN_UNRESEARCHED");
+    // No group is ever returned for this lineage — the throw happens inside
+    // groupE85TemporalLineageMembers's member-validation pass, before any
+    // group (let alone GROUP_READY / selectorEligibleMembers) is constructed.
+  });
+
+  // C. Every other non-CLOSED validity state (parameterized across the full
+  // seven-state union minus CLOSED itself).
+  const NON_CLOSED_VALIDITY_STATES: readonly E85VersionValidity["state"][] = [
+    "START_UNKNOWN",
+    "CONFLICTING_START",
+    "OPEN_UNRESEARCHED",
+    "OPEN_REVIEWED_NO_END_ESTABLISHED",
+    "CONFLICTING_END",
+    "CONDITIONAL_PARTIAL_TERMINATION",
+  ];
+
+  function honestValidityFor(state: (typeof NON_CLOSED_VALIDITY_STATES)[number]): E85VersionValidity {
+    switch (state) {
+      case "START_UNKNOWN":
+        return { state: "START_UNKNOWN" };
+      case "CONFLICTING_START":
+        return { state: "CONFLICTING_START", conflictingStartAssertions: [commencement(), commencement({ effectiveFrom: "2020-02-01" })] };
+      case "OPEN_UNRESEARCHED":
+        return { state: "OPEN_UNRESEARCHED", effectiveFrom: "2020-01-01", start: commencement() };
+      case "OPEN_REVIEWED_NO_END_ESTABLISHED":
+        return {
+          state: "OPEN_REVIEWED_NO_END_ESTABLISHED",
+          effectiveFrom: "2020-01-01",
+          start: commencement(),
+          endReview: { sourcesChecked: ["TEST-SOURCE"], reviewedAt: "2026-01-01" },
+        };
+      case "CONFLICTING_END":
+        return {
+          state: "CONFLICTING_END",
+          effectiveFrom: "2020-01-01",
+          start: commencement(),
+          conflictingEndAssertions: [expressRepeal(), expressRepeal({ effectiveTo: "2022-06-30" })],
+        };
+      case "CONDITIONAL_PARTIAL_TERMINATION":
+        return { state: "CONDITIONAL_PARTIAL_TERMINATION", effectiveFrom: "2020-01-01", start: commencement(), description: "TEST partial termination." };
+      default:
+        throw new Error(`unsupported non-CLOSED validity state in test helper, got ${JSON.stringify(state)}.`);
+    }
+  }
+
+  test.each(NON_CLOSED_VALIDITY_STATES.map((s) => [s] as const))(
+    "94. forged CANDIDATE outcome paired with validity.state %s is rejected",
+    (state) => {
+      const honestClosed = candidateResult();
+      if (honestClosed.outcome !== "CANDIDATE") throw new Error("expected CANDIDATE");
+      const forged: E85TemporalCandidateAdapterResult = { ...honestClosed, validity: honestValidityFor(state) };
+      expect(() => groupE85TemporalLineageMembers([member("TEST-LINEAGE-A", forged)])).toThrow(E85TemporalLineageError);
+    },
+  );
+
+  // D. JSON round-trip — proves this is runtime validation, not merely a
+  // TypeScript-time guarantee. The `as unknown as` cast here is the
+  // narrowest boundary cast needed to simulate deserialized/untyped input
+  // reaching the public grouping boundary; it is never used on a passing
+  // (positive) path anywhere in this file.
+  test("95. JSON round-tripped forged CANDIDATE/OPEN_UNRESEARCHED plain object is rejected at the runtime boundary", () => {
+    const honestClosed = candidateResult();
+    if (honestClosed.outcome !== "CANDIDATE") throw new Error("expected CANDIDATE");
+    const forgedPlainObject = {
+      outcome: "CANDIDATE",
+      candidateId: honestClosed.candidateId,
+      candidate: honestClosed.candidate,
+      bundle: honestClosed.bundle,
+      validity: { state: "OPEN_UNRESEARCHED", effectiveFrom: "2020-01-01", start: commencement() },
+    };
+    const deserialized: unknown = JSON.parse(JSON.stringify(forgedPlainObject));
+    // Narrowest cast possible to simulate untyped/deserialized input crossing
+    // the public grouping boundary — this member is malformed by
+    // construction and is not reused on any success-path assertion.
+    const deserializedMember = member("TEST-LINEAGE-A", deserialized as unknown as E85TemporalCandidateAdapterResult);
+    expect(() => groupE85TemporalLineageMembers([deserializedMember])).toThrow(E85TemporalLineageError);
+  });
+
+  // E. Honest non-candidate controls — representative non-CLOSED states,
+  // produced by the real Slice 3C adapter, retain their existing frozen
+  // group-outcome mapping unchanged by this remediation.
+  test("96. honest OPEN_UNRESEARCHED (alone) -> GROUP_NO_CANDIDATE, unaffected by the new invariant check", () => {
+    const result = groupE85TemporalLineageMembers([member("TEST-LINEAGE-A", nonCandidateResult("OPEN_UNRESEARCHED"))]);
+    expect(findGroup(result, "TEST-LINEAGE-A").kind).toBe("GROUP_NO_CANDIDATE");
+  });
+
+  test("97. honest CLOSED candidate + honest OPEN_UNRESEARCHED sibling -> GROUP_EVIDENCE_INCOMPLETE, unaffected", () => {
+    const result = groupE85TemporalLineageMembers([
+      member("TEST-LINEAGE-A", candidateResult({ sourceVersionId: "TEST-V1" })),
+      member("TEST-LINEAGE-A", nonCandidateResult("OPEN_UNRESEARCHED", { sourceVersionId: "TEST-V2" })),
+    ]);
+    expect(findGroup(result, "TEST-LINEAGE-A").kind).toBe("GROUP_EVIDENCE_INCOMPLETE");
+  });
+
+  test("98. honest CANDIDATE/CANDIDATE content collision -> GROUP_BLOCKED, unaffected by the new invariant check", () => {
+    const shared = candidateResult({ sourceVersionId: "TEST-V1" });
+    const differentContent = candidateResult({ sourceVersionId: "TEST-V1" }, { ...CLOSED_VALIDITY, effectiveTo: "2022-12-31", end: expressRepeal({ effectiveTo: "2022-12-31" }) });
+    const result = groupE85TemporalLineageMembers([member("TEST-LINEAGE-A", shared), member("TEST-LINEAGE-A", differentContent)]);
+    expect(findGroup(result, "TEST-LINEAGE-A").kind).toBe("GROUP_BLOCKED");
+  });
+
+  // F. Invalid-interval behavior — this remediation must not weaken or
+  // replace the existing, separate invalid-interval construction failure
+  // (thrown by Slice 3B's buildE85VersionValidity / Slice 3C's revalidate,
+  // both upstream of and untouched by this module). It continues to fail at
+  // its own established boundary, never converted into
+  // E85TemporalLineageError or a legal evidence gap.
+  test("99. invalid interval (effectiveFrom after effectiveTo) still fails at its own established construction boundary, not as E85TemporalLineageError", () => {
+    expect(() =>
+      buildE85TemporalCandidateFromVersionValidity(bundle(), {
+        state: "CLOSED",
+        effectiveFrom: "2025-01-01",
+        start: commencement({ effectiveFrom: "2025-01-01" }),
+        effectiveTo: "2020-01-01",
+        end: expressRepeal({ effectiveTo: "2020-01-01" }),
+      }),
+    ).not.toThrow(E85TemporalLineageError);
+  });
+
+  // G. Downstream non-reachability — a grouping-level throw for the
+  // malformed lineage means groupE85TemporalLineageMembers never returns a
+  // result at all for that call; no GROUP_READY/selectorEligibleMembers
+  // value can therefore ever be constructed or handed to a selector. This is
+  // proven directly: the throw is synchronous, occurs before `groups` is
+  // built (see `groupE85TemporalLineageMembers`'s `members.map(validateMember)`
+  // call, which runs before any group-state computation), and no group
+  // object is returned or partially returned on throw.
+  test("100. malformed CANDIDATE/non-CLOSED member throws before any group is returned for a mixed batch", () => {
+    const honestClosed = candidateResult({ sourceVersionId: "TEST-V1" });
+    if (honestClosed.outcome !== "CANDIDATE") throw new Error("expected CANDIDATE");
+    const forged: E85TemporalCandidateAdapterResult = { ...honestClosed, candidateId: honestClosed.candidateId, validity: honestValidityFor("OPEN_UNRESEARCHED") };
+    let result: E85TemporalLineageGroupingResult | undefined;
+    let caught: unknown;
+    try {
+      result = groupE85TemporalLineageMembers([member("TEST-LINEAGE-A", candidateResult({ sourceVersionId: "TEST-V2" })), member("TEST-LINEAGE-B", forged)]);
+    } catch (error) {
+      caught = error;
+    }
+    expect(result).toBeUndefined();
+    expect(caught).toBeInstanceOf(E85TemporalLineageError);
+  });
+});

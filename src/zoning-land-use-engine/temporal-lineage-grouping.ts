@@ -201,7 +201,16 @@ function validateAndReconstructMember(adapterResult: E85TemporalCandidateAdapter
           `adapterResult.candidate.candidateId "${JSON.stringify(innerId)}" does not match adapterResult.candidateId "${candidateId}".`,
         );
       }
-      requireField(obj, "validity", outcome);
+      const validity = requireField(obj, "validity", outcome);
+      if (validity === null || typeof validity !== "object") {
+        throw new E85TemporalLineageError(`adapterResult with outcome "CANDIDATE" must have an object "validity" field.`);
+      }
+      const validityState = (validity as Record<string, unknown>).state;
+      if (validityState !== "CLOSED") {
+        throw new E85TemporalLineageError(
+          `adapterResult with outcome "CANDIDATE" must carry validity.state "CLOSED", got ${JSON.stringify(validityState)} (candidateId "${candidateId}").`,
+        );
+      }
       break;
     }
     case "OPEN_END_UNRESEARCHED": {
