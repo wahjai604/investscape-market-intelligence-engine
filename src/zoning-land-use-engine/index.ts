@@ -152,4 +152,12 @@ export * from "./decision-orchestrator";
 // construct one.
 export * from "./temporal-request-types";
 
+// PHASE 15.18A (Slice 3F-2): the final-package adapter that converts Slice
+// 3E's E85TemporalDecisionImpact[] into per-lineage E85DecisionMaterialityRecord[].
+// Exported publicly so a caller can introspect the mapping directly; the
+// lineage-grouping/selection/decision-impact modules it consumes remain
+// deliberately unexported, matching Slice 3D-1/3D-3/3E's own established
+// (non-public) boundary.
+export * from "./decision-temporal-materiality-adapter";
+
 export * as adapters from "./adapters";

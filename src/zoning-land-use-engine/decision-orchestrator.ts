@@ -30,16 +30,37 @@
  * legacy `asOfDate` using the existing, unchanged `resolveE85TemporalRequest`,
  * and — ONLY when the caller EXPLICITLY supplied `temporalRequest` — adds
  * exactly one honest, package-level, MATERIAL `GAP` disclosing that the
- * requested temporal analysis was accepted but not yet applied. That is ALL
- * this does. The resolved request is never passed to rule composition, legal
- * linkage, a family evaluator, the temporal candidate selector, or the Slice
- * 3E temporal-decision-impact mapper — none of that wiring exists yet. A
- * legacy caller supplying only `asOfDate` (or nothing at all) sees no change:
+ * requested temporal analysis was accepted but not yet applied. A legacy
+ * caller supplying only `asOfDate` (or nothing at all) sees no change:
  * `hasExplicitTemporalRequest` is deliberately computed from the presence of
  * `request.temporalRequest` itself, never from the resolver's output, because
  * `resolveE85TemporalRequest` normalizes a legacy `asOfDate` alone into an
  * AS_OF result too — and that normalization must not, by itself, opt a legacy
  * caller into a new disclosure it never asked for.
+ *
+ * A NOTE ON `temporalLineageEvidence` (PHASE 15.18A, Slice 3F-2). This
+ * orchestrator now ALSO accepts an OPTIONAL, additive, SYNTHETIC-OR-INJECTED
+ * `request.temporalLineageEvidence`. When — and ONLY when — a caller BOTH
+ * explicitly supplies `temporalRequest` (resolved successfully) AND supplies
+ * `temporalLineageEvidence` with at least one lineage member, this
+ * orchestrator actually invokes the existing, frozen pipeline end to end:
+ * `groupE85TemporalLineageMembers` (Slice 3D-1) -> `selectE85TemporalLineages`
+ * (Slice 3D-3, which itself calls Slice 2's `selectE85TemporalCandidate` for
+ * every `GROUP_READY` lineage) -> `mapE85TemporalDecisionImpact` (Slice 3E) ->
+ * `buildE85TemporalLineageMaterialityRecords` (new Slice 3F-2 adapter). None
+ * of those four functions is reimplemented here — each is called through its
+ * real, unmodified, already-tested behavior. When lineage evidence is
+ * supplied and actually produces impacts, the resulting per-lineage
+ * materiality records REPLACE the blanket `TEMPORAL_ANALYSIS_NOT_YET_APPLIED`
+ * disclosure for this package (never both at once) — see
+ * `buildE85TemporalMaterialityAddition` below. When `temporalLineageEvidence`
+ * is absent, or supplied with zero lineages, the blanket disclosure is
+ * retained exactly as Slice 3F-1 left it. This slice still does NOT apply any
+ * selected source version to rule-pack evaluation, does NOT touch spatial
+ * applicability, and does NOT promote any real R1-1/C-2C source — a
+ * `TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED` record is always emitted
+ * alongside an `AS_OF_SELECTED` impact so a caller can never mistake
+ * candidate identification for evaluation application.
  */
 import { composeE85RulePacks } from "./rule-pack-composer";
 import type { E85CompositionResult } from "./composition-types";
@@ -61,8 +82,12 @@ import { evaluateZoningAndLandUse } from "./evaluator";
 import type { E85EvaluationOutcome } from "./evaluator-result-types";
 import { resolveE85SpatialApplicability } from "./spatial-applicability";
 import type { E85SpatialApplicabilityResult } from "./spatial-applicability-types";
-import type { E85TemporalRequest } from "./temporal-request-types";
+import type { E85ResolvedTemporalRequest, E85TemporalRequest } from "./temporal-request-types";
 import { resolveE85TemporalRequest } from "./temporal-request-types";
+import { groupE85TemporalLineageMembers } from "./temporal-lineage-grouping";
+import { selectE85TemporalLineages } from "./temporal-lineage-selection";
+import { mapE85TemporalDecisionImpact } from "./temporal-decision-impact";
+import { buildE85TemporalLineageMaterialityRecords } from "./decision-temporal-materiality-adapter";
 
 /** The empty resolution, for paths where no pack identity was ever produced. */
 const NO_PACKS: E85RulePackResolution = { resolved: [], unresolvedPackIds: [], conflictingPackIds: [], collapsedDuplicatePackIds: [] };
@@ -98,6 +123,58 @@ function buildE85TemporalRequestNotAppliedRecord(resolved: E85TemporalRequest, a
       checkedAt: assessedAt,
     },
   };
+}
+
+/**
+ * PHASE 15.18A (Slice 3F-2): computes the temporal materiality records to add
+ * to a package's `materiality`, deciding between the blanket Slice 3F-1
+ * disclosure and real per-lineage results per the retirement matrix:
+ *
+ *   - No explicit `temporalRequest`, or it did not resolve                -> [] (no addition at all).
+ *   - Explicit `temporalRequest`, no `temporalLineageEvidence` supplied,
+ *     or supplied with zero lineages                                     -> the ONE blanket
+ *                                                                            TEMPORAL_ANALYSIS_NOT_YET_APPLIED record, unchanged from Slice 3F-1.
+ *   - Explicit `temporalRequest` AND `temporalLineageEvidence` with at
+ *     least one lineage                                                  -> the existing, frozen pipeline is
+ *                                                                            actually invoked (grouping -> selection -> Slice 3E mapping -> this
+ *                                                                            slice's final adapter), and its per-lineage records REPLACE the
+ *                                                                            blanket disclosure for this package.
+ *
+ * Every function called below is the real, unmodified, already-tested
+ * implementation — nothing here reimplements selector, grouping, or mapper
+ * policy. A malformed `temporalLineageEvidence` shape throws the existing
+ * typed `E85TemporalLineageError`/`E85TemporalLineageSelectionError`/
+ * `E85TemporalDecisionImpactError` from those modules, propagated unmodified;
+ * it is never converted into a DATA_GAP.
+ */
+function computeE85TemporalMaterialityAddition(
+  request: E85DecisionRequest,
+  hasExplicitTemporalRequest: boolean,
+  resolvedTemporalRequest: E85ResolvedTemporalRequest,
+  assembledAt: string,
+): readonly E85DecisionMaterialityRecord[] {
+  if (!hasExplicitTemporalRequest || resolvedTemporalRequest.kind !== "RESOLVED") {
+    return [];
+  }
+
+  const evidence = request.temporalLineageEvidence;
+  if (evidence === undefined || evidence.lineages.length === 0) {
+    return [buildE85TemporalRequestNotAppliedRecord(resolvedTemporalRequest.request, assembledAt)];
+  }
+
+  const grouping = groupE85TemporalLineageMembers(evidence.lineages);
+  const selection = selectE85TemporalLineages(grouping, resolvedTemporalRequest);
+  const impactResult = mapE85TemporalDecisionImpact(selection, resolvedTemporalRequest);
+
+  // Structurally unreachable given `resolvedTemporalRequest.kind === "RESOLVED"`
+  // above (mapE85TemporalDecisionImpact only returns ABSENT when its request
+  // argument is ABSENT), retained as a defensive, honest fallback rather than
+  // an unsafe cast.
+  if (impactResult.requestKind === "ABSENT") {
+    return [buildE85TemporalRequestNotAppliedRecord(resolvedTemporalRequest.request, assembledAt)];
+  }
+
+  return buildE85TemporalLineageMaterialityRecords(impactResult.impacts, assembledAt);
 }
 
 /**
@@ -174,15 +251,16 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
     const materiality = assessE85DecisionMateriality({ phase8: normalization, packResolution: NO_PACKS, requestedAnalyses, assessedAt: assembledAt });
     const blockers = e85DecisionBlockers(materiality);
 
-    // PHASE 15.16: the temporal-request disclosure is added to `materiality`
-    // and `blockers` (so status/completeness derive from it exactly like any
-    // other blocker), but deliberately NOT to the array handed to
-    // `buildE85DecisionTrace` — this slice adds no trace entry.
+    // PHASE 15.16/15.18A: the temporal materiality addition (blanket
+    // disclosure, or real per-lineage results when lineage evidence was
+    // supplied — see `computeE85TemporalMaterialityAddition`) is added to
+    // `materiality` and `blockers` (so status/completeness derive from it
+    // exactly like any other blocker), but deliberately NOT to the array
+    // handed to `buildE85DecisionTrace` — this slice adds no trace entry.
+    const temporalAddition = computeE85TemporalMaterialityAddition(request, hasExplicitTemporalRequest, resolvedTemporalRequest, assembledAt);
     const materialityWithTemporal =
-      hasExplicitTemporalRequest && resolvedTemporalRequest.kind === "RESOLVED"
-        ? [...materiality, buildE85TemporalRequestNotAppliedRecord(resolvedTemporalRequest.request, assembledAt)].sort(
-            (a, b) => byE85DecisionKey(a.sourcePhase, b.sourcePhase) || byE85DecisionKey(a.sourceRef, b.sourceRef),
-          )
+      temporalAddition.length > 0
+        ? [...materiality, ...temporalAddition].sort((a, b) => byE85DecisionKey(a.sourcePhase, b.sourcePhase) || byE85DecisionKey(a.sourceRef, b.sourceRef))
         : materiality;
     const blockersWithTemporal = hasExplicitTemporalRequest ? e85DecisionBlockers(materialityWithTemporal) : blockers;
 
@@ -320,17 +398,16 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
     });
   }
 
-  // ---- PHASE 15.16 (Slice 3F-1): the temporal-request disclosure, added to
+  // ---- PHASE 15.16/15.18A: the temporal materiality addition, added to
   //      `materiality`/`blockers` only — never to the trace input below — so
   //      status and evaluationCompleteness derive from it through the SAME
   //      unmodified algorithms that already handle every other blocker, while
   //      the EVALUATION stage text above (which already ran) and the trace
   //      stay exactly as they would without this field.
+  const temporalAddition = computeE85TemporalMaterialityAddition(request, hasExplicitTemporalRequest, resolvedTemporalRequest, assembledAt);
   const materialityWithTemporal =
-    hasExplicitTemporalRequest && resolvedTemporalRequest.kind === "RESOLVED"
-      ? [...materiality, buildE85TemporalRequestNotAppliedRecord(resolvedTemporalRequest.request, assembledAt)].sort(
-          (a, b) => byE85DecisionKey(a.sourcePhase, b.sourcePhase) || byE85DecisionKey(a.sourceRef, b.sourceRef),
-        )
+    temporalAddition.length > 0
+      ? [...materiality, ...temporalAddition].sort((a, b) => byE85DecisionKey(a.sourcePhase, b.sourcePhase) || byE85DecisionKey(a.sourceRef, b.sourceRef))
       : materiality;
   const blockersWithTemporal = hasExplicitTemporalRequest ? e85DecisionBlockers(materialityWithTemporal) : blockers;
 

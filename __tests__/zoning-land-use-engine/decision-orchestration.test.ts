@@ -1378,3 +1378,206 @@ describe("E85 Phase 15.16 (Slice 3F-1, revised 3F-1C) — explicit temporal-anal
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// PHASE 15.18A (Slice 3F-2) — real pipeline wiring behind an explicit,
+// additive, SYNTHETIC-ONLY `temporalLineageEvidence` input.
+//
+// Wholly synthetic identifiers (TEST-JX/TEST-SOURCE/TEST-LINEAGE-*/TEST-ZONE)
+// — no Vancouver/Burnaby/R1-1/C-2C identity is used anywhere below. This
+// suite proves the orchestrator actually invokes the existing, frozen
+// Slice 2/3D-1/3D-3/3E pipeline (via real behavior, not a duplicate
+// reimplementation) and that the Slice 3F-2 final adapter's per-lineage
+// records replace — never duplicate alongside — the Slice 3F-1 blanket
+// disclosure exactly when lineage evidence is genuinely supplied.
+// ---------------------------------------------------------------------------
+import type { E85NormalizedRuleBundle } from "../../src/zoning-land-use-engine/normalized-bundle-types";
+import type { E85VersionValidity, E85StartAuthority, E85EndAuthority, E85OperativeLocator } from "../../src/zoning-land-use-engine/version-validity-types";
+import { buildE85TemporalCandidateFromVersionValidity } from "../../src/zoning-land-use-engine/temporal-candidate-adapter";
+import type { E85TemporalLineageMember } from "../../src/zoning-land-use-engine/temporal-lineage-grouping";
+import { E85TemporalLineageError } from "../../src/zoning-land-use-engine/temporal-lineage-grouping";
+
+describe("E85 Phase 15.18A (Slice 3F-2) — temporalLineageEvidence pipeline wiring", () => {
+  const LOCATOR_3F2: E85OperativeLocator = { bylawOrDocumentId: "TEST-999", clause: "1" };
+
+  function bundle3f2(overrides: Partial<E85NormalizedRuleBundle> = {}): E85NormalizedRuleBundle {
+    return {
+      sourceId: "TEST-SOURCE",
+      sourceVersionId: "TEST-V1",
+      jurisdictionId: "TEST-JX",
+      zoneDesignation: "TEST-ZONE",
+      temporal: { effectiveDateBasis: "UNKNOWN" },
+      rules: [],
+      conditionalRules: [],
+      supportedRuleFamilies: [],
+      findings: [],
+      unresolvedSourceItems: [],
+      readiness: { blockers: [], limitations: [] } as unknown as E85NormalizedRuleBundle["readiness"],
+      qualification: { evidenceQuality: "HIGH", ruleApplicability: "HIGH" } as unknown as E85NormalizedRuleBundle["qualification"],
+      provenance: { sourceId: "TEST-SOURCE" } as unknown as E85NormalizedRuleBundle["provenance"],
+      adapterId: "TEST-ADAPTER",
+      adapterVersion: "1.0.0",
+      normalizedAt: "2026-01-01T00:00:00.000Z",
+      ...overrides,
+    };
+  }
+
+  function commencement3f2(overrides: Partial<Extract<E85StartAuthority, { eventKind: "COMMENCEMENT" }>> = {}): E85StartAuthority {
+    return {
+      eventKind: "COMMENCEMENT",
+      effectiveFrom: "2026-01-01",
+      authoritySourceId: "TEST-SOURCE",
+      authoritySourceVersionId: "TEST-V1",
+      commencementLocator: LOCATOR_3F2,
+      effectiveDateBasis: "SOURCE_STATED",
+      ...overrides,
+    };
+  }
+
+  function expressRepeal3f2(overrides: Partial<Extract<E85EndAuthority, { eventKind: "EXPRESS_REPEAL" }>> = {}): E85EndAuthority {
+    return {
+      eventKind: "EXPRESS_REPEAL",
+      effectiveTo: "2026-12-31",
+      authoritySourceId: "TEST-SOURCE",
+      authoritySourceVersionId: "TEST-V2",
+      repealLocator: LOCATOR_3F2,
+      effectiveDateBasis: "SOURCE_STATED",
+      ...overrides,
+    };
+  }
+
+  /** CLOSED validity covering 2026-01-01 through 2026-12-31 — 2026-02-12 (the fixture `asOfDate`) falls inside it. */
+  function closedMember(lineageId: string, bundleOverrides: Partial<E85NormalizedRuleBundle> = {}): E85TemporalLineageMember {
+    const validity: E85VersionValidity = { state: "CLOSED", effectiveFrom: "2026-01-01", start: commencement3f2(), effectiveTo: "2026-12-31", end: expressRepeal3f2() };
+    const adapterResult = buildE85TemporalCandidateFromVersionValidity(bundle3f2({ sourceVersionId: `TEST-V-${lineageId}`, ...bundleOverrides }), validity);
+    return { lineageId, adapterResult, membershipRationale: "TEST rationale: synthetic single closed version." };
+  }
+
+  /** A second CLOSED-validity candidate in the SAME lineage, also covering 2026-02-12, to force CONFLICTING_TEMPORAL_EVIDENCE. */
+  function overlappingMember(lineageId: string, suffix: string): E85TemporalLineageMember {
+    const validity: E85VersionValidity = { state: "CLOSED", effectiveFrom: "2026-01-01", start: commencement3f2(), effectiveTo: "2026-12-31", end: expressRepeal3f2() };
+    const adapterResult = buildE85TemporalCandidateFromVersionValidity(
+      bundle3f2({ sourceVersionId: `TEST-V-${lineageId}-${suffix}`, zoneDesignation: `TEST-ZONE-${suffix}` }),
+      validity,
+    );
+    return { lineageId, adapterResult, membershipRationale: "TEST rationale: synthetic overlapping version." };
+  }
+
+  /** GROUP_NO_CANDIDATE: a member whose adapter outcome is START_UNKNOWN — no candidate at all. */
+  function noCandidateMember(lineageId: string): E85TemporalLineageMember {
+    const adapterResult = buildE85TemporalCandidateFromVersionValidity(bundle3f2({ sourceVersionId: `TEST-V-${lineageId}-nc` }), { state: "START_UNKNOWN" });
+    return { lineageId, adapterResult, membershipRationale: "TEST rationale: synthetic no-candidate lineage." };
+  }
+
+  function decideWith(overrides: { temporalRequest?: E85DecisionRequest["temporalRequest"]; temporalLineageEvidence?: E85DecisionRequest["temporalLineageEvidence"] }): E85DecisionPackage {
+    return assembleE85DecisionPackage({ ...request({ records: [RECORD_A()] }), ...overrides });
+  }
+
+  const temporalRecords = (p: E85DecisionPackage) => p.materiality.filter((m) => m.sourcePhase === "TEMPORAL_REQUEST");
+
+  test("1. temporalLineageEvidence absent: unchanged blanket disclosure (backward compatible with Slice 3F-1)", () => {
+    const p = decideWith({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
+    const records = temporalRecords(p);
+    expect(records).toHaveLength(1);
+    expect(records[0].sourceCode).toBe("TEMPORAL_ANALYSIS_NOT_YET_APPLIED");
+  });
+
+  test("2. temporalLineageEvidence with zero lineages: falls back to the blanket disclosure, not a fabricated zero-lineage result", () => {
+    const p = decideWith({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" }, temporalLineageEvidence: { lineages: [] } });
+    const records = temporalRecords(p);
+    expect(records).toHaveLength(1);
+    expect(records[0].sourceCode).toBe("TEMPORAL_ANALYSIS_NOT_YET_APPLIED");
+  });
+
+  test("3. temporalLineageEvidence WITHOUT an explicit temporalRequest does not silently activate temporal analysis", () => {
+    const p = decideWith({ temporalLineageEvidence: { lineages: [closedMember("TEST-LINEAGE-IGNORED")] } });
+    expect(temporalRecords(p)).toEqual([]);
+  });
+
+  test("4. one GROUP_READY lineage, uniquely applicable candidate: real pipeline runs and produces AS_OF_SELECTED's honest not-applied caveat, replacing the blanket disclosure", () => {
+    const p = decideWith({
+      temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" },
+      temporalLineageEvidence: { lineages: [closedMember("TEST-LINEAGE-SEL")] },
+    });
+    const records = temporalRecords(p);
+    expect(records).toHaveLength(1);
+    expect(records[0].sourceCode).toBe("TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED");
+    expect(records[0].sourceRef).toBe("TEMPORAL_LINEAGE:TEST-LINEAGE-SEL:AS_OF_SELECTED:AS_OF:2026-02-12");
+    expect(records[0].kind).toBe("GAP");
+    expect(records[0].materiality).toBe("MATERIAL");
+    // No claim of evaluation application anywhere on the package.
+    expect(JSON.stringify(p)).not.toMatch(/rule-pack evaluation used the selected/i);
+  });
+
+  test("5. two overlapping candidates in one lineage: real selector reports CONFLICTING_TEMPORAL_EVIDENCE -> MANUAL_REVIEW dominance over the terminal status", () => {
+    const p = decideWith({
+      temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" },
+      temporalLineageEvidence: { lineages: [overlappingMember("TEST-LINEAGE-CONF", "A"), overlappingMember("TEST-LINEAGE-CONF", "B")] },
+    });
+    const records = temporalRecords(p);
+    expect(records).toHaveLength(1);
+    expect(records[0].kind).toBe("MANUAL_REVIEW");
+    expect(records[0].sourceCode).toBe("AS_OF_CONFLICTING_EVIDENCE");
+    expect(p.status).toBe("MANUAL_REVIEW_REQUIRED");
+  });
+
+  test("6. GROUP_NO_CANDIDATE lineage: real grouping/selection pipeline produces TEMPORAL_LINEAGE_NOT_READY, DATA_GAP", () => {
+    const p = decideWith({
+      temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" },
+      temporalLineageEvidence: { lineages: [noCandidateMember("TEST-LINEAGE-NC")] },
+    });
+    const records = temporalRecords(p);
+    expect(records).toHaveLength(1);
+    expect(records[0].sourceCode).toBe("TEMPORAL_LINEAGE_NOT_READY");
+    expect(records[0].kind).toBe("GAP");
+  });
+
+  test("7. multiple independent lineages: deterministic ordering, no cross-lineage contamination, SELECTED + not-ready coexist", () => {
+    const p = decideWith({
+      temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" },
+      temporalLineageEvidence: { lineages: [closedMember("TEST-LINEAGE-Z"), noCandidateMember("TEST-LINEAGE-A")] },
+    });
+    const records = temporalRecords(p);
+    expect(records).toHaveLength(2);
+    const byLineage = new Map(records.map((r) => [r.sourceRef?.split(":")[1], r.sourceCode]));
+    expect(byLineage.get("TEST-LINEAGE-Z")).toBe("TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED");
+    expect(byLineage.get("TEST-LINEAGE-A")).toBe("TEMPORAL_LINEAGE_NOT_READY");
+    // Package-level materiality is sorted deterministically; verify it never depends on input array order.
+    const reordered = decideWith({
+      temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" },
+      temporalLineageEvidence: { lineages: [noCandidateMember("TEST-LINEAGE-A"), closedMember("TEST-LINEAGE-Z")] },
+    });
+    expect(temporalRecords(reordered).map((r) => r.sourceRef)).toEqual(records.map((r) => r.sourceRef));
+  });
+
+  test("8. malformed lineage evidence throws the existing typed grouping error, never converted to DATA_GAP", () => {
+    const malformed = [{ lineageId: "", adapterResult: {} as never, membershipRationale: "x" }] as unknown as readonly E85TemporalLineageMember[];
+    expect(() => decideWith({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" }, temporalLineageEvidence: { lineages: malformed } })).toThrow(
+      E85TemporalLineageError,
+    );
+  });
+
+  test("9. CURRENT plus required asOfDate still throws before any lineage-evidence processing runs", () => {
+    expect(() =>
+      assembleE85DecisionPackage({
+        ...request({ records: [RECORD_A()] }),
+        temporalRequest: { mode: "CURRENT" },
+        temporalLineageEvidence: { lineages: [closedMember("TEST-LINEAGE-CUR")] },
+      }),
+    ).toThrow(E85TemporalRequestError);
+  });
+
+  test("10. evaluationCompleteness is never COMPLETE on the strength of AS_OF_SELECTED alone", () => {
+    const p = decideWith({
+      temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" },
+      temporalLineageEvidence: { lineages: [closedMember("TEST-LINEAGE-COMPLETE")] },
+    });
+    expect(p.evaluationCompleteness).toBe("PARTIAL");
+  });
+
+  test("11. legacy callers (no temporalRequest, no temporalLineageEvidence) remain byte-identical to the Slice 3F-1 baseline", () => {
+    const legacy = assembleE85DecisionPackage(request({ records: [RECORD_A()] }));
+    const p = decideWith({});
+    expect(withoutClock(p)).toBe(withoutClock(legacy));
+  });
+});

@@ -49,6 +49,7 @@ import type { E85SpatialNormalizationResult } from "./spatial-source-adapter-con
 import type { E85SpatialRelation } from "./geometry-relations";
 import type { E85SpatialTolerance } from "./spatial-types";
 import type { E85TemporalRequest } from "./temporal-request-types";
+import type { E85TemporalLineageMember } from "./temporal-lineage-grouping";
 
 /**
  * The pipeline stages, named so a caller can see which ones ran.
@@ -290,6 +291,25 @@ export interface E85DecisionPackage {
 }
 
 /**
+ * PHASE 15.18A (Slice 3F-2): the caller's explicit, SYNTHETIC-OR-INJECTED
+ * temporal lineage evidence. This is NOT a connection to any real source-
+ * version registry (none exists in production) — it is an additive,
+ * optional envelope of caller-supplied `E85TemporalLineageMember` values
+ * (temporal-lineage-grouping.ts), used only to actually run the existing,
+ * frozen Slices 2/3D-1/3D-3/3E pipeline end-to-end when a caller chooses to
+ * supply it alongside an explicit `temporalRequest`. Supplying this field
+ * does NOT prove — and TypeScript cannot prove — that the evidence is
+ * genuinely synthetic or that it originates from any particular source; that
+ * is a caller discipline this type cannot enforce. An empty `lineages` array
+ * is treated identically to omitting this field entirely: the blanket
+ * `TEMPORAL_ANALYSIS_NOT_YET_APPLIED` disclosure is retained rather than
+ * fabricating a zero-lineage result.
+ */
+export interface E85TemporalLineageEvidenceInput {
+  readonly lineages: readonly E85TemporalLineageMember[];
+}
+
+/**
  * The single input envelope.
  *
  * Phase 8's RESULT is the input, not a snapshot: orchestration does not
@@ -318,6 +338,16 @@ export interface E85DecisionRequest {
    * supplies only the legacy `asOfDate`, sees no change in behavior.
    */
   temporalRequest?: E85TemporalRequest;
+  /**
+   * PHASE 15.18A (Slice 3F-2): optional, additive, SYNTHETIC-OR-INJECTED
+   * temporal lineage evidence — see `E85TemporalLineageEvidenceInput`. Only
+   * has any effect when `temporalRequest` is ALSO explicitly supplied and
+   * resolves successfully; a caller that supplies this field without
+   * `temporalRequest` sees no change in behavior (no silent activation). A
+   * legacy caller that omits this field, including one that supplies only
+   * `temporalRequest` or only the legacy `asOfDate`, sees no change either.
+   */
+  temporalLineageEvidence?: E85TemporalLineageEvidenceInput;
   requestedAnalyses: readonly E85RequestedAnalysis[];
   policyVersion: E85PolicyVersion;
   /**

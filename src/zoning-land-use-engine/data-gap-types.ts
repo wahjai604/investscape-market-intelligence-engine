@@ -96,7 +96,44 @@ export type E85DataGapReasonCode =
    * `asOfDate`-only request, which continues to mean ordinary fact filtering as
    * before this slice.
    */
-  | "TEMPORAL_ANALYSIS_NOT_YET_APPLIED";
+  | "TEMPORAL_ANALYSIS_NOT_YET_APPLIED"
+  /**
+   * PHASE 15.18A (Slice 3F-2): the caller explicitly supplied
+   * `temporalLineageEvidence` for a `CURRENT` request, and the existing
+   * Slice 2 selector deterministically reported `INSUFFICIENT_TEMPORAL_EVIDENCE`
+   * for a `GROUP_READY` lineage because E85 reads no clock and CURRENT has no
+   * trusted present-day reference basis. Never emitted for AS_OF requests.
+   */
+  | "TEMPORAL_CURRENT_REFERENCE_UNAVAILABLE"
+  /**
+   * PHASE 15.18A (Slice 3F-2): a supplied temporal lineage's grouping outcome
+   * (`GROUP_BLOCKED`, `GROUP_EVIDENCE_INCOMPLETE`, or `GROUP_NO_CANDIDATE`)
+   * never reached the Slice 2 selector at all, so no source-version candidate
+   * could even be considered for this lineage.
+   */
+  | "TEMPORAL_LINEAGE_NOT_READY"
+  /**
+   * PHASE 15.18A (Slice 3F-2): the Slice 2 selector identified exactly one
+   * applicable source-version candidate for the supplied AS_OF request within
+   * the supplied synthetic/injected lineage evidence. This means ONLY that a
+   * candidate was identified — it does NOT mean the selected source version
+   * controlled rule-pack evaluation, that a parcel's historical zoning
+   * designation was proven, or that legal text and parcel designation were
+   * temporally aligned. E85 has not yet wired selected-version application
+   * into rule-pack evaluation, so this disclosure is retained specifically to
+   * prevent a caller from inferring application from selection.
+   */
+  | "TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED"
+  /** PHASE 15.18A (Slice 3F-2): more than one supplied source-version candidate was applicable to the requested AS_OF date within one lineage and no basis exists to prefer one. */
+  | "TEMPORAL_CANDIDATE_AMBIGUOUS"
+  /** PHASE 15.18A (Slice 3F-2): no supplied source-version candidate in this lineage was applicable to the requested AS_OF date. */
+  | "TEMPORAL_CANDIDATE_INSUFFICIENT_EVIDENCE"
+  /** PHASE 15.18A (Slice 3F-2): the requested AS_OF date falls outside every supplied candidate's proven validity interval for this lineage. */
+  | "TEMPORAL_CANDIDATE_OUTSIDE_VALIDITY"
+  /** PHASE 15.18A (Slice 3F-2): every supplied candidate applicable to this lineage does not yet take effect as of the requested AS_OF date. */
+  | "TEMPORAL_CANDIDATE_FUTURE_EFFECTIVE"
+  /** PHASE 15.18A (Slice 3F-2): every supplied candidate applicable to this lineage had already been superseded as of the requested AS_OF date. */
+  | "TEMPORAL_CANDIDATE_SUPERSEDED";
 
 export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, string>> = {
   PARCEL_NOT_IDENTIFIED: "The parcel/site could not be identified from the information supplied.",
@@ -117,6 +154,14 @@ export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, s
   PROPOSAL_CONTEXT_MISSING: "A rule's applicability depends on a fact about the proposal that was not supplied, so whether the rule governs this proposal could not be determined.",
   EXTERNAL_CONDITION_UNDETERMINED: "A rule's applicability depends on an external condition that was neither affirmed nor denied for this request, so whether the rule governs this proposal could not be determined.",
   TEMPORAL_ANALYSIS_NOT_YET_APPLIED: "The caller explicitly requested a temporal analysis (CURRENT or AS_OF), and this request was accepted but not yet applied: E85 has not yet wired real temporal source-version selection into decision orchestration.",
+  TEMPORAL_CURRENT_REFERENCE_UNAVAILABLE: "A CURRENT temporal request was evaluated against supplied lineage evidence, but E85 has no trusted present-day reference basis (no clock is read), so no candidate could be treated as currently in force.",
+  TEMPORAL_LINEAGE_NOT_READY: "The supplied temporal lineage evidence for this lineage was not structurally ready for source-version selection (blocked, incomplete, or without any candidate), so no source-version could be considered.",
+  TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED: "A source-version candidate was identified as applicable to the requested date within the supplied lineage evidence, but the selected version was NOT applied to rule-pack evaluation: E85 has not yet wired selected-version application into decision orchestration.",
+  TEMPORAL_CANDIDATE_AMBIGUOUS: "More than one supplied source-version candidate in this lineage was applicable to the requested date and no basis exists to prefer one.",
+  TEMPORAL_CANDIDATE_INSUFFICIENT_EVIDENCE: "No supplied source-version candidate in this lineage was applicable to the requested date.",
+  TEMPORAL_CANDIDATE_OUTSIDE_VALIDITY: "The requested date falls outside every supplied source-version candidate's proven validity interval for this lineage.",
+  TEMPORAL_CANDIDATE_FUTURE_EFFECTIVE: "Every supplied source-version candidate applicable to this lineage does not yet take effect as of the requested date.",
+  TEMPORAL_CANDIDATE_SUPERSEDED: "Every supplied source-version candidate applicable to this lineage had already been superseded as of the requested date.",
 };
 
 /**
