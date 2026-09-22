@@ -15,29 +15,16 @@
  *    Miami, FL. Licensed CRE market source required."
  *
  * instead of a generic "No data available."
+ *
+ * The vocabulary itself (`CREDataGapReasonCode`) is defined in
+ * `src/cre-intelligence/types.ts`, alongside `CREDataGap`, since it is
+ * shared domain taxonomy rather than an ingestion-subsystem internal — this
+ * module re-exports it so existing ingestion-local imports keep working,
+ * and owns the runtime label map and message formatting below.
  */
 
-export type CREDataGapReasonCode =
-  /** The source does not publish this metric at all, for any geography. */
-  | "METRIC_NOT_PUBLISHED"
-  /** The source publishes the metric, but not for the requested geography. */
-  | "GEOGRAPHY_NOT_COVERED"
-  /** The source publishes the metric for a coarser geography than requested
-   *  (e.g. national or state-level only, not metro/city). */
-  | "GRANULARITY_NOT_AVAILABLE"
-  /** A source is known to exist but has no public API or downloadable dataset. */
-  | "API_OR_DOWNLOAD_UNAVAILABLE"
-  /** The data exists but only under a paid license E86 has not obtained. */
-  | "LICENSE_REQUIRED"
-  /** The source is normally available but could not be reached at retrieval time. */
-  | "SOURCE_TEMPORARILY_UNAVAILABLE"
-  /** The source's published schema/format changed in a way the adapter does not
-   *  recognize, so parsing was deliberately refused rather than guessed at. */
-  | "SCHEMA_CHANGED"
-  /** A response was retrieved and parsed but failed E86 validation (out of
-   *  range, internally inconsistent, missing a required field) and was
-   *  discarded rather than stored. */
-  | "VALIDATION_FAILED";
+export type { CREDataGapReasonCode } from "../types";
+import type { CREDataGapReasonCode } from "../types";
 
 export const CRE_DATA_GAP_REASON_LABELS: Readonly<Record<CREDataGapReasonCode, string>> = {
   METRIC_NOT_PUBLISHED: "This metric is not published by any public/government source E86 has checked.",

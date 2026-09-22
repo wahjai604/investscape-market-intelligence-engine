@@ -217,6 +217,48 @@ export interface CRECitedObservation extends CREObservation {
 }
 
 /**
+ * Phase 7 Part 11 — the closed vocabulary of reasons a `CREDataGap` can
+ * exist. Canonical home for this type: it is domain-neutral, shared E86
+ * gap taxonomy, not an ingestion-subsystem internal, so it lives alongside
+ * `CREDataGap` itself rather than in `ingestion/gap-reasons.ts` (which
+ * still owns the runtime label map and message formatting for it — see
+ * that file for the human-readable side of this vocabulary).
+ *
+ *   METRIC_NOT_PUBLISHED        — the source does not publish this metric at
+ *                                 all, for any geography.
+ *   GEOGRAPHY_NOT_COVERED       — the source publishes the metric, but not
+ *                                 for the requested geography.
+ *   GRANULARITY_NOT_AVAILABLE   — the source publishes the metric for a
+ *                                 coarser geography than requested (e.g.
+ *                                 national or state-level only, not
+ *                                 metro/city).
+ *   API_OR_DOWNLOAD_UNAVAILABLE — a source is known to exist but has no
+ *                                 public API or downloadable dataset.
+ *   LICENSE_REQUIRED            — the data exists but only under a paid
+ *                                 license E86 has not obtained.
+ *   SOURCE_TEMPORARILY_UNAVAILABLE — the source is normally available but
+ *                                 could not be reached at retrieval time.
+ *   SCHEMA_CHANGED              — the source's published schema/format
+ *                                 changed in a way the adapter does not
+ *                                 recognize, so parsing was deliberately
+ *                                 refused rather than guessed at.
+ *   VALIDATION_FAILED           — a response was retrieved and parsed but
+ *                                 failed E86 validation (out of range,
+ *                                 internally inconsistent, missing a
+ *                                 required field) and was discarded rather
+ *                                 than stored.
+ */
+export type CREDataGapReasonCode =
+  | "METRIC_NOT_PUBLISHED"
+  | "GEOGRAPHY_NOT_COVERED"
+  | "GRANULARITY_NOT_AVAILABLE"
+  | "API_OR_DOWNLOAD_UNAVAILABLE"
+  | "LICENSE_REQUIRED"
+  | "SOURCE_TEMPORARILY_UNAVAILABLE"
+  | "SCHEMA_CHANGED"
+  | "VALIDATION_FAILED";
+
+/**
  * A city/category combination E86 deliberately does NOT carry, and why.
  * Recording the absence is what keeps "we have no data" distinguishable from
  * "nobody looked" — and stops a future contributor from quietly backfilling an
@@ -235,10 +277,13 @@ export interface CREDataGap {
   /**
    * Phase 7 Part 11: a structured reason code alongside the free-text `reason`
    * above. Optional so every pre-Phase-7 gap remains valid without edits;
-   * new gaps recorded through the ingestion layer should set it. See
-   * `src/cre-intelligence/ingestion/gap-reasons.ts`.
+   * new gaps recorded through the ingestion layer should set it. The
+   * runtime label map and message formatting for this vocabulary live in
+   * `src/cre-intelligence/ingestion/gap-reasons.ts`; the type itself is
+   * defined above (`CREDataGapReasonCode`) since it is shared, domain-level
+   * taxonomy, not an ingestion-subsystem internal.
    */
-  reasonCode?: import("./ingestion/gap-reasons").CREDataGapReasonCode;
+  reasonCode?: CREDataGapReasonCode;
 }
 
 /**

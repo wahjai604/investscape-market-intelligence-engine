@@ -4,8 +4,39 @@
   "description": "Market Intelligence & Statistical Risk engines (Phase 1) for InvestScape.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
-    "dist"
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/statistical-risk/**",
+    "dist/market-intelligence/**",
+    "dist/visualization/**",
+    "dist/types/**",
+    "dist/cre-intelligence/public.js",
+    "dist/cre-intelligence/public.d.ts",
+    "dist/cre-intelligence/consensus.js",
+    "dist/cre-intelligence/consensus.d.ts",
+    "dist/cre-intelligence/benchmark-selection.js",
+    "dist/cre-intelligence/benchmark-selection.d.ts",
+    "dist/cre-intelligence/qualification.js",
+    "dist/cre-intelligence/qualification.d.ts",
+    "dist/cre-intelligence/mapping.js",
+    "dist/cre-intelligence/mapping.d.ts",
+    "dist/cre-intelligence/types.js",
+    "dist/cre-intelligence/types.d.ts",
+    "dist/cre-intelligence/benchmark-types.js",
+    "dist/cre-intelligence/benchmark-types.d.ts",
+    "dist/cre-intelligence/data/cap-rate-benchmark-mapping.js",
+    "dist/cre-intelligence/data/cap-rate-benchmark-mapping.d.ts",
+    "dist/cre-intelligence/data/cap-rates-us.js",
+    "dist/cre-intelligence/data/cap-rates-us.d.ts",
+    "dist/cre-intelligence/data/cap-rates-ca.js",
+    "dist/cre-intelligence/data/cap-rates-ca.d.ts"
   ],
   "directories": {
     "test": "__tests__"

@@ -18,6 +18,6 @@
 
 export * as statisticalRisk from "./statistical-risk";
 export * as marketIntelligence from "./market-intelligence";
-export * as creIntelligence from "./cre-intelligence";
+export * as creIntelligence from "./cre-intelligence/public";
 export * as visualization from "./visualization";
 export * as opportunityTypes from "./types/opportunity.types";
