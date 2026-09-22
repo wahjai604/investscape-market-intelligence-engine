@@ -1,6 +1,6 @@
 {
   "name": "@investscape/market-intelligence-engine",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Market Intelligence & Statistical Risk engines (Phase 1) for InvestScape.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,6 +19,8 @@
     "dist/types/**",
     "dist/cre-intelligence/public.js",
     "dist/cre-intelligence/public.d.ts",
+    "dist/cre-intelligence/benchmark-lookup.js",
+    "dist/cre-intelligence/benchmark-lookup.d.ts",
     "dist/cre-intelligence/consensus.js",
     "dist/cre-intelligence/consensus.d.ts",
     "dist/cre-intelligence/benchmark-selection.js",

@@ -12,6 +12,7 @@
 
 export { capRateConsensus, weightedConsensus } from "./consensus";
 export { selectCapRateBenchmark, selectHardCostBenchmark } from "./benchmark-selection";
+export { getCapRateBenchmark } from "./benchmark-lookup";
 
 export type {
   CREObservation,
