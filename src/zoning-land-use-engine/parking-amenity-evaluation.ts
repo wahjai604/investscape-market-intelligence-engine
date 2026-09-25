@@ -19,7 +19,7 @@ import type { E85EvaluationFinding } from "./finding-types";
 import type { E85ApplicabilityContext } from "./rule-applicability-types";
 import { matchesJurisdictionZone } from "./applicability";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
-import { e85ResolvedApplicabilityAudit, selectE85EvidenceForProposal } from "./rule-applicability";
+import { e85HistoricalRuleNotStructuredGap, e85ResolvedApplicabilityAudit, e85TemporallyExcludedOnly, selectE85EvidenceForProposal } from "./rule-applicability";
 
 function defaultContext(parcel: E85ParcelReference, callerContext?: E85CallerContext): E85ApplicabilityContext {
   return {
@@ -48,7 +48,13 @@ function evaluateKeyedNumeric(
       continue;
     }
     const ev = selection.applicable[0];
-    if (ev === undefined) continue;
+    if (ev === undefined) {
+      // Phase 12C.2 anti-look-ahead, as in density/dimensional: a value that is
+      // in scope but outside its temporal window is a GAP, never a silent absence.
+      const excluded = e85TemporallyExcludedOnly([item], context, asOfDate);
+      if (excluded.length > 0) findings.push(e85HistoricalRuleNotStructuredGap(family, `${fieldPrefix}:${key}`, excluded, asOfDate));
+      continue;
+    }
     const audit = e85ResolvedApplicabilityAudit(ev);
     findings.push({
       family,
@@ -106,7 +112,11 @@ export function evaluateAmenity(
         continue;
       }
       const ev = selection.applicable[0];
-      if (ev === undefined) continue;
+      if (ev === undefined) {
+        const excluded = e85TemporallyExcludedOnly([item], context, asOfDate);
+        if (excluded.length > 0) findings.push(e85HistoricalRuleNotStructuredGap("AMENITY", `requirement:${key}`, excluded, asOfDate));
+        continue;
+      }
       const condition = r.requirementConditions?.[key];
       if (condition) {
         const affirmed = (callerContext?.satisfiedConditions ?? []).includes(condition);
