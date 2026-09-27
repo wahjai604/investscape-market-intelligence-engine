@@ -54,9 +54,42 @@ export interface E85BindingConstraint {
   note?: string;
 }
 
-/** Bundled envelope + binding constraints + any gaps affecting the envelope specifically, kept separate from the top-level result's own gap list so an envelope can be embedded in other contexts without losing its own gap accounting. */
+/**
+ * One separately resolved regulatory limit on the envelope, with the evidence
+ * that establishes it. A resolved limit is a legal ceiling or minimum, NOT a
+ * claim that it governs a feasible building: e.g. an FSR-derived GFA ceiling
+ * may be unreachable under the height, setback and coverage limits.
+ */
+export interface E85ResolvedLimit {
+  /** Which envelope field this limit populates, e.g. "maxHeightMetres". */
+  field: keyof E85RegulatoryEnvelope;
+  evidence: E85Evidence<number>;
+  /** Derivation note or, for setbacks, the yard ("Yard: front"). */
+  note?: string;
+}
+
+/**
+ * Whether E85 determined which limit actually governs achievable floor area.
+ * Rule-Only Mode has no lot geometry, building form or massing model, so the
+ * status is always NOT_ASSESSED in this version.
+ */
+export interface E85PracticalCapacityAssessment {
+  status: "NOT_ASSESSED";
+  reason: string;
+}
+
+/** Bundled envelope + resolved limits + any gaps affecting the envelope specifically, kept separate from the top-level result's own gap list so an envelope can be embedded in other contexts without losing its own gap accounting. */
 export interface E85RegulatoryEnvelopeResult {
   envelope: E85RegulatoryEnvelope;
+  /**
+   * @deprecated Always empty. E85 does not determine which limit governs a
+   * feasible building (see `practicalCapacity`); it previously listed every
+   * resolved limit here, which overstated them as binding. Read
+   * `resolvedLimits` instead. Retained for type compatibility.
+   */
   bindingConstraints: readonly E85BindingConstraint[];
+  /** Every separately resolved envelope limit, in finding order. None is asserted to be binding. */
+  resolvedLimits: readonly E85ResolvedLimit[];
+  practicalCapacity: E85PracticalCapacityAssessment;
   envelopeGaps: readonly E85DataGap[];
 }

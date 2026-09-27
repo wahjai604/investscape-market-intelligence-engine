@@ -19,11 +19,12 @@ import type { E85EvaluationFinding } from "./finding-types";
 import type { E85ApplicabilityContext } from "./rule-applicability-types";
 import { matchesJurisdictionZone } from "./applicability";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
+import { e85ThresholdSiteArea } from "./site-area-basis";
 import { e85HistoricalRuleNotStructuredGap, e85ResolvedApplicabilityAudit, e85TemporallyExcludedOnly, selectE85EvidenceForProposal } from "./rule-applicability";
 
 function defaultContext(parcel: E85ParcelReference, callerContext?: E85CallerContext): E85ApplicabilityContext {
   return {
-    ...(parcel.siteAreaSqm === undefined ? {} : { siteAreaSqm: parcel.siteAreaSqm }),
+    ...e85ThresholdSiteArea(parcel),
     ...(callerContext?.satisfiedConditions === undefined ? {} : { satisfiedConditions: callerContext.satisfiedConditions }),
     ...(callerContext?.unsatisfiedConditions === undefined ? {} : { unsatisfiedConditions: callerContext.unsatisfiedConditions }),
   };

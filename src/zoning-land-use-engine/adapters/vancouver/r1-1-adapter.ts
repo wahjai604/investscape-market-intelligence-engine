@@ -48,6 +48,7 @@ import { floorQualificationTiers } from "../../qualification-types";
 import { deriveEvidenceQuality } from "../../qualification-derivation";
 import { assessE85SourceReadiness } from "../../source-readiness-assessment";
 import { canonicalE85ApplicabilityKey, normalizeE85ApplicabilityCodes, validateE85RuleApplicability } from "../../rule-applicability";
+import { e85FactQualificationFindings, e85FactQualificationProblem } from "../../source-fact-qualifications";
 import {
   VANCOUVER_JURISDICTION_ID,
   VANCOUVER_R1_1_ZONE,
@@ -97,6 +98,8 @@ function factContentKey(fact: E85StructuredSourceFact): string {
     fact.textValue ?? null,
     fact.unit ?? null,
     fact.condition ?? null,
+    fact.additionalLocators ?? null,
+    fact.qualifications ?? null,
     fact.applicability ?? null,
     fact.requirement ?? null,
     loc.bylawOrDocumentId ?? null,
@@ -315,7 +318,12 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
   // once some facts carry a proven `temporal`.
   const undatedFactIds: string[] = [];
 
+  // A fact's qualification disclosures follow ALL of that fact's own findings,
+  // so the first finding for a fact is always its real outcome.
+  let pendingDisclosures: E85NormalizationFinding[] = [];
   for (const fact of facts) {
+    findings.push(...pendingDisclosures);
+    pendingDisclosures = [];
     if (fact.zoneDesignation !== document.zoneDesignation) {
       addGap(
         fact,
@@ -356,6 +364,14 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
     // did that until now. INFO severity only: a note is never itself grounds
     // to change a fact's outcome (a fact whose note describes a real problem
     // must still fail through one of the ordinary gap paths above/below).
+    // A qualification that cannot be carried faithfully stops the fact: emitting
+    // the value without it would present a qualified value as unqualified.
+    const qualificationProblem = e85FactQualificationProblem(fact);
+    if (qualificationProblem !== undefined) {
+      addGap(fact, "RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED", qualificationProblem, "Correct the qualification or additional locator in the extract.");
+      continue;
+    }
+
     if (fact.notes !== undefined && fact.notes.trim() !== "") {
       findings.push({
         code: "SOURCE_NOTE_PRESERVED",
@@ -365,6 +381,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         message: `Extractor's note on fact "${fact.factId}": ${fact.notes}`,
       });
     }
+    pendingDisclosures = e85FactQualificationFindings(fact);
 
     // PHASE 12C.2 — a fact's own proven legal window takes precedence over the
     // document version's bundle-wide window; absence falls back exactly as
@@ -598,6 +615,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
 
     scalars.push({ mapping, evidence, scopeKey: scope.scopeKey });
   }
+  findings.push(...pendingDisclosures);
 
   for (const section of document.unstructuredSections ?? []) {
     const message = `Section "${section}" of ${source.displayName} is known to exist but was not structured by this extract, so any rule it states is absent rather than nonexistent.`;

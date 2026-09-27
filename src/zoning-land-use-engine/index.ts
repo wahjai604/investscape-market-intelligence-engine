@@ -78,6 +78,7 @@ export * from "./evaluator";
 // scope identity, three-valued evaluation, and proven-disjointness semantics.
 export * from "./rule-applicability-types";
 export * from "./rule-applicability";
+export * from "./site-area-basis";
 
 // Phase 12B.4 — regulatory requirements. A generic rule family for binding
 // obligations imposed on an otherwise-entitled development, triggered through
@@ -94,6 +95,7 @@ export * from "./source-registry";
 export * from "./source-readiness-assessment";
 export * from "./source-fact-types";
 export * from "./normalization-finding-types";
+export * from "./source-fact-qualifications";
 export * from "./normalized-bundle-types";
 export * from "./source-adapter-contract";
 export * from "./adapter-registry";
@@ -143,6 +145,7 @@ export * from "./spatial-source-adapter-registry";
 export * from "./decision-package-types";
 export * from "./decision-rule-pack-resolution";
 export * from "./decision-materiality";
+export * from "./quarantine-exclusion-proof";
 export * from "./decision-status";
 export * from "./decision-trace";
 export * from "./decision-orchestrator";

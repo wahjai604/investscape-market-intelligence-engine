@@ -22,6 +22,13 @@
  * reaches this parcel. Where that evidence does not exist, the answer is
  * UNDETERMINED, which blocks. It is never quietly rounded to NON_MATERIAL.
  *
+ * ONE NAMED EXCEPTION, deliberately narrow. A record quarantined solely for a
+ * Phase 7 interior-ring-contact refusal may be judged NON_MATERIAL to a POINT
+ * request when quarantine-exclusion-proof.ts proves the point lies outside its
+ * verbatim rings under every ring reading and clear of every edge by more than
+ * the tolerance. The record stays quarantined and is never treated as valid;
+ * polygon parcels, other refusals and every failed proof stay UNDETERMINED.
+ *
  * Two rules are worth stating outright because both protect against plausible
  * reasoning:
  *
@@ -42,6 +49,9 @@ import type { E85RequestedAnalysis } from "./request-types";
 import type { E85SpatialApplicabilityResult } from "./spatial-applicability-types";
 import type { E85SpatialNormalizationResult } from "./spatial-source-adapter-contract";
 import type { E85SpatialSourceFinding } from "./spatial-source-findings";
+import type { E85ExclusionProofEvidence } from "./quarantine-exclusion-proof";
+import { proveE85PointOutsideQuarantinedPolygon } from "./quarantine-exclusion-proof";
+import type { E85Geometry, E85SpatialTolerance } from "./spatial-types";
 
 export interface E85DecisionMaterialityInput {
   phase8: E85SpatialNormalizationResult;
@@ -53,6 +63,10 @@ export interface E85DecisionMaterialityInput {
   requestedAnalyses: readonly E85RequestedAnalysis[];
   /** Stamped onto any gap record this module must construct. Caller-supplied; never a clock read. */
   assessedAt: string;
+  /** The subject parcel's geometry. Used ONLY by the quarantined-polygon point-exclusion proof; absent, that proof never runs. */
+  parcelGeometry?: E85Geometry;
+  /** The tolerance in force for this decision, as supplied to Phase 7. */
+  tolerance?: E85SpatialTolerance;
 }
 
 /**
@@ -102,6 +116,25 @@ function relationReason(relation: E85SpatialRelation | undefined, featureId: str
     default:
       return `Phase 7 holds no geometric evidence about "${featureId}" — it never became a comparable feature, so nothing was measured against this parcel. No relation is inferred from a withheld record's raw geometry, centroid or bounding box, so its relevance cannot be established either way.`;
   }
+}
+
+/**
+ * Runs the named point-exclusion proof for one quarantined feature id, or
+ * returns undefined when it does not hold. Requires EXACTLY ONE quarantined
+ * record under that id and no normalized feature sharing it: an id carried by
+ * several records is a conflict, and no one record may speak for it.
+ */
+function exclusionProofFor(phase8: E85SpatialNormalizationResult, featureId: string, input: E85DecisionMaterialityInput): E85ExclusionProofEvidence | undefined {
+  if (phase8.outcome !== "NORMALIZED") return undefined;
+  const records = phase8.quarantined.filter((q) => q.featureId === featureId);
+  if (records.length !== 1 || phase8.features.some((f) => f.featureId === featureId)) return undefined;
+  const result = proveE85PointOutsideQuarantinedPolygon({
+    parcelGeometry: input.parcelGeometry,
+    record: records[0],
+    datasetVersionId: phase8.datasetVersionId,
+    ...(input.tolerance === undefined ? {} : { tolerance: input.tolerance }),
+  });
+  return result.proven ? result.evidence : undefined;
 }
 
 /**
@@ -217,6 +250,32 @@ export function assessE85DecisionMateriality(input: E85DecisionMaterialityInput)
 
     const hit = phase7?.hits.find((h) => h.featureId === featureId);
     const relation = hit?.relation;
+
+    // ---- The one exception to "quarantined means UNDETERMINED": the named
+    //      point-exclusion proof. Scoped to a Phase 7 geometry refusal of a
+    //      single, unambiguous quarantined record; every refusal of the proof
+    //      falls through to the ordinary UNDETERMINED path below.
+    if (relation === undefined && finding.code === "GEOMETRY_FAILED_PHASE7_VALIDATION" && input.parcelGeometry !== undefined) {
+      const proof = exclusionProofFor(phase8, featureId, input);
+      if (proof !== undefined) {
+        records.push({
+          sourceRef: `SPATIAL_NORMALIZATION:${finding.code}:${featureId}`,
+          sourcePhase: "SPATIAL_NORMALIZATION",
+          sourceCode: finding.code,
+          kind: "GAP",
+          materiality: "NON_MATERIAL",
+          reason:
+            `Feature "${featureId}" remains quarantined and was never compared by Phase 7. Proof ${proof.proofId} establishes that the requested point lies outside its verbatim rings under every ring reading ` +
+            `(even-odd, nonzero winding, shell-minus-holes) and is ${proof.minimumEdgeDistance} from the nearest edge, farther than the tolerance ${proof.tolerance}. ` +
+            `The point is therefore outside this shape however its refused topology is read. The shape is NOT treated as valid, and the problem remains recorded on the Phase 8 result.`,
+          featureId,
+          quarantineExclusionProof: proof,
+          ...(finding.gap === undefined ? {} : { gap: finding.gap }),
+        });
+        continue;
+      }
+    }
+
     const materiality = e85RelationMateriality(relation);
 
     records.push({

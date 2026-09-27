@@ -19,7 +19,10 @@
  * So when Phase 7's topology gate refuses one of the City's polygons — and in
  * the audited release it refuses a handful, all of them interior-ring cases —
  * this adapter quarantines the record and reports exactly which ring failed
- * and why. It does not fix and retry.
+ * and why. It does not fix and retry. Where the refusal is solely interior-ring
+ * contact with no proper crossing, the verbatim rings are kept on the
+ * quarantine record for Phase 9's point-exclusion proof only — the record is
+ * still quarantined and still never becomes a feature.
  *
  * NOTE WHAT A REFUSAL HERE DOES AND DOES NOT ASSERT. It says the shape falls
  * outside the profile E85 is prepared to reason about, which is a statement
@@ -41,6 +44,7 @@ import type { E85SpatialDatasetDefinition } from "../../../spatial-dataset-types
 import { deriveE85SpatialTemporalWindow } from "../../../spatial-dataset-types";
 import type { E85LinearRing, E85PolygonGeometry, E85Position } from "../../../spatial-types";
 import { formatE85GeometryProblems, validateE85Geometry } from "../../../geometry-validation";
+import { e85ExclusionProofRingsRetainable } from "../../../quarantine-exclusion-proof";
 import type { E85RawSpatialFeatureRecord, E85RawSpatialSourceSnapshot } from "../../../spatial-source-snapshot-types";
 import { e85RawRecordRef } from "../../../spatial-source-snapshot-types";
 import type { E85SpatialSourceFinding, E85SpatialSourceFindingCode } from "../../../spatial-source-findings";
@@ -70,7 +74,7 @@ import {
 export const VANCOUVER_ZONING_SPATIAL_ADAPTER_ID = `${VANCOUVER_SPATIAL_JURISDICTION_ID}.${VANCOUVER_ZONING_DATASET_SLUG}.geojson`;
 
 /** Bumped whenever mapping logic changes in a way that could alter output for unchanged input. Stamped onto every feature's provenance. */
-export const VANCOUVER_ZONING_SPATIAL_ADAPTER_VERSION = "1.0.0";
+export const VANCOUVER_ZONING_SPATIAL_ADAPTER_VERSION = "1.1.0";
 
 const IDENTITY: E85SpatialAdapterIdentity = {
   adapterId: VANCOUVER_ZONING_SPATIAL_ADAPTER_ID,
@@ -365,6 +369,15 @@ export function createVancouverZoningSpatialAdapter(rulePackLinkPolicy: E85Vanco
             `No repair was attempted: the boundary is not reordered, snapped, simplified, closed, un-tangled or replaced, and no hole was dropped to make the shell pass. Altering a published legal boundary so it validates would substitute a shape nobody enacted.`;
           findings.push({ code: "GEOMETRY_FAILED_PHASE7_VALIDATION", severity: "GAP", featureId, rawRecordRef, message: detail });
           quarantine(rawRecordRef, ["GEOMETRY_FAILED_PHASE7_VALIDATION"], detail, featureId, { [VANCOUVER_ZONING_FIELDS.zoningDistrict]: record.rawAttributes[VANCOUVER_ZONING_FIELDS.zoningDistrict] ?? null }, record.sourceLocator);
+          // The transcribed rings are kept, verbatim, ONLY where Phase 9's named
+          // exclusion proof may use them (see quarantine-exclusion-proof.ts). The
+          // record stays quarantined either way; this never makes it a feature.
+          const phase7ProblemCodes = [...new Set(validation.problems.map((p) => p.code))].sort(byE85SpatialKey);
+          const interiors = geometry.interiors ?? [];
+          if (e85ExclusionProofRingsRetainable({ crsId: snapshot.declaredCrs?.crsId, exterior: geometry.exterior, interiors, phase7ProblemCodes })) {
+            const last = quarantined[quarantined.length - 1];
+            quarantined[quarantined.length - 1] = { ...last, exclusionProofRings: { crs, exterior: geometry.exterior, interiors, phase7ProblemCodes } };
+          }
           continue;
         }
 

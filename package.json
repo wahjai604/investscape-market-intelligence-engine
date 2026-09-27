@@ -46,6 +46,8 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
+    "test:evidence": "jest -c jest.evidence.config.js",
+    "test:release": "jest && jest -c jest.evidence.config.js",
     "test:watch": "jest --watch",
     "lint": "tsc --noEmit"
   },

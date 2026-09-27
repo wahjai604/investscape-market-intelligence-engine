@@ -34,6 +34,15 @@
 import type { E85LinearRing, E85Position } from "./spatial-types";
 import { e85CanonicalRing } from "./spatial-types";
 
+/**
+ * `Math.max`/`Math.min` bound once. The very same functions, so results are
+ * identical (NaN and signed zero included); only the per-call `Math` global
+ * lookup is removed. Inside a `vm` context (Jest) that lookup goes through the
+ * contextified global and made the segment-box early-out ~30x slower.
+ */
+const mathMax = Math.max;
+const mathMin = Math.min;
+
 /** A segment as an ordered pair of endpoints. */
 export type E85Segment = readonly [E85Position, E85Position];
 
@@ -50,7 +59,7 @@ export function e85DistanceToSegment(p: E85Position, a: E85Position, b: E85Posit
   if (lengthSquared === 0) return Math.sqrt(e85DistanceSquared(p, a));
   // Projection parameter of p onto the infinite line, clamped to the segment.
   let t = ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / lengthSquared;
-  t = Math.max(0, Math.min(1, t));
+  t = mathMax(0, mathMin(1, t));
   const projection: E85Position = [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])];
   return Math.sqrt(e85DistanceSquared(p, projection));
 }
@@ -127,16 +136,16 @@ export function e85Orientation(a: E85Position, b: E85Position, c: E85Position): 
 
 /** Whether a position already known to be COLLINEAR with a segment lies within that segment's extent. */
 function withinExtent(a: E85Position, b: E85Position, p: E85Position): boolean {
-  return Math.min(a[0], b[0]) <= p[0] && p[0] <= Math.max(a[0], b[0]) && Math.min(a[1], b[1]) <= p[1] && p[1] <= Math.max(a[1], b[1]);
+  return mathMin(a[0], b[0]) <= p[0] && p[0] <= mathMax(a[0], b[0]) && mathMin(a[1], b[1]) <= p[1] && p[1] <= mathMax(a[1], b[1]);
 }
 
 /** Whether two segments' bounding boxes are separated. A pure early-out: boxes that merely touch are NOT separated, so this can never change an answer. */
 function boxesSeparated(a: E85Position, b: E85Position, c: E85Position, d: E85Position): boolean {
   return (
-    Math.max(a[0], b[0]) < Math.min(c[0], d[0]) ||
-    Math.max(c[0], d[0]) < Math.min(a[0], b[0]) ||
-    Math.max(a[1], b[1]) < Math.min(c[1], d[1]) ||
-    Math.max(c[1], d[1]) < Math.min(a[1], b[1])
+    mathMax(a[0], b[0]) < mathMin(c[0], d[0]) ||
+    mathMax(c[0], d[0]) < mathMin(a[0], b[0]) ||
+    mathMax(a[1], b[1]) < mathMin(c[1], d[1]) ||
+    mathMax(c[1], d[1]) < mathMin(a[1], b[1])
   );
 }
 

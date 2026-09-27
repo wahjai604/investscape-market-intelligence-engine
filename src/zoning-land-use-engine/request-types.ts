@@ -69,6 +69,12 @@ export interface E85ProposalContext {
  */
 export interface E85EvaluationRequest {
   parcel: E85ParcelReference;
+  /**
+   * ISO 8601 timestamp stamped on the result and on every gap/review record
+   * this evaluation creates. Supplied by the orchestrator from deterministic
+   * evidence; when absent, one clock read is shared by the whole evaluation.
+   */
+  resolvedAt?: string;
   /** Jurisdiction to match rule records against — exact string match only. */
   jurisdictionId: string;
   /** Zone designation to match rule records against — exact string match only (e.g. "R1-1" != "R1"). */

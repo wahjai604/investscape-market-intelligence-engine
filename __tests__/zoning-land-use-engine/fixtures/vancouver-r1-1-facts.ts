@@ -73,18 +73,24 @@
  * does not defer the general 2023-10-17 effective date and is not encoded
  * here.
  *
- * `use-005` (Multiple Dwelling, ≤8 units, Conditional) is deliberately KEPT
- * UNKNOWN: the original Schedule A's own §2.2.7 restricts the 7-8 unit
- * portion of that range to non-stratified, secured residential rental tenure
- * — a scope-narrowing qualifier the current normalized fact does not carry.
- * The current fact is therefore broader than the 2023 (and, so far as this
- * evidence goes, still-current) legal proposition, so dating it would assert
- * more than is proven. This is a separate fact-integrity question for a
- * future audit, not something this phase resolves.
+ * `use-005` (Multiple Dwelling, ≤8 units, Conditional) was left undated in
+ * Phase 12C.3A. Phase 12C.4B dated it: By-law 14747 cl.4(b) struck the
+ * original §2.2.7 tenure/stratification bar, so the current, tenure-silent
+ * proposition is in force from 2026-06-30 (see S2_2_7_ELIGIBILITY_AUTHORITY).
+ * Its three §2.2.7(a)-(c) site conditions remain caller-affirmed.
+ *
+ * READINESS AUDIT CORRECTIONS (VANCOUVER-LEGAL-PACK-READINESS.md §3). Values,
+ * scopes and dates are unchanged; each correction attaches a qualification
+ * the cited provision itself carries:
+ *   use-004      §2.2.1 (with §2.2.2) and §2.2.3 use-specific regulations.
+ *   density-004  §5.1 discretionary character-house FSR relaxation. 0.60
+ *                stays the maximum; the relaxation is not an entitlement.
+ *   density-005/006  §3.1.1.4 owner-occupied-unit exception, which decides
+ *                which of the two caps applies.
  *
  * This file is not a test (jest matches `*.test.ts` only).
  */
-import type { E85StructuredSourceDocument, E85StructuredSourceFact } from "../../../src/zoning-land-use-engine";
+import type { E85StructuredFactQualification, E85StructuredSourceDocument, E85StructuredSourceFact } from "../../../src/zoning-land-use-engine";
 import type { E85TemporalWindow } from "../../../src/zoning-land-use-engine/evidence-types";
 import type { E85DocumentLocator, E85TemporalAuthority } from "../../../src/zoning-land-use-engine/provenance-types";
 import { adapters } from "../../../src/zoning-land-use-engine";
@@ -165,6 +171,10 @@ export const FACT_OUTRIGHT_DUPLEX: E85StructuredSourceFact = {
   temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "2.1", row: DUPLEX_TERM, page: 12 }),
 };
 
+/** Opaque ids for the §2.2.1 tree and §2.2.3 suite-limit regulations on a duplex with secondary suite. E85 holds no site, tree or suite facts; a caller affirms them or the permission is withheld. */
+export const R1_1_DUPLEX_SUITE_TREE_CONDITION = "vancouver_r1_1_duplex_suite_front_yard_trees";
+export const R1_1_DUPLEX_SUITE_LIMIT_CONDITION = "vancouver_r1_1_duplex_one_suite_per_unit";
+
 export const FACT_CONDITIONAL_DUPLEX_WITH_SUITE: E85StructuredSourceFact = {
   factId: "r1-1-use-004",
   family: "USE",
@@ -174,6 +184,26 @@ export const FACT_CONDITIONAL_DUPLEX_WITH_SUITE: E85StructuredSourceFact = {
   locator: { section: "2.1", table: USE_TABLE, row: DUPLEX_WITH_SUITE_TERM, page: 2 },
   temporal: S13817_ORIGINAL_TEMPORAL,
   temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "2.1", row: DUPLEX_WITH_SUITE_TERM, page: 12 }),
+  // Both regulations sit in §2.2; each qualification below cites its own clause.
+  applicability: { conditionIds: [R1_1_DUPLEX_SUITE_TREE_CONDITION, R1_1_DUPLEX_SUITE_LIMIT_CONDITION], locators: { requiredConditionIds: { section: "2.2", page: 4 } } },
+  qualifications: [
+    {
+      qualificationId: "r1-1-2.2.1-front-yard-tree",
+      kind: "USE_SPECIFIC_REGULATION",
+      conditionId: R1_1_DUPLEX_SUITE_TREE_CONDITION,
+      locator: { section: "2.2.1", page: 4 },
+      description: "A new duplex with secondary suite must retain or plant front-yard trees as section 2.2.1 requires, read with the section 2.2.2 definitions. Not structured: E85 holds no site or tree-inventory facts.",
+      history: { status: "NOT_TRACED", disclosure: "The amendment history of sections 2.2.1 and 2.2.2 was not traced for this fact." },
+    },
+    {
+      qualificationId: "r1-1-2.2.3-secondary-suite-limit",
+      kind: "USE_SPECIFIC_REGULATION",
+      conditionId: R1_1_DUPLEX_SUITE_LIMIT_CONDITION,
+      locator: { section: "2.2.3", page: 5 },
+      description: "A duplex with secondary suite may have no more than 1 secondary suite for each dwelling unit.",
+      history: { status: "NOT_TRACED", disclosure: "The amendment history of section 2.2.3 was not traced for this fact." },
+    },
+  ],
 };
 
 /**
@@ -313,7 +343,11 @@ export const FACT_FSR_DUPLEX: E85StructuredSourceFact = {
   temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.2.1.1", page: 21 }),
 };
 
-/** §3.2.1.1: 0.60 for every other §3.2 use (i.e. not multiple dwelling per §3.2, not duplex per §3.2.1.1). */
+/**
+ * §3.2.1.1: 0.60 for every other §3.2 use (i.e. not multiple dwelling per §3.2,
+ * not duplex per §3.2.1.1). §5.1 lets the Director relax it in character-house
+ * cases; 0.60 remains the maximum unless a relaxation is granted.
+ */
 export const FACT_FSR_OTHER_USES: E85StructuredSourceFact = {
   factId: "r1-1-density-004",
   family: "DENSITY",
@@ -325,6 +359,46 @@ export const FACT_FSR_OTHER_USES: E85StructuredSourceFact = {
   locator: { section: "3.2.1.1", page: 12 },
   temporal: S13817_ORIGINAL_TEMPORAL,
   temporalAuthority: s13817Authority({ schedule: "Schedule A", section: "3.2.1.1", page: 21 }),
+  qualifications: [
+    {
+      qualificationId: "r1-1-5.1-character-house-fsr-relaxation",
+      kind: "DISCRETIONARY_RELAXATION",
+      locator: { section: "5.1", page: 17 },
+      description:
+        "The Director of Planning may relax the permitted floor space ratio to 0.65 (single detached house, with or without secondary suite, for an addition to a character house), 0.75 (multiple conversion dwelling, for an addition to a character house) or 0.85 (infill with retention of a character house).",
+      history: {
+        status: "INSTRUMENTS_LOCATED",
+        locatedInstruments: [
+          { bylawOrDocumentId: "14747", clause: "4(o)" },
+          { bylawOrDocumentId: "14747", section: "37" },
+          { bylawOrDocumentId: "13817", schedule: "Schedule A", section: "3.2.1.2", page: 21 },
+          { bylawOrDocumentId: "14747", clause: "4(e)" },
+        ],
+        disclosure:
+          "Section 5.1 was added by By-law 14747 cl.4(o), in force 2026-06-30 (s.37). Before then the same power sat in section 3.2.1.2 (By-law 13817 Schedule A p.21), which 14747 cl.4(e) struck. The definition of character house was not traced.",
+      },
+    },
+  ],
+};
+
+/**
+ * §3.1.1.4, which 14747 cl.4(d) enacted with the rest of §3.1.1: despite
+ * §3.1.1.3(a), one unit may be occupied by a registered owner of the site. It
+ * decides whether density-005 or density-006 applies, so both carry it.
+ */
+export const R1_1_OWNER_OCCUPIED_EXCEPTION: E85StructuredFactQualification = {
+  qualificationId: "r1-1-3.1.1.4-owner-occupied-unit",
+  kind: "EXCEPTION",
+  locator: { section: "3.1.1.4", page: 8 },
+  description:
+    "Despite section 3.1.1.3(a), 1 dwelling unit may be occupied by a registered owner of the site. A development that is otherwise 100% secured rental with one owner-occupied unit falls under 3.1.1.3(a) (8 units), not 3.1.1.3(b) (6 units). Not structured into tenure scope: a caller classifying tenure must apply it.",
+  history: {
+    status: "INSTRUMENTS_LOCATED",
+    locatedInstruments: [
+      { bylawOrDocumentId: "14747", clause: "4(d)" },
+      { bylawOrDocumentId: "14747", section: "37" },
+    ],
+  },
 };
 
 /** §3.1.1.3(a): 100% secured residential rental tenure -> maximum 8 dwelling units. */
@@ -339,6 +413,7 @@ export const FACT_UNITS_RENTAL: E85StructuredSourceFact = {
   locator: { section: "3.1.1.3", clause: "(a)", page: 8 },
   temporal: S311_REPLACEMENT_TEMPORAL,
   temporalAuthority: S311_REPLACEMENT_AUTHORITY,
+  qualifications: [R1_1_OWNER_OCCUPIED_EXCEPTION],
 };
 
 /** §3.1.1.3(b)(i): any tenure other than residential rental -> maximum 6 dwelling units. */
@@ -353,6 +428,7 @@ export const FACT_UNITS_OTHER_TENURE: E85StructuredSourceFact = {
   locator: { section: "3.1.1.3", clause: "(b)(i)", page: 8 },
   temporal: S311_REPLACEMENT_TEMPORAL,
   temporalAuthority: S311_REPLACEMENT_AUTHORITY,
+  qualifications: [R1_1_OWNER_OCCUPIED_EXCEPTION],
 };
 
 /** Opaque, adapter-level id for §3.1.1.3(b)(ii)(C). E85 does not resolve this geography; a caller affirms or denies it. */

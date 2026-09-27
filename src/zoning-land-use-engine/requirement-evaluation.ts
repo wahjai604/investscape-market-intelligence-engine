@@ -18,6 +18,7 @@
  * NO ARITHMETIC. A stated fraction is returned as the fraction; this module never
  * multiplies it by any project figure, and never prices anything.
  */
+import { e85EvaluationTimestamp } from "./evaluation-clock";
 import type { E85RuleRecord, E85RequirementRule } from "./rule-family-types";
 import type { E85Evidence } from "./evidence-types";
 import type { E85ParcelReference } from "./jurisdiction-types";
@@ -110,7 +111,7 @@ export function evaluateRequirements(
           reasonCode: "EFFECTIVE_DATE_UNKNOWN",
           reason: `${field}: the obligation's trigger governs this proposal, but its effective-date basis is UNKNOWN, so whether it was in force as of ${asOfDate} could not be determined.`,
           sourcesChecked: sourcesOf(undated),
-          checkedAt: new Date().toISOString(),
+          checkedAt: e85EvaluationTimestamp(),
         };
         const evidence = canonical(undated);
         const audit = e85ResolvedApplicabilityAudit(evidence[0]);
@@ -145,7 +146,7 @@ export function evaluateRequirements(
           reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
           explanation: `${governing.length} statements of obligation ${id} govern this proposal as of ${asOfDate} and disagree on its kind or choice membership, with no basis to prefer one.`,
           evidenceConsidered: governing.map((e) => e.provenance.sourceId),
-          flaggedAt: new Date().toISOString(),
+          flaggedAt: e85EvaluationTimestamp(),
         },
       });
       continue;
@@ -178,7 +179,7 @@ export function evaluateRequirements(
             reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
             explanation: `${stated.length} statements of the ${kind} quantity of obligation ${id} govern this proposal and disagree, with no basis to prefer one. No figure is chosen, neither the higher nor the lower.`,
             evidenceConsidered: stated.map((e) => e.provenance.sourceId),
-            flaggedAt: new Date().toISOString(),
+            flaggedAt: e85EvaluationTimestamp(),
           },
         });
         continue;
@@ -215,7 +216,7 @@ export function evaluateRequirements(
         (unstructured.length > 0 ? `; it depends on ${unstructured.map(describe).join("; ")}, which is known to exist and has not been structured` : "") +
         `. No quantity or amount is inferred.`,
       sourcesChecked: sourcesOf(governing),
-      checkedAt: new Date().toISOString(),
+      checkedAt: e85EvaluationTimestamp(),
       resolutionHint: unstructured.length > 0 ? "Structure the referenced content under its own source identity so its quantity can be stated as evidence." : "Extract the quantity the source states for this obligation.",
     };
     if (quantityGap === undefined) findings.push({ family: "REQUIREMENT", field, outcome: "GAP", gap, ...auditField });

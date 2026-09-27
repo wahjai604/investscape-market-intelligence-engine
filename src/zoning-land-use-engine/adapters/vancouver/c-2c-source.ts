@@ -51,7 +51,7 @@ export const VANCOUVER_C_2C_SOURCE_ID = buildE85SourceId({
 export const VANCOUVER_C_2C_ADAPTER_ID = "ca-bc-vancouver.district-schedule.c-2c";
 
 /** Bumped whenever normalization logic changes in a way that could alter output for unchanged input. Stamped onto every value's provenance. */
-export const VANCOUVER_C_2C_ADAPTER_VERSION = "1.0.0";
+export const VANCOUVER_C_2C_ADAPTER_VERSION = "1.1.0";
 
 /**
  * PHASE 14.4B — exactly USE and DIMENSIONAL. No DENSITY (the §3.1 gate,

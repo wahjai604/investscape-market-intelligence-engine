@@ -45,6 +45,9 @@ import type { E85QualificationTier } from "../../qualification-types";
 import { floorQualificationTiers } from "../../qualification-types";
 import { deriveEvidenceQuality } from "../../qualification-derivation";
 import { assessE85SourceReadiness } from "../../source-readiness-assessment";
+import { e85FactQualificationFindings, e85FactQualificationProblem } from "../../source-fact-qualifications";
+import type { E85RuleApplicability } from "../../rule-applicability-types";
+import { validateE85RuleApplicability } from "../../rule-applicability";
 import { VANCOUVER_JURISDICTION_ID } from "./r1-1-source";
 import {
   VANCOUVER_C_2C_ZONE,
@@ -79,6 +82,9 @@ function factContentKey(fact: E85StructuredSourceFact): string {
     fact.textValue ?? null,
     fact.unit ?? null,
     fact.condition ?? null,
+    fact.additionalLocators ?? null,
+    fact.qualifications ?? null,
+    fact.applicability ?? null,
     loc.bylawOrDocumentId ?? null,
     loc.section ?? null,
     loc.clause ?? null,
@@ -119,6 +125,21 @@ function canHandle(document: E85StructuredSourceDocument, source: E85SourceDefin
     };
   }
   return { supported: true };
+}
+
+/**
+ * The fact's scope when it is ONLY caller-affirmed conditions with a source
+ * locator; undefined when it has no scope; "REFUSED" for anything else.
+ */
+function conditionOnlyApplicability(fact: E85StructuredSourceFact): E85RuleApplicability | undefined | "REFUSED" {
+  const scope = fact.applicability;
+  if (scope === undefined) return undefined;
+  const { conditionIds, locators, ...rest } = scope;
+  const otherLocators = Object.keys(locators ?? {}).filter((k) => k !== "requiredConditionIds");
+  if (Object.keys(rest).length > 0 || otherLocators.length > 0) return "REFUSED";
+  if (conditionIds === undefined || conditionIds.length === 0 || locators?.requiredConditionIds === undefined) return "REFUSED";
+  const applicability: E85RuleApplicability = { requiredConditionIds: conditionIds, locators: { requiredConditionIds: locators.requiredConditionIds } };
+  return validateE85RuleApplicability(applicability).length > 0 ? "REFUSED" : applicability;
 }
 
 function normalize(document: E85StructuredSourceDocument, source: E85SourceDefinition, options?: E85NormalizationOptions): E85NormalizationResult {
@@ -184,7 +205,12 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
   const dimensionalEvidence: { field: "setback"; yardName: string; evidence: E85Evidence<number> }[] = [];
   const undatedFactIds: string[] = [];
 
+  // A fact's qualification disclosures follow ALL of that fact's own findings,
+  // so the first finding for a fact is always its real outcome.
+  let pendingDisclosures: E85NormalizationFinding[] = [];
   for (const fact of facts) {
+    findings.push(...pendingDisclosures);
+    pendingDisclosures = [];
     if (fact.zoneDesignation !== document.zoneDesignation) {
       addGap(fact, "AMBIGUOUS_SOURCE_INTERPRETATION", "ZONING_AMBIGUOUS", `Fact "${fact.factId}" states zone "${fact.zoneDesignation}" inside an extract scoped to "${document.zoneDesignation}"; it is not attributed to either zone.`);
       continue;
@@ -200,15 +226,19 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
       continue;
     }
 
-    if (fact.applicability !== undefined) {
+    // Only a condition-only scope is accepted: a caller-affirmed condition can
+    // withhold a value but never widen it. Any other scope is refused.
+    const conditionScope = conditionOnlyApplicability(fact);
+    if (conditionScope === "REFUSED") {
       addGap(
         fact,
         "UNSUPPORTED_SOURCE_CONCEPT",
         "RULE_NOT_STRUCTURED",
-        `Fact "${fact.factId}" states a scope, but this narrow C-2C pilot has no reviewed scope-mapping machinery. Emitting it unscoped would widen the rule, so it is not emitted.`,
+        `Fact "${fact.factId}" states a scope, but this narrow C-2C pilot maps only sourced, condition-only scopes. Emitting it unscoped would widen the rule, so it is not emitted.`,
       );
       continue;
     }
+    const scoped = conditionScope === undefined ? {} : { applicability: conditionScope };
 
     const factTemporal: E85TemporalWindow = fact.temporal ?? temporal;
     const temporalNote =
@@ -217,9 +247,18 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         : "";
     if (temporalNote === "" && factTemporal.effectiveDateBasis === "UNKNOWN") undatedFactIds.push(fact.factId);
 
+    // A qualification that cannot be carried faithfully stops the fact: emitting
+    // the value without it would present a qualified value as unqualified.
+    const qualificationProblem = e85FactQualificationProblem(fact);
+    if (qualificationProblem !== undefined) {
+      addGap(fact, "RULE_NOT_STRUCTURED", "RULE_NOT_STRUCTURED", qualificationProblem, "Correct the qualification or additional locator in the extract.");
+      continue;
+    }
+
     if (fact.notes !== undefined && fact.notes.trim() !== "") {
       findings.push({ code: "SOURCE_NOTE_PRESERVED", severity: "INFO", factId: fact.factId, sourceTerm: fact.sourceTerm, message: `Extractor's note on fact "${fact.factId}": ${fact.notes}` });
     }
+    pendingDisclosures = e85FactQualificationFindings(fact);
 
     if (fact.family === "USE") {
       const status = mapVancouverC2CUseStatus(fact.sourceTerm);
@@ -244,9 +283,9 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
         ...(status === "CONDITIONAL" ? { approvalAuthority: VANCOUVER_CONDITIONAL_APPROVAL_AUTHORITY } : {}),
         ...(fact.condition ? { conditionsNote: fact.condition } : {}),
       };
-      permissions.push({ value: permission, provenance, temporal: factTemporal });
+      permissions.push({ value: permission, provenance, temporal: factTemporal, ...scoped });
       qualityTiers.push(deriveEvidenceQuality(provenance));
-      applicabilityTiers.push(fact.condition ? "moderate" : "high");
+      applicabilityTiers.push(fact.condition || conditionScope !== undefined ? "moderate" : "high");
       findings.push({
         code: "TERM_MAPPED_EXACT",
         severity: "INFO",
@@ -302,6 +341,7 @@ function normalize(document: E85StructuredSourceDocument, source: E85SourceDefin
       message: `"${fact.sourceTerm}" mapped to DIMENSIONAL.setbacksMetres.${mapping.yardName} = ${converted.value} (${fact.unit}), value unchanged.${temporalNote}`,
     });
   }
+  findings.push(...pendingDisclosures);
 
   for (const section of document.unstructuredSections ?? []) {
     const message = `Section "${section}" of ${source.displayName} is known to exist but was not structured by this extract, so any rule it states is absent rather than nonexistent.`;

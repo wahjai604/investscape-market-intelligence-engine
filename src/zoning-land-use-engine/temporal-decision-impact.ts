@@ -4,9 +4,9 @@
  *
  * Additive only. This module is the thin, pure boundary between Slice 3D-3's
  * `E85TemporalLineageSelectionResult` (temporal-lineage-selection.ts) plus a
- * resolved temporal request (temporal-request-types.ts) and a FUTURE,
- * unimplemented Slice 3F adapter that will build real decision-package
- * gaps/materiality/status/trace. This module produces neither: it maps every
+ * resolved temporal request (temporal-request-types.ts) and the downstream
+ * decision-materiality adapter (Slice 3F-2). This module produces neither
+ * package materiality nor package gaps/status/trace: it maps every
  * per-lineage outcome onto a typed, jurisdiction-neutral "temporal decision
  * impact" — an intermediate disposition recommendation only.
  *
@@ -84,8 +84,8 @@ export interface E85TemporalImpactPolicy {
 
 /**
  * Closed, local, mapper-only impact-kind vocabulary. None of these literals
- * are (or ever become) an `E85DataGapReasonCode` — that final reason-code
- * choice is explicitly deferred to a future Slice 3F. The CURRENT-context
+ * are (or ever become) an `E85DataGapReasonCode` — final reason-code
+ * mapping belongs to the downstream Slice 3F-2 adapter. The CURRENT-context
  * and AS_OF-context kinds are deliberately distinct even when the
  * underlying upstream selector/group kind coincides.
  */

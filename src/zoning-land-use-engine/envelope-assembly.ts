@@ -4,13 +4,13 @@
  * © 2026 Lighthouse Research Ltd. All rights reserved.
  *
  * Folds `envelopeContribution`s from density/dimensional findings into one
- * `E85RegulatoryEnvelopeResult`, and computes binding-constraint records
- * ONLY where mechanically defensible: a resolved scalar field on the
- * envelope directly binds itself (e.g. "maxHeightMetres constrains
- * maxHeightMetres"). Rule-Only Mode never claims cross-field binding (e.g.
- * "height caps GFA") because it never has the geometry to prove that.
+ * `E85RegulatoryEnvelopeResult`. Each resolved field is recorded as a
+ * `resolvedLimit`; none is asserted to be binding. Rule-Only Mode has no
+ * geometry or massing model, so it cannot tell whether, say, height rather
+ * than FSR limits achievable floor area — `practicalCapacity` says so
+ * explicitly and `bindingConstraints` stays empty.
  */
-import type { E85RegulatoryEnvelope, E85BindingConstraint, E85RegulatoryEnvelopeResult } from "./envelope-types";
+import type { E85RegulatoryEnvelope, E85RegulatoryEnvelopeResult, E85ResolvedLimit } from "./envelope-types";
 import type { E85EvaluationFinding } from "./finding-types";
 import type { E85DataGap } from "./data-gap-types";
 
@@ -21,7 +21,7 @@ export function assembleEnvelope(
   envelopeGaps: readonly E85DataGap[],
 ): E85RegulatoryEnvelopeResult {
   const envelope: E85RegulatoryEnvelope = { jurisdictionId, zoneDesignation };
-  const bindingConstraints: E85BindingConstraint[] = [];
+  const resolvedLimits: E85ResolvedLimit[] = [];
 
   for (const finding of findings) {
     const contribution = finding.envelopeContribution;
@@ -29,10 +29,10 @@ export function assembleEnvelope(
     if (contribution.field === "setbacksMetres") continue; // never a flat scalar; handled below by field-label convention
     if (contribution.field.startsWith("setbacksMetres.")) continue;
     (envelope as any)[contribution.field] = contribution.evidence;
-    bindingConstraints.push({
-      constrainedField: contribution.field,
+    resolvedLimits.push({
+      field: contribution.field,
       evidence: contribution.evidence,
-      note: contribution.derivationNote,
+      ...(contribution.derivationNote === undefined ? {} : { note: contribution.derivationNote }),
     });
   }
 
@@ -44,13 +44,23 @@ export function assembleEnvelope(
     const yard = finding.field.slice("setback:".length);
     setbacks[yard] = finding.envelopeContribution.evidence;
     hasSetback = true;
-    bindingConstraints.push({
-      constrainedField: "setbacksMetres",
+    resolvedLimits.push({
+      field: "setbacksMetres",
       evidence: finding.envelopeContribution.evidence,
       note: `Yard: ${yard}`,
     });
   }
   if (hasSetback) envelope.setbacksMetres = setbacks;
 
-  return { envelope, bindingConstraints, envelopeGaps };
+  return {
+    envelope,
+    bindingConstraints: [],
+    resolvedLimits,
+    practicalCapacity: {
+      status: "NOT_ASSESSED",
+      reason:
+        "E85 reports each regulatory limit separately. It has no lot geometry or building-form model, so it does not determine which limit (FSR, height, storeys, setbacks, site coverage) governs achievable floor area; maxRegulatoryGfaSqm is a legal ceiling, not practical capacity.",
+    },
+    envelopeGaps,
+  };
 }

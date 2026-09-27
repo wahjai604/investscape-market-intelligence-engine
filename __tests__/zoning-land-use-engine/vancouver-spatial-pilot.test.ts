@@ -708,6 +708,27 @@ describe("E85 Phase 10A — the full-snapshot quarantine consequence is stated, 
     expect(p.status).toBe("DATA_GAP");
   });
 
+  test("Phase 9 reaches quarantined rings ONLY through the named point-exclusion proof", () => {
+    // DELIBERATE GUARD UPDATE (E85 quarantine point-exclusion slice). Phase 9
+    // may now measure a quarantined record's retained verbatim rings, but only
+    // inside quarantine-exclusion-proof.ts. The retained-ring field is read by
+    // no other source file outside the contract that declares it and the
+    // adapter that fills it, and the Phase 9 files still read no raw payload.
+    const srcDir = path.join(__dirname, "../../src");
+    const allowed = new Set(
+      ["zoning-land-use-engine/spatial-source-adapter-contract.ts", "zoning-land-use-engine/quarantine-exclusion-proof.ts", "zoning-land-use-engine/adapters/spatial/vancouver/vancouver-zoning-adapter.ts"].map((p) => path.normalize(p)),
+    );
+    const walk = (dir: string): string[] => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(dir, e.name)) : e.name.endsWith(".ts") ? [path.join(dir, e.name)] : []));
+    const readers = walk(srcDir)
+      .filter((file) => /exclusionProofRings/.test(fs.readFileSync(file, "utf8")))
+      .map((file) => path.normalize(path.relative(srcDir, file)))
+      .filter((rel) => !allowed.has(rel));
+    expect(readers).toEqual([]);
+
+    const materiality = fs.readFileSync(path.join(srcDir, "zoning-land-use-engine/decision-materiality.ts"), "utf8");
+    expect(materiality).toContain("proveE85PointOutsideQuarantinedPolygon(");
+  });
+
   test("Phase 9 is not rescued by reading a quarantined record's raw geometry", () => {
     // Strips comments AND string literals, so this tests the OPERATION rather
     // than the word — the same discipline scope-protection.test.ts uses. Phase 9
@@ -723,7 +744,7 @@ describe("E85 Phase 10A — the full-snapshot quarantine consequence is stated, 
         .replace(/'(?:[^'\\]|\\.)*'/g, "''");
 
     const decisionDir = path.join(__dirname, "../../src/zoning-land-use-engine");
-    for (const file of ["decision-materiality.ts", "decision-orchestrator.ts"]) {
+    for (const file of ["decision-materiality.ts", "decision-orchestrator.ts", "quarantine-exclusion-proof.ts"]) {
       const content = executable(fs.readFileSync(path.join(decisionDir, file), "utf8"));
       for (const term of [/rawGeometry/, /boundingBox/i, /centroid/i, /convexHull/i]) {
         expect({ file, term: term.source, found: term.test(content) }).toEqual({ file, term: term.source, found: false });

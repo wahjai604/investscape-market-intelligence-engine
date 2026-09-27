@@ -306,7 +306,12 @@ describe("E85 Phase 5A — licensing records established rights, never inferred 
   });
 
   test("the temporal limitation is likewise stated rather than left implicit", () => {
-    expect(VANCOUVER_R1_1_SOURCE.knownLimitations.join(" ")).toMatch(/NO EFFECTIVE DATE IS ESTABLISHED/);
+    const limitations = VANCOUVER_R1_1_SOURCE.knownLimitations.join(" ");
+    expect(limitations).toMatch(/NO VERSION-LEVEL EFFECTIVE DATE IS ESTABLISHED/);
+    // Readiness audit: every R1-1 fact now carries its own proven window, so the
+    // registration must not still say the rules themselves are undated.
+    expect(limitations).not.toMatch(/Rules normalized from this source therefore carry an UNKNOWN temporal basis/);
+    expect(limitations).toMatch(/AMENDMENT HISTORY IS NOT PROVEN COMPLETE/);
   });
 });
 

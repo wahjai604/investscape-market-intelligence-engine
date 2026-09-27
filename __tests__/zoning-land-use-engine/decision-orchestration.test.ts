@@ -1473,7 +1473,8 @@ describe("E85 Phase 15.18A (Slice 3F-2) — temporalLineageEvidence pipeline wir
     return assembleE85DecisionPackage({ ...request({ records: [RECORD_A()] }), ...overrides });
   }
 
-  const temporalRecords = (p: E85DecisionPackage) => p.materiality.filter((m) => m.sourcePhase === "TEMPORAL_REQUEST");
+  // Per-lineage and blanket records only. Per-pack coverage records (TEMPORAL_PACK:*) are asserted separately below.
+  const temporalRecords = (p: E85DecisionPackage) => p.materiality.filter((m) => m.sourcePhase === "TEMPORAL_REQUEST" && !m.sourceRef.startsWith("TEMPORAL_PACK:"));
 
   test("1. temporalLineageEvidence absent: unchanged blanket disclosure (backward compatible with Slice 3F-1)", () => {
     const p = decideWith({ temporalRequest: { mode: "AS_OF", asOfDate: "2026-02-12" } });
@@ -1502,6 +1503,10 @@ describe("E85 Phase 15.18A (Slice 3F-2) — temporalLineageEvidence pipeline wir
     const records = temporalRecords(p);
     expect(records).toHaveLength(1);
     expect(records[0].sourceCode).toBe("TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED");
+    // The selected TEST-SOURCE candidate is not the parcel's resolved pack, so that pack stays uncovered and MATERIAL.
+    expect(p.materiality.filter((m) => m.sourceRef.startsWith("TEMPORAL_PACK:"))).toEqual([
+      expect.objectContaining({ sourceCode: "TEMPORAL_VERSION_NOT_ESTABLISHED", materiality: "MATERIAL", packId: "refburgh-rb-1" }),
+    ]);
     expect(records[0].sourceRef).toBe("TEMPORAL_LINEAGE:TEST-LINEAGE-SEL:AS_OF_SELECTED:AS_OF:2026-02-12");
     expect(records[0].kind).toBe("GAP");
     expect(records[0].materiality).toBe("MATERIAL");

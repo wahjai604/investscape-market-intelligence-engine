@@ -43,7 +43,11 @@ export type E85NormalizationFindingCode =
   /** The stated unit is not one this concept accepts (e.g. a height in SPACES), so no conversion was attempted. */
   | "UNIT_UNSUPPORTED_FOR_CONCEPT"
   /** PHASE 12C.2A: an extractor's note (`E85StructuredSourceFact.notes`) was carried forward as an audit-only finding. INFO only — a note never changes whether a fact was normalized or what its outcome was. */
-  | "SOURCE_NOTE_PRESERVED";
+  | "SOURCE_NOTE_PRESERVED"
+  /** A fact's qualification (`E85StructuredSourceFact.qualifications`) was carried forward. WARNING: the value stands, but is not unqualified. */
+  | "SOURCE_QUALIFICATION_DISCLOSED"
+  /** A fact's value is also stated at another locator (`E85StructuredSourceFact.additionalLocators`). INFO. */
+  | "SOURCE_LOCATOR_ADDITIONAL";
 
 /**
  * How the finding affects the bundle.

@@ -26,6 +26,8 @@
  * is reserved for genuine invariant violations.
  */
 import type { E85DataGap } from "./data-gap-types";
+import type { E85GeometryProblemCode } from "./geometry-validation";
+import type { E85Crs, E85LinearRing } from "./spatial-types";
 import type { E85RegulatorySpatialFeature, E85SpatialFeatureClass } from "./spatial-applicability-types";
 import type { E85SpatialDatasetDefinition } from "./spatial-dataset-types";
 import type { E85SourceAccessStatus, E85SourceLicenseStatus } from "./source-readiness-types";
@@ -102,6 +104,34 @@ export interface E85QuarantinedSpatialRecord {
   rawValues?: Readonly<Record<string, unknown>>;
   /** Convenience locator for the record at its source, when supplied. */
   sourceLocator?: string;
+  /**
+   * The record's rings, verbatim, retained for ONE purpose: Phase 9's named
+   * exclusion proof (quarantine-exclusion-proof.ts), which may show that a
+   * POINT lies outside this shape under every ring reading.
+   *
+   * Present only when an adapter could honestly retain them: the coordinates
+   * transcribed cleanly, the CRS is declared, Phase 7's refusal consists solely
+   * of interior-ring contact codes, and no two segments anywhere in the shape
+   * properly cross. Everything else keeps no rings, and stays UNDETERMINED.
+   *
+   * THIS IS NOT AN ACCEPTANCE. The record remains quarantined, never becomes a
+   * feature, never reaches Phase 7, and contributes no rule pack. Nothing may
+   * read these rings to establish that the shape is valid, where its interior
+   * is, or whether it reaches a polygon parcel.
+   */
+  exclusionProofRings?: E85QuarantinedExclusionProofRings;
+}
+
+/** Interior-ring contact codes: the only Phase 7 refusals for which `exclusionProofRings` may be retained. */
+export const E85_EXCLUSION_PROOF_ELIGIBLE_PROBLEM_CODES: readonly E85GeometryProblemCode[] = ["INTERIOR_RING_CROSSES_EXTERIOR", "INTERIOR_RINGS_OVERLAP"];
+
+/** Verbatim rings of a quarantined polygon, with the CRS they were declared in and the exact refusal they carry. */
+export interface E85QuarantinedExclusionProofRings {
+  crs: E85Crs;
+  exterior: E85LinearRing;
+  interiors: readonly E85LinearRing[];
+  /** Phase 7's problem codes for this shape, sorted and deduplicated. Always a non-empty subset of `E85_EXCLUSION_PROOF_ELIGIBLE_PROBLEM_CODES`. */
+  phase7ProblemCodes: readonly E85GeometryProblemCode[];
 }
 
 /**

@@ -28,6 +28,7 @@
  * scope, exclusion-only lists never prove disjointness (the universe of codes is
  * open), and opaque condition ids never do.
  */
+import { e85EvaluationTimestamp } from "./evaluation-clock";
 import type { E85Evidence } from "./evidence-types";
 import type { E85RuleFamily, E85RuleRecord } from "./rule-family-types";
 import type { E85EvaluationFinding } from "./finding-types";
@@ -43,6 +44,7 @@ import type {
 } from "./rule-applicability-types";
 import { E85_APPLICABILITY_DIMENSIONS } from "./rule-applicability-types";
 import { evaluateTemporalApplicability, matchesJurisdictionZone } from "./applicability";
+import { e85ThresholdSiteArea } from "./site-area-basis";
 
 type E85CodeDimension = "useCodes" | "excludedUseCodes" | "buildingRoles" | "excludedBuildingRoles" | "tenureCodes" | "excludedTenureCodes" | "requiredConditionIds";
 
@@ -303,7 +305,7 @@ export function buildE85ApplicabilityContext(
     ...(proposal?.buildingRole === undefined ? {} : { buildingRole: proposal.buildingRole }),
     ...(proposal?.tenureCode === undefined ? {} : { tenureCode: proposal.tenureCode }),
     ...(proposal?.frontageMetres === undefined ? {} : { frontageMetres: proposal.frontageMetres }),
-    ...(request.parcel.siteAreaSqm === undefined ? {} : { siteAreaSqm: request.parcel.siteAreaSqm }),
+    ...e85ThresholdSiteArea(request.parcel),
     ...(request.callerContext?.satisfiedConditions === undefined ? {} : { satisfiedConditions: request.callerContext.satisfiedConditions }),
     ...(request.callerContext?.unsatisfiedConditions === undefined ? {} : { unsatisfiedConditions: request.callerContext.unsatisfiedConditions }),
   };
@@ -401,10 +403,13 @@ export function selectE85EvidenceForProposal<T>(
           reasonCode: gapReasonFor(missing),
           reason:
             `${field}: ${undetermined.length} scoped rule value(s) with scope ${keys.map((k) => `{${k}}`).join(", ")} cannot be confirmed to govern this proposal, ` +
-            `because the proposal context does not establish: ${missing.join(", ")}. No scope is assumed to apply, and none is assumed not to.`,
+            `because the proposal context does not establish: ${missing.join(", ")}. No scope is assumed to apply, and none is assumed not to.` +
+            (missing.includes("siteAreaSqm") && context.siteAreaBasisIssue !== undefined ? ` ${context.siteAreaBasisIssue}` : ""),
           sourcesChecked: sortedUnique(undetermined.map((c) => c.evidence.provenance.sourceId)),
-          checkedAt: new Date().toISOString(),
-          resolutionHint: `Supply the missing proposal context (${missing.join(", ")}) so each scoped rule's applicability can be decided.`,
+          checkedAt: e85EvaluationTimestamp(),
+          resolutionHint:
+            `Supply the missing proposal context (${missing.join(", ")}) so each scoped rule's applicability can be decided.` +
+            (missing.includes("siteAreaSqm") && context.siteAreaBasisIssue !== undefined ? " For site area, declare parcel.siteAreaBasis as the by-law-defined site area with resolved deductions and a source reference." : ""),
         },
         applicability: audit,
       },
@@ -473,7 +478,7 @@ export function e85HistoricalRuleNotStructuredGap<T>(family: E85RuleFamily, fiel
         `(${notYetEffective} not yet effective, ${expired} expired). E85's fact model is CURRENT-ONLY: no historical predecessor rule is structured for this date, ` +
         `so the current value cannot be assumed to have applied earlier and no historical value is available. This is an absence of structured rule content for the requested date, not an absence of law.`,
       sourcesChecked: sortedUnique(excluded.map((ev) => ev.provenance.sourceId)),
-      checkedAt: new Date().toISOString(),
+      checkedAt: e85EvaluationTimestamp(),
       resolutionHint: "Structure the historical predecessor evidence in force on the requested date, if it is needed, or query a date on/after the current rule's effectiveFrom.",
     },
   };

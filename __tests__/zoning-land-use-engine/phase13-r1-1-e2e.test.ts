@@ -103,6 +103,8 @@ function parcelRef(parcelReferenceId: string): E85ParcelReference {
     },
     rawZoningDesignation: "R1-1",
     siteAreaSqm: 700,
+    // A declared by-law-defined basis lets the ≥623 m² trigger be decided; see site-area-basis.ts.
+    siteAreaBasis: { kind: "BYLAW_DEFINED_SITE_AREA", deductionStatus: "NONE_APPLICABLE_CONFIRMED", sourceReference: "synthetic test parcel" },
   };
 }
 

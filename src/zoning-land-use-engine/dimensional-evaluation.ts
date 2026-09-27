@@ -14,6 +14,7 @@
  * NO_RULE_FOR_PROPOSAL_SCOPE finding and no envelope value — never a default,
  * never "unlimited".
  */
+import { e85EvaluationTimestamp } from "./evaluation-clock";
 import type { E85RuleRecord, E85DimensionalRule } from "./rule-family-types";
 import type { E85Evidence } from "./evidence-types";
 import type { E85ParcelReference } from "./jurisdiction-types";
@@ -22,6 +23,7 @@ import type { E85ApplicabilityContext } from "./rule-applicability-types";
 import { matchesJurisdictionZone } from "./applicability";
 import { detectConflict } from "./conflict-detection";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
+import { e85ThresholdSiteArea } from "./site-area-basis";
 import { e85HistoricalRuleNotStructuredGap, e85ResolvedApplicabilityAudit, e85TemporallyExcludedOnly, selectE85EvidenceForProposal } from "./rule-applicability";
 
 function applicableDimensionalRules(rules: readonly E85RuleRecord[], jurisdictionId: string, zoneDesignation: string): E85DimensionalRule[] {
@@ -55,7 +57,7 @@ function evaluateScalarField(
         reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
         explanation: `${conflict.distinctValues.length} distinct values (${conflict.distinctValues.join(", ")}) found for ${fieldName} in ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}.`,
         evidenceConsidered: conflict.deduped.map((e) => e.provenance.sourceId),
-        flaggedAt: new Date().toISOString(),
+        flaggedAt: e85EvaluationTimestamp(),
       },
     };
   }
@@ -84,7 +86,7 @@ export function evaluateDimensional(
   asOfDate: string,
   applicabilityContext?: E85ApplicabilityContext,
 ): E85EvaluationFinding[] {
-  const context: E85ApplicabilityContext = applicabilityContext ?? (parcel.siteAreaSqm === undefined ? {} : { siteAreaSqm: parcel.siteAreaSqm });
+  const context: E85ApplicabilityContext = applicabilityContext ?? e85ThresholdSiteArea(parcel);
   const findings: E85EvaluationFinding[] = [];
   const dimRules = applicableDimensionalRules(rules, jurisdictionId, zoneDesignation);
 

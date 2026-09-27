@@ -32,6 +32,7 @@
  *
  * Nothing here acquires anything, computes a rule, or ranks an instrument.
  */
+import type { E85FeatureDesignationEvidence } from "./decision-temporal-application";
 import type { E85DataGap } from "./data-gap-types";
 import type { E85EvaluationOutcome } from "./evaluator-result-types";
 import type { E85ParcelReference } from "./jurisdiction-types";
@@ -47,6 +48,7 @@ import type { E85SpatialDatasetRegistry } from "./spatial-dataset-registry";
 import type { E85ParcelSpatialReference, E85SpatialApplicabilityResult, E85SpatialFeatureClass } from "./spatial-applicability-types";
 import type { E85SpatialNormalizationResult } from "./spatial-source-adapter-contract";
 import type { E85SpatialRelation } from "./geometry-relations";
+import type { E85ExclusionProofEvidence } from "./quarantine-exclusion-proof";
 import type { E85SpatialTolerance } from "./spatial-types";
 import type { E85TemporalRequest } from "./temporal-request-types";
 import type { E85TemporalLineageMember } from "./temporal-lineage-grouping";
@@ -156,6 +158,13 @@ export interface E85DecisionMaterialityRecord {
    * this feature at all — which is itself why such a record is UNDETERMINED.
    */
   spatialRelation?: E85SpatialRelation;
+  /**
+   * Present only when a QUARANTINED record was judged NON_MATERIAL by the named
+   * point-exclusion proof (quarantine-exclusion-proof.ts). It records that the
+   * point lies outside the refused shape under every ring reading; it is not a
+   * spatial relation, and it says nothing about whether the shape is valid.
+   */
+  quarantineExclusionProof?: E85ExclusionProofEvidence;
   /**
    * The rule families this problem could affect, when they are actually KNOWN.
    *
@@ -307,6 +316,12 @@ export interface E85DecisionPackage {
  */
 export interface E85TemporalLineageEvidenceInput {
   readonly lineages: readonly E85TemporalLineageMember[];
+  /**
+   * Server-supplied designation validity per Phase 8 feature id. Required,
+   * separately from any version selection, before an AS_OF result can clear
+   * its temporal records (see decision-temporal-application.ts).
+   */
+  readonly designations?: readonly E85FeatureDesignationEvidence[];
 }
 
 /**
@@ -331,10 +346,12 @@ export interface E85DecisionRequest {
   /**
    * PHASE 15.16 (Slice 3F-1): the caller's explicit temporal intent, reconciled
    * against `asOfDate` (above) via the existing `resolveE85TemporalRequest`.
-   * Optional, additive, and NOT a request for E85 to perform real temporal
-   * analysis: until source-version selection is wired, supplying this field
-   * only causes one honest `TEMPORAL_ANALYSIS_NOT_YET_APPLIED` disclosure to be
-   * added to `materiality`. A caller that omits it, including one that still
+   * Optional and additive. When no `temporalLineageEvidence` is supplied,
+   * this field adds one honest `TEMPORAL_ANALYSIS_NOT_YET_APPLIED` disclosure
+   * to `materiality`; when evidence is supplied, the grouping, selection,
+   * impact and materiality adapters run and report their per-lineage findings.
+   * Neither path applies a selected source version to rule-pack evaluation.
+   * A caller that omits this field, including one that still
    * supplies only the legacy `asOfDate`, sees no change in behavior.
    */
   temporalRequest?: E85TemporalRequest;

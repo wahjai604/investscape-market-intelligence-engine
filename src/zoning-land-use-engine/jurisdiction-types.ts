@@ -54,6 +54,43 @@ export interface E85Jurisdiction {
 export type E85GeometryRef = unknown;
 
 /**
+ * What a caller's `siteAreaSqm` measures. No universal gross/net rule is
+ * supportable: the pilot evidence treats FSR as "floor area ÷ site area" but
+ * does not establish, for any jurisdiction, the by-law's own definition of
+ * site area or its treatment of road dedications, widenings or
+ * statutory-right-of-way areas. E85 therefore never chooses a basis on the
+ * caller's behalf.
+ *
+ * - BYLAW_DEFINED_SITE_AREA: the caller asserts the figure was measured as the
+ *   governing by-law defines site area for density purposes.
+ * - GROSS_TITLE_AREA: area of the legal parcel(s) as titled/surveyed, before
+ *   any dedication.
+ * - NET_AFTER_DEDICATIONS: title area less known dedications/widenings.
+ * - UNSPECIFIED: the caller does not know what the figure measures.
+ */
+export type E85SiteAreaKind = "BYLAW_DEFINED_SITE_AREA" | "GROSS_TITLE_AREA" | "NET_AFTER_DEDICATIONS" | "UNSPECIFIED";
+
+/**
+ * Whether dedications, widenings or other area reductions that the by-law may
+ * exclude from site area are known for this parcel.
+ *
+ * - NONE_APPLICABLE_CONFIRMED: the caller has confirmed none apply.
+ * - ALREADY_REFLECTED: known reductions are already reflected in `siteAreaSqm`.
+ * - POSSIBLE_OR_PENDING: a reduction may apply or is pending (e.g. a required
+ *   road widening not yet registered).
+ * - UNKNOWN: not investigated.
+ */
+export type E85SiteAreaDeductionStatus = "NONE_APPLICABLE_CONFIRMED" | "ALREADY_REFLECTED" | "POSSIBLE_OR_PENDING" | "UNKNOWN";
+
+/** Caller-declared basis and provenance of `E85ParcelReference.siteAreaSqm`. */
+export interface E85SiteAreaBasis {
+  kind: E85SiteAreaKind;
+  deductionStatus: E85SiteAreaDeductionStatus;
+  /** Where the figure came from, e.g. "BC Land Title plan EPP12345", "legal survey dated 2026-03-01", "BC Assessment roll 2026". Free text; not validated. */
+  sourceReference?: string;
+}
+
+/**
  * Minimal, locally-scoped identification of the parcel/site E85 is
  * evaluating rules for. Every field beyond `parcelReferenceId` is optional
  * because Rule-Only Mode can operate on partial information (with
@@ -72,6 +109,8 @@ export interface E85ParcelReference {
   rawZoningDesignation?: string;
   /** Site area in square metres, when known. Some dimensional/density rules cannot be evaluated without this and must instead produce a DATA_GAP (REQUIRED_SITE_DIMENSION_MISSING). */
   siteAreaSqm?: number;
+  /** What `siteAreaSqm` measures and where it came from. Optional and additive; see `E85SiteAreaBasis`. When absent, a regulatory GFA derived from `siteAreaSqm` is still reported but carries a warning that its area basis is undeclared. */
+  siteAreaBasis?: E85SiteAreaBasis;
   /** Site frontage/depth or other required dimensions the caller has supplied, keyed by jurisdiction-specific dimension name. Intentionally open-ended rather than a fixed set of fields, since required site dimensions vary by rule family and jurisdiction. */
   knownSiteDimensions?: Readonly<Record<string, number>>;
   /** Optional, minimal, dependency-free geometry placeholder — see `E85GeometryRef`. Never required in Rule-Only Mode. */

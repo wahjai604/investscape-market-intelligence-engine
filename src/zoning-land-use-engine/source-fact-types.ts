@@ -68,6 +68,60 @@ export interface E85StructuredFactRequirement {
 }
 
 /**
+ * How a provision elsewhere in the source bears on a fact's value without
+ * changing it.
+ *  USE_SPECIFIC_REGULATION — a regulation the use row itself cites, which a
+ *                            proposal must also satisfy.
+ *  DISCRETIONARY_RELAXATION — an official MAY vary the value. Never an
+ *                            entitlement, never a higher maximum.
+ *  EXCEPTION               — the source carves a case out of the value's
+ *                            premise (e.g. a tenure test).
+ */
+export type E85FactQualificationKind = "USE_SPECIFIC_REGULATION" | "DISCRETIONARY_RELAXATION" | "EXCEPTION";
+
+/**
+ * What is known of the qualifying provision's own amendment history.
+ *  INSTRUMENTS_LOCATED — each instrument named was located and read. This does
+ *                        NOT assert the history, or any definition it relies
+ *                        on, is complete.
+ *  PARTLY_UNLOCATED    — at least one part has no located instrument.
+ *  NOT_TRACED          — the provision's history was not traced at all.
+ */
+export type E85QualificationHistoryStatus = "INSTRUMENTS_LOCATED" | "PARTLY_UNLOCATED" | "NOT_TRACED";
+
+/**
+ * A provision that qualifies a fact without changing its value or scope.
+ *
+ * Deliberately carries NO numeric field: a relaxation's figures stay in
+ * `description` so nothing downstream can read them as a limit. A condition
+ * that decides whether the value applies at all belongs in `condition` or
+ * `applicability`, not here.
+ */
+export interface E85StructuredFactQualification {
+  /** Stable within the fact. */
+  qualificationId: string;
+  kind: E85FactQualificationKind;
+  /** Where the source states the qualification. Must name a section. */
+  locator: E85DocumentLocator;
+  /** Short paraphrase, never by-law prose. */
+  description: string;
+  /**
+   * The caller-affirmed condition (in the fact's `applicability.conditionIds`)
+   * that gates the value on this regulation. REQUIRED for a
+   * USE_SPECIFIC_REGULATION on a USE fact: a disclosure alone would let a
+   * permission read as unconditional while compliance is unestablished.
+   */
+  conditionId?: string;
+  history: {
+    status: E85QualificationHistoryStatus;
+    /** Located amending or originating instruments, when any. */
+    locatedInstruments?: readonly E85DocumentLocator[];
+    /** What is unresolved. Required unless `status` is INSTRUMENTS_LOCATED. */
+    disclosure?: string;
+  };
+}
+
+/**
  * Unit as the source states it. `NONE` is for genuinely unitless facts (a
  * use-permission status); it is NOT a stand-in for "unit not recorded" —
  * omitting `unit` entirely expresses that, and an adapter needing a unit will
@@ -128,6 +182,10 @@ export interface E85StructuredSourceFact {
   requirement?: E85StructuredFactRequirement;
   /** Where in the document this fact is stated. Carried straight into provenance. */
   locator: E85DocumentLocator;
+  /** Other places the source states the SAME value for the same scope, e.g. a zone-wide value repeated in two sections. Surfaced as a finding; `locator` stays the primary citation. */
+  additionalLocators?: readonly E85DocumentLocator[];
+  /** Provisions that qualify this value without changing it. Each surfaces as a WARNING finding on the fact. */
+  qualifications?: readonly E85StructuredFactQualification[];
   /**
    * PHASE 12C.2 (optional, additive): this fact's OWN legal effective window,
    * when an amending instrument distinct from the document's own

@@ -61,6 +61,13 @@
  * `TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED` record is always emitted
  * alongside an `AS_OF_SELECTED` impact so a caller can never mistake
  * candidate identification for evaluation application.
+ *
+ * SUPERSEDED IN PART (temporal application): for an explicit AS_OF request
+ * with lineage evidence, `decision-temporal-application.ts` now DOES apply a
+ * uniquely selected, linked, content-identical version to composition, and
+ * only then replaces that lineage's SELECTED_NOT_APPLIED record with a
+ * NON_MATERIAL TEMPORAL_VERSION_APPLIED. Designation/legal-text coincidence
+ * is required separately. CURRENT requests keep the behavior described above.
  */
 import { composeE85RulePacks } from "./rule-pack-composer";
 import type { E85CompositionResult } from "./composition-types";
@@ -88,6 +95,8 @@ import { groupE85TemporalLineageMembers } from "./temporal-lineage-grouping";
 import { selectE85TemporalLineages } from "./temporal-lineage-selection";
 import { mapE85TemporalDecisionImpact } from "./temporal-decision-impact";
 import { buildE85TemporalLineageMaterialityRecords } from "./decision-temporal-materiality-adapter";
+import type { E85TemporalApplicationPlan } from "./decision-temporal-application";
+import { finalizeE85TemporalApplication, planE85TemporalApplication } from "./decision-temporal-application";
 
 /** The empty resolution, for paths where no pack identity was ever produced. */
 const NO_PACKS: E85RulePackResolution = { resolved: [], unresolvedPackIds: [], conflictingPackIds: [], collapsedDuplicatePackIds: [] };
@@ -186,6 +195,42 @@ function computeE85TemporalMaterialityAddition(
  * result never depends on caller-supplied array order or object insertion
  * order.
  */
+/**
+ * Phase 7's TEMPORAL_APPLICABILITY_UNKNOWN measures one thing: the feature
+ * RECORD carries no legal effective date (`temporal.effectiveDateBasis`
+ * "UNKNOWN"). Server-supplied designation evidence can answer that question
+ * for the as-of date, so the package warning is qualified per feature:
+ *   - a feature is dropped from the warning only when it has at least one
+ *     designation record and every one is NON_MATERIAL
+ *     DESIGNATION_COINCIDENCE_ESTABLISHED;
+ *   - every other applying undated feature keeps the warning (no evidence,
+ *     open-ended, duplicated, mismatched, or its pack not applied).
+ * Phase 7's own finding is left unchanged in `phase7.findings` for audit.
+ * With nothing established the original message is returned verbatim.
+ */
+function qualifyE85SpatialTemporalWarning(phase7: E85SpatialApplicabilityResult, temporalRecords: readonly E85DecisionMaterialityRecord[]): string | undefined {
+  const finding = phase7.findings.find((f) => f.code === "TEMPORAL_APPLICABILITY_UNKNOWN" && f.severity === "WARNING");
+  if (finding === undefined) return undefined;
+  const designationRecords = temporalRecords.filter(
+    (r) => r.featureId !== undefined && (r.sourceCode === "DESIGNATION_COINCIDENCE_ESTABLISHED" || r.sourceCode === "DESIGNATION_COINCIDENCE_NOT_ESTABLISHED"),
+  );
+  const established = new Set(
+    designationRecords
+      .filter((r) => r.sourceCode === "DESIGNATION_COINCIDENCE_ESTABLISHED" && r.materiality === "NON_MATERIAL")
+      .map((r) => r.featureId as string)
+      .filter((id) => designationRecords.every((r) => r.featureId !== id || (r.sourceCode === "DESIGNATION_COINCIDENCE_ESTABLISHED" && r.materiality === "NON_MATERIAL"))),
+  );
+  const featureIds = finding.featureIds ?? [];
+  const superseded = featureIds.filter((id) => established.has(id));
+  if (superseded.length === 0) return `Phase 7 (${finding.code}): ${finding.message}`;
+  const remaining = featureIds.filter((id) => !established.has(id));
+  if (remaining.length === 0) return undefined;
+  return (
+    `Phase 7 (${finding.code}): ${remaining.length} applying feature(s) (${remaining.join(", ")}) have no established legal effective date. The dataset's publication or observation date is NOT used as a substitute. ` +
+    `Server designation evidence established coincidence on the as-of date for ${superseded.join(", ")}, so those are not included here.`
+  );
+}
+
 function collectE85DecisionSourceFindings(phase6: E85CompositionResult | undefined, packResolution: E85RulePackResolution): readonly E85DecisionSourceFinding[] {
   if (phase6 === undefined || phase6.outcome !== "COMPOSED") return [];
   const byPackId = new Map(packResolution.resolved.map((pack) => [pack.packId, pack]));
@@ -298,8 +343,10 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
     state: "EXECUTED",
     detail: `Phase 7 compared ${normalization.features.length} feature(s) against parcel "${request.parcelSpatial.parcelReferenceId}" and concluded ${phase7.status}, naming ${phase7.applicableRulePackIds.length} applicable rule pack(s).`,
   });
+  // TEMPORAL_APPLICABILITY_UNKNOWN is deferred until the temporal records
+  // exist: see `qualifyE85SpatialTemporalWarning`.
   for (const finding of phase7.findings) {
-    if (finding.severity === "WARNING") warnings.push(`Phase 7 (${finding.code}): ${finding.message}`);
+    if (finding.severity === "WARNING" && finding.code !== "TEMPORAL_APPLICABILITY_UNKNOWN") warnings.push(`Phase 7 (${finding.code}): ${finding.message}`);
   }
 
   // ---- Stage 3: pack resolution. Exact id match only.
@@ -313,20 +360,35 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
       `Identical duplicates collapsed: [${packResolution.collapsedDuplicatePackIds.join(", ")}].`,
   });
 
+  // ---- Temporal application: for an explicit AS_OF request with server
+  //      lineage evidence, only the uniquely selected version of a covered
+  //      source may be composed (decision-temporal-application.ts).
+  const temporalPlan: E85TemporalApplicationPlan | undefined =
+    hasExplicitTemporalRequest &&
+    resolvedTemporalRequest.kind === "RESOLVED" &&
+    resolvedTemporalRequest.request.mode === "AS_OF" &&
+    request.temporalLineageEvidence !== undefined &&
+    request.temporalLineageEvidence.lineages.length > 0
+      ? planE85TemporalApplication(request.temporalLineageEvidence.lineages, resolvedTemporalRequest, packResolution.resolved)
+      : undefined;
+  const composablePacks = temporalPlan?.composablePacks ?? packResolution.resolved;
+
   // ---- Stage 4: Phase 6. Only confirmed packs are offered; an unresolved
   //      identity is never represented to composition as anything at all.
   let phase6: E85CompositionResult | undefined;
-  if (packResolution.resolved.length === 0) {
+  if (composablePacks.length === 0) {
     stages.push({
       stage: "COMPOSITION",
       state: "SKIPPED",
       detail:
         phase7.applicableRulePackIds.length === 0
           ? "Not run: Phase 7 named no applicable rule pack for this parcel, so there is nothing to compose."
-          : `Not run: none of the applicable pack identities [${phase7.applicableRulePackIds.join(", ")}] resolved to a supplied rule pack.`,
+          : packResolution.resolved.length > 0
+            ? `Not run: every resolved pack [${packResolution.resolved.map((p) => p.packId).join(", ")}] was withheld because a different legal version was selected for the as-of date.`
+            : `Not run: none of the applicable pack identities [${phase7.applicableRulePackIds.join(", ")}] resolved to a supplied rule pack.`,
     });
   } else {
-    phase6 = composeE85RulePacks(packResolution.resolved, {
+    phase6 = composeE85RulePacks(composablePacks, {
       ...(request.composedAt === undefined ? {} : { composedAt: request.composedAt }),
       ...(request.callerContext?.satisfiedConditions === undefined ? {} : { affirmedConditions: request.callerContext.satisfiedConditions }),
       ...(request.precedenceRelations === undefined ? {} : { precedenceRelations: request.precedenceRelations }),
@@ -359,6 +421,8 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
       rules: phase6.composed.effectiveRules,
       requestedAnalyses,
       policyVersion: request.policyVersion,
+      // Phase 7's own deterministic timestamp (caller-supplied or derived from evidence), never a clock read.
+      resolvedAt: phase7.resolvedAt,
       ...(request.callerContext === undefined ? {} : { callerContext: request.callerContext }),
       // Phase 12B.2: proposal facts pass through to Phase 4 untouched. Phase 9
       // does not read or interpret them, and Phase 6 never receives them.
@@ -384,6 +448,8 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
     ...(phase6 === undefined ? {} : { phase6 }),
     requestedAnalyses,
     assessedAt: assembledAt,
+    parcelGeometry: request.parcelSpatial.geometry,
+    ...(request.tolerance === undefined ? {} : { tolerance: request.tolerance }),
   });
   const blockers = e85DecisionBlockers(materiality);
 
@@ -404,12 +470,25 @@ export function assembleE85DecisionPackage(request: E85DecisionRequest): E85Deci
   //      unmodified algorithms that already handle every other blocker, while
   //      the EVALUATION stage text above (which already ran) and the trace
   //      stay exactly as they would without this field.
-  const temporalAddition = computeE85TemporalMaterialityAddition(request, hasExplicitTemporalRequest, resolvedTemporalRequest, assembledAt);
+  const temporalAddition =
+    temporalPlan !== undefined && resolvedTemporalRequest.kind === "RESOLVED" && resolvedTemporalRequest.request.mode === "AS_OF"
+      ? finalizeE85TemporalApplication({
+          plan: temporalPlan,
+          phase6,
+          phase7,
+          designations: request.temporalLineageEvidence?.designations ?? [],
+          resolvedRequest: resolvedTemporalRequest,
+          asOfDate: resolvedTemporalRequest.request.asOfDate,
+          assessedAt: assembledAt,
+        })
+      : computeE85TemporalMaterialityAddition(request, hasExplicitTemporalRequest, resolvedTemporalRequest, assembledAt);
   const materialityWithTemporal =
     temporalAddition.length > 0
       ? [...materiality, ...temporalAddition].sort((a, b) => byE85DecisionKey(a.sourcePhase, b.sourcePhase) || byE85DecisionKey(a.sourceRef, b.sourceRef))
       : materiality;
   const blockersWithTemporal = hasExplicitTemporalRequest ? e85DecisionBlockers(materialityWithTemporal) : blockers;
+  const temporalWarning = qualifyE85SpatialTemporalWarning(phase7, temporalAddition);
+  if (temporalWarning !== undefined) warnings.push(temporalWarning);
 
   const evaluationCompleteness: E85DecisionEvaluationCompleteness = phase4 === undefined ? "NOT_EVALUATED" : blockersWithTemporal.length > 0 ? "PARTIAL" : "COMPLETE";
 

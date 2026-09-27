@@ -38,6 +38,8 @@ import {
   R1_1_MD_REAR_VEHICULAR_ACCESS_CONDITION,
   R1_1_MD_NOT_IN_FLOOD_PLAIN_CONDITION,
   R1_1_UNSTRUCTURED_SECTIONS,
+  R1_1_DUPLEX_SUITE_TREE_CONDITION,
+  R1_1_DUPLEX_SUITE_LIMIT_CONDITION,
 } from "./fixtures/vancouver-r1-1-facts";
 
 /** PHASE 12C.4A: all three of use-005's current §2.2.7 site-eligibility conditions affirmed, so tests whose real subject is something other than that gate can reach it. */
@@ -443,7 +445,8 @@ describe("E85 Phase 12C.3A — 2023-10-17 boundary (By-law 13817, visually prove
   ])("USE %s: not yet in force on 2023-10-16, resolved on 2023-10-17", (useCode, expectedStatus) => {
     const before = evaluate({ rules: bundle.rules, useCode, requestedAnalyses: ["USE"], asOfDate: "2023-10-16" });
     expect(before.usePermission?.status).toBe("UNKNOWN");
-    const onDate = evaluate({ rules: bundle.rules, useCode, requestedAnalyses: ["USE"], asOfDate: "2023-10-17" });
+    // use-004 is gated on its §2.2.1/§2.2.3 regulations; affirming them isolates the date boundary.
+    const onDate = evaluate({ rules: bundle.rules, useCode, requestedAnalyses: ["USE"], asOfDate: "2023-10-17", callerContext: { satisfiedConditions: [R1_1_DUPLEX_SUITE_TREE_CONDITION, R1_1_DUPLEX_SUITE_LIMIT_CONDITION] } });
     expect(onDate.usePermission?.status).toBe(expectedStatus);
   });
 

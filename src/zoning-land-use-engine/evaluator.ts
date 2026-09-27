@@ -44,6 +44,7 @@ import { determineOverallStatus, isMaterial } from "./result-status";
 import { matchesJurisdictionZone } from "./applicability";
 import { buildE85ApplicabilityContext } from "./rule-applicability";
 import { evaluateRequirements } from "./requirement-evaluation";
+import { e85EvaluationTimestamp, withE85EvaluationTimestamp } from "./evaluation-clock";
 
 function collectQualification(findings: readonly E85EvaluationFinding[]): E85Qualification {
   const quals = findings.map((f) => f.qualification).filter((q): q is E85Qualification => q !== undefined);
@@ -58,8 +59,12 @@ function collectQualification(findings: readonly E85EvaluationFinding[]): E85Qua
 }
 
 export function evaluateZoningAndLandUse(request: E85EvaluationRequest): E85EvaluationOutcome {
+  return withE85EvaluationTimestamp(request.resolvedAt ?? new Date().toISOString(), () => evaluateAtFixedTimestamp(request));
+}
+
+function evaluateAtFixedTimestamp(request: E85EvaluationRequest): E85EvaluationOutcome {
   const { parcel, jurisdictionId, zoneDesignation, useCode, asOfDate, rules, requestedAnalyses, callerContext } = request;
-  const resolvedAt = new Date().toISOString();
+  const resolvedAt = e85EvaluationTimestamp();
 
   const findings: E85EvaluationFinding[] = [];
   // Phase 12B.2: one proposal context, built only from what the request states,

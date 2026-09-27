@@ -106,7 +106,10 @@ export interface E85ApplicabilityContext {
   readonly recognizedUseCodes?: readonly string[];
   readonly dwellingUnitCount?: number;
   readonly buildingRole?: string;
+  /** Site area comparable against a legal site-area threshold. Parcel-derived contexts set this only when `parcel.siteAreaBasis` is established (see site-area-basis.ts). */
   readonly siteAreaSqm?: number;
+  /** Why a supplied parcel site area was withheld from `siteAreaSqm`; surfaced in the resulting gap. Never read as a value. */
+  readonly siteAreaBasisIssue?: string;
   readonly frontageMetres?: number;
   readonly tenureCode?: string;
   /** Condition ids the caller affirms are TRUE. */

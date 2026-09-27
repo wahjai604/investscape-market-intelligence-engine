@@ -105,6 +105,10 @@ export type E85DataGapReasonCode =
    * trusted present-day reference basis. Never emitted for AS_OF requests.
    */
   | "TEMPORAL_CURRENT_REFERENCE_UNAVAILABLE"
+  /** A resolved rule pack's legal version was not uniquely selected and applied for the as-of date (uncovered, ambiguous, not linked, or not composed). */
+  | "TEMPORAL_VERSION_NOT_ESTABLISHED"
+  /** It is not established that the parcel's applying designation and the applied legal text both applied, in closed intervals, on the as-of date. */
+  | "DESIGNATION_COINCIDENCE_NOT_ESTABLISHED"
   /**
    * PHASE 15.18A (Slice 3F-2): a supplied temporal lineage's grouping outcome
    * (`GROUP_BLOCKED`, `GROUP_EVIDENCE_INCOMPLETE`, or `GROUP_NO_CANDIDATE`)
@@ -153,10 +157,12 @@ export const E85_DATA_GAP_REASON_LABELS: Readonly<Record<E85DataGapReasonCode, s
   SPATIAL_REFERENCE_MISMATCH: "Geometries that needed to be compared declare different coordinate reference systems, and no transform between them has been performed.",
   PROPOSAL_CONTEXT_MISSING: "A rule's applicability depends on a fact about the proposal that was not supplied, so whether the rule governs this proposal could not be determined.",
   EXTERNAL_CONDITION_UNDETERMINED: "A rule's applicability depends on an external condition that was neither affirmed nor denied for this request, so whether the rule governs this proposal could not be determined.",
-  TEMPORAL_ANALYSIS_NOT_YET_APPLIED: "The caller explicitly requested a temporal analysis (CURRENT or AS_OF), and this request was accepted but not yet applied: E85 has not yet wired real temporal source-version selection into decision orchestration.",
+  TEMPORAL_ANALYSIS_NOT_YET_APPLIED: "The caller explicitly requested a temporal analysis (CURRENT or AS_OF), and this request was accepted but not yet applied: no server-supplied version-validity lineage was available to select a source version.",
   TEMPORAL_CURRENT_REFERENCE_UNAVAILABLE: "A CURRENT temporal request was evaluated against supplied lineage evidence, but E85 has no trusted present-day reference basis (no clock is read), so no candidate could be treated as currently in force.",
+  TEMPORAL_VERSION_NOT_ESTABLISHED: "No legal version of a resolved rule pack was uniquely selected and actually applied for the requested date.",
+  DESIGNATION_COINCIDENCE_NOT_ESTABLISHED: "It is not established that the parcel's applying designation and the applied legal text both applied, in closed intervals, on the requested date.",
   TEMPORAL_LINEAGE_NOT_READY: "The supplied temporal lineage evidence for this lineage was not structurally ready for source-version selection (blocked, incomplete, or without any candidate), so no source-version could be considered.",
-  TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED: "A source-version candidate was identified as applicable to the requested date within the supplied lineage evidence, but the selected version was NOT applied to rule-pack evaluation: E85 has not yet wired selected-version application into decision orchestration.",
+  TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED: "A source-version candidate was identified as applicable to the requested date within the supplied lineage evidence, but the selected version was NOT applied to rule-pack evaluation: it is not the version the parcel's spatial link resolved to, or composition did not use it.",
   TEMPORAL_CANDIDATE_AMBIGUOUS: "More than one supplied source-version candidate in this lineage was applicable to the requested date and no basis exists to prefer one.",
   TEMPORAL_CANDIDATE_INSUFFICIENT_EVIDENCE: "No supplied source-version candidate in this lineage was applicable to the requested date.",
   TEMPORAL_CANDIDATE_OUTSIDE_VALIDITY: "The requested date falls outside every supplied source-version candidate's proven validity interval for this lineage.",

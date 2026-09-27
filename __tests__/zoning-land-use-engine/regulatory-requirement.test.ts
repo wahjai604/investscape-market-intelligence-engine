@@ -104,7 +104,8 @@ function uses(...codes: string[]): E85UseRule {
 const policy = (): E85PolicyVersion => ({ policyVersionId: "req-v1", effectiveFrom: "2020-01-01", concepts: {} });
 
 const TRIGGERED = {
-  parcel: { parcelReferenceId: "p", siteAreaSqm: 700 },
+  // A declared by-law-defined basis lets site-area scopes be decided; see site-area-basis.ts.
+  parcel: { parcelReferenceId: "p", siteAreaSqm: 700, siteAreaBasis: { kind: "BYLAW_DEFINED_SITE_AREA", deductionStatus: "NONE_APPLICABLE_CONFIRMED", sourceReference: "synthetic test parcel" } as const },
   proposal: { dwellingUnitCount: 6, tenureCode: "strata", frontageMetres: 18 },
   callerContext: { satisfiedConditions: ["inside_area_x"] },
 };
@@ -323,14 +324,16 @@ describe("Phase 4 requirement evaluation", () => {
 
   test("a requirement gap never blocks an analysis that did not request REQUIREMENT", () => {
     const withDensity = [...rules, { family: "DENSITY", jurisdictionId: J, zoneDesignation: Z, maxFsr: ev(1) } as E85DensityRule];
-    const outcome = evaluate(withDensity, { requestedAnalyses: ["DENSITY"] });
+    // A declared, by-law-defined site area keeps the FSR-derived GFA warning-free, isolating the requirement behaviour under test.
+    const parcel = { parcelReferenceId: "p", siteAreaSqm: 700, siteAreaBasis: { kind: "BYLAW_DEFINED_SITE_AREA", deductionStatus: "NONE_APPLICABLE_CONFIRMED", sourceReference: "synthetic survey" } } as const;
+    const outcome = evaluate(withDensity, { requestedAnalyses: ["DENSITY"], parcel });
     expect(outcome.result.status).toBe("MACHINE_RESOLVED");
     expect(outcome.requirements).toBeUndefined();
     expect(evaluate(withDensity, { requestedAnalyses: ["DENSITY", "REQUIREMENT"] }).result.status).toBe("DATA_GAP");
   });
 
   test.each([
-    ["site area below the threshold", { parcel: { parcelReferenceId: "p", siteAreaSqm: 599 } }],
+    ["site area below the threshold", { parcel: { parcelReferenceId: "p", siteAreaSqm: 599, siteAreaBasis: { kind: "BYLAW_DEFINED_SITE_AREA", deductionStatus: "NONE_APPLICABLE_CONFIRMED", sourceReference: "synthetic test parcel" } as const } }],
     ["frontage below the threshold", { proposal: { dwellingUnitCount: 6, tenureCode: "strata", frontageMetres: 14.9 } }],
     ["excluded tenure", { proposal: { dwellingUnitCount: 6, tenureCode: "rental", frontageMetres: 18 } }],
     ["external condition explicitly false", { callerContext: { unsatisfiedConditions: ["inside_area_x"] } }],
@@ -399,7 +402,7 @@ const R11_TRIGGER_KEY =
 
 function r11Evaluate(rules: readonly E85RuleRecord[], extra: Partial<E85EvaluationRequest> = {}) {
   return evaluateZoningAndLandUse({
-    parcel: { parcelReferenceId: "r11-parcel", jurisdiction: VANCOUVER_JURISDICTION, rawZoningDesignation: VANCOUVER_R1_1_ZONE, siteAreaSqm: 700 },
+    parcel: { parcelReferenceId: "r11-parcel", jurisdiction: VANCOUVER_JURISDICTION, rawZoningDesignation: VANCOUVER_R1_1_ZONE, siteAreaSqm: 700, siteAreaBasis: { kind: "BYLAW_DEFINED_SITE_AREA", deductionStatus: "NONE_APPLICABLE_CONFIRMED", sourceReference: "synthetic test parcel" } as const },
     jurisdictionId: VANCOUVER_JURISDICTION_ID,
     zoneDesignation: VANCOUVER_R1_1_ZONE,
     useCode: "multiple_dwelling",
@@ -531,7 +534,7 @@ describe("R1-1 §3.1.1.3(b)(ii) — Phase 4 for proposals (hypothetical dated co
 
   test.each([
     ["100% residential rental tenure", { proposal: { dwellingUnitCount: 6, tenureCode: "residential_rental_tenure_100_percent", frontageMetres: 18 } }],
-    ["site area 622 m²", { parcel: { parcelReferenceId: "r11-parcel", siteAreaSqm: 622 } }],
+    ["site area 622 m²", { parcel: { parcelReferenceId: "r11-parcel", siteAreaSqm: 622, siteAreaBasis: { kind: "BYLAW_DEFINED_SITE_AREA", deductionStatus: "NONE_APPLICABLE_CONFIRMED", sourceReference: "synthetic test parcel" } as const } }],
     ["frontage 17.0 m", { proposal: { dwellingUnitCount: 6, tenureCode: "strata", frontageMetres: 17.0 } }],
     ["site explicitly not west of the centre lines", { callerContext: { unsatisfiedConditions: [SITE_WEST_OF_ONTARIO_OR_CARRALL_CONDITION] } }],
     ["a single detached house", { useCode: "single_detached_house" }],
@@ -542,7 +545,7 @@ describe("R1-1 §3.1.1.3(b)(ii) — Phase 4 for proposals (hypothetical dated co
   });
 
   test("thresholds are inclusive: exactly 623 m² and 17.1 m trigger the obligation", () => {
-    const outcome = r11Evaluate(rules, { parcel: { parcelReferenceId: "r11-parcel", siteAreaSqm: 623 }, proposal: { dwellingUnitCount: 6, tenureCode: "strata", frontageMetres: 17.1 } });
+    const outcome = r11Evaluate(rules, { parcel: { parcelReferenceId: "r11-parcel", siteAreaSqm: 623, siteAreaBasis: { kind: "BYLAW_DEFINED_SITE_AREA", deductionStatus: "NONE_APPLICABLE_CONFIRMED", sourceReference: "synthetic test parcel" } as const }, proposal: { dwellingUnitCount: 6, tenureCode: "strata", frontageMetres: 17.1 } });
     expect(outcome.requirements).toHaveLength(2);
   });
 

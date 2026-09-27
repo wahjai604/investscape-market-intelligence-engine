@@ -41,7 +41,7 @@ import {
 } from "../../src/zoning-land-use-engine";
 import { createVancouverZoningSpatialAdapter, vancouverZoningDataset, vancouverZoningLinkPolicyFromLegalBundles } from "../../src/zoning-land-use-engine/adapters/spatial/vancouver";
 import { SYNTHETIC_PARCEL_IN_C_2C, VANCOUVER_NORMALIZED_AT, VANCOUVER_RESOLVED_AT, VAN_C_2C, vancouverSnapshot } from "./fixtures/vancouver-spatial-snapshot";
-import { c2cDocument } from "./fixtures/vancouver-c-2c-facts";
+import { c2cDocument, C_2C_ENCLOSED_BUILDING_CONDITION } from "./fixtures/vancouver-c-2c-facts";
 
 const { vancouverC2CAdapter, VANCOUVER_C_2C_SOURCE, VANCOUVER_C_2C_SOURCE_ID, VANCOUVER_C_2C_VERSION_ID, VANCOUVER_JURISDICTION_ID } = adapters.vancouver;
 
@@ -111,6 +111,9 @@ function decide(spec: DecideSpec = {}): E85DecisionPackage {
     resolvedAt: VANCOUVER_RESOLVED_AT,
     composedAt: COMPOSED_AT,
     assembledAt: ASSEMBLED_AT,
+    // §2.2.1 gates every C-2C commercial use; the caller affirms it here. The
+    // unaffirmed case is covered in vancouver-full-snapshot-public-path.test.ts.
+    callerContext: { satisfiedConditions: [C_2C_ENCLOSED_BUILDING_CONDITION] },
   });
 }
 
@@ -206,6 +209,7 @@ describe("E85 Phase 14.4B — real spatial->legal->composition->evaluation->deci
       requestedAnalyses: TWO_SUPPORTED_FAMILIES,
       policyVersion: policy(),
       rules: c2cBundle().rules,
+      callerContext: { satisfiedConditions: [C_2C_ENCLOSED_BUILDING_CONDITION] },
     });
     expect(p.phase4?.usePermission?.status).toBe(direct.usePermission?.status);
     expect(p.phase4?.result.status).toBe(direct.result.status);

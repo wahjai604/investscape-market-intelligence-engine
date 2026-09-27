@@ -34,6 +34,7 @@ import {
   FACT_OUTRIGHT_LAUNDROMAT,
   FACT_OUTRIGHT_PHOTOFINISHING,
   FACT_OUTRIGHT_REPAIR_SHOP_B,
+  C_2C_ENCLOSED_BUILDING_CONDITION,
 } from "./fixtures/vancouver-c-2c-facts";
 
 const {
@@ -268,6 +269,8 @@ describe("Vancouver C-2C — requested-family coverage at the Phase 4 level", ()
       requestedAnalyses,
       policyVersion: policy(),
       rules: bundle.rules,
+      // §2.2.1 gates every C-2C commercial use; without this the permission is withheld.
+      callerContext: { satisfiedConditions: [C_2C_ENCLOSED_BUILDING_CONDITION] },
     });
     expect(result.usePermission?.status).toBe("PERMITTED");
     expect(result.usePermission?.useCode).toBe("barber_shop_or_beauty_salon");

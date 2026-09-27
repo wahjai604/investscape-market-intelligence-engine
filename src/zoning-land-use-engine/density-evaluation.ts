@@ -16,6 +16,7 @@
  * into a false conflict and a value stated for another kind of development is
  * never applied to this one.
  */
+import { e85EvaluationTimestamp } from "./evaluation-clock";
 import type { E85RuleRecord, E85DensityRule } from "./rule-family-types";
 import type { E85Evidence } from "./evidence-types";
 import type { E85ParcelReference } from "./jurisdiction-types";
@@ -26,6 +27,7 @@ import { evaluateTemporalApplicability, matchesJurisdictionZone } from "./applic
 import { detectConflict } from "./conflict-detection";
 import { deriveEvidenceQuality, deriveParcelMatch, deriveRuleApplicability } from "./qualification-derivation";
 import { e85HistoricalRuleNotStructuredGap, e85ResolvedApplicabilityAudit, e85TemporallyExcludedOnly, evaluateE85RuleApplicability, selectE85EvidenceForProposal } from "./rule-applicability";
+import { e85SiteAreaBasisProblems, e85ThresholdSiteArea } from "./site-area-basis";
 
 function applicableDensityRules(rules: readonly E85RuleRecord[], jurisdictionId: string, zoneDesignation: string): E85DensityRule[] {
   return rules.filter((r): r is E85DensityRule => r.family === "DENSITY" && matchesJurisdictionZone(r, jurisdictionId, zoneDesignation));
@@ -34,6 +36,28 @@ function applicableDensityRules(rules: readonly E85RuleRecord[], jurisdictionId:
 function auditOf(ev: E85Evidence<unknown>): Pick<E85EvaluationFinding, "applicability"> {
   const audit = e85ResolvedApplicabilityAudit(ev);
   return audit ? { applicability: audit } : {};
+}
+
+function describeSiteAreaBasis(parcel: E85ParcelReference): string {
+  const basis = parcel.siteAreaBasis;
+  if (basis === undefined) return "area basis undeclared";
+  return `area basis ${basis.kind}, deductions ${basis.deductionStatus}, source ${basis.sourceReference ?? "not stated"}`;
+}
+
+/**
+ * A regulatory GFA is only as good as the site area it multiplies. The figure
+ * is still derived (existing callers keep their value), but unless the caller
+ * declares a by-law-defined site area with resolved deductions and a stated
+ * source, the finding carries a warning rather than passing as clean.
+ */
+function siteAreaBasisWarning(parcel: E85ParcelReference): string | undefined {
+  const basis = parcel.siteAreaBasis;
+  if (basis === undefined) {
+    return "maxRegulatoryGfaSqm was derived from parcel.siteAreaSqm with no declared siteAreaBasis; whether the figure is gross, net of dedications, or the by-law-defined site area is unknown, so the regulatory GFA may be overstated or understated.";
+  }
+  const problems = e85SiteAreaBasisProblems(parcel);
+  if (problems.length === 0) return undefined;
+  return `maxRegulatoryGfaSqm may not reflect the by-law's site area: ${problems.join("; ")}.`;
 }
 
 export function evaluateDensity(
@@ -46,7 +70,7 @@ export function evaluateDensity(
   applicabilityContext?: E85ApplicabilityContext,
 ): E85EvaluationFinding[] {
   const context: E85ApplicabilityContext = applicabilityContext ?? {
-    ...(parcel.siteAreaSqm === undefined ? {} : { siteAreaSqm: parcel.siteAreaSqm }),
+    ...e85ThresholdSiteArea(parcel),
     ...(callerContext?.satisfiedConditions === undefined ? {} : { satisfiedConditions: callerContext.satisfiedConditions }),
     ...(callerContext?.unsatisfiedConditions === undefined ? {} : { unsatisfiedConditions: callerContext.unsatisfiedConditions }),
   };
@@ -76,7 +100,7 @@ export function evaluateDensity(
           reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
           explanation: `${conflict.distinctValues.length} distinct maxFsr values (${conflict.distinctValues.join(", ")}) found for ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}, with no basis to prefer one.`,
           evidenceConsidered: conflict.deduped.map((e) => e.provenance.sourceId),
-          flaggedAt: new Date().toISOString(),
+          flaggedAt: e85EvaluationTimestamp(),
         },
       });
     } else {
@@ -116,16 +140,18 @@ export function evaluateDensity(
           reasonCode: "REQUIRED_SITE_DIMENSION_MISSING",
           reason: `maxFsr (${resolvedFsr}) resolved but parcel.siteAreaSqm is missing, so maxRegulatoryGfaSqm cannot be derived.`,
           sourcesChecked: [fsrEv.provenance.sourceId],
-          checkedAt: new Date().toISOString(),
+          checkedAt: e85EvaluationTimestamp(),
           resolutionHint: "Supply parcel.siteAreaSqm to derive the regulatory GFA cap.",
         },
       });
     } else {
       const gfa = resolvedFsr * parcel.siteAreaSqm; // no rounding beyond IEEE double precision
+      const basisWarning = siteAreaBasisWarning(parcel);
       findings.push({
         family: "DENSITY",
         field: "maxRegulatoryGfaSqm",
         outcome: "RESOLVED",
+        ...(basisWarning === undefined ? {} : { warning: basisWarning }),
         qualification: {
           evidenceQuality: deriveEvidenceQuality(fsrEv.provenance),
           ruleApplicability: deriveRuleApplicability(false),
@@ -135,7 +161,7 @@ export function evaluateDensity(
         envelopeContribution: {
           field: "maxRegulatoryGfaSqm",
           evidence: { value: gfa, provenance: fsrEv.provenance, temporal: fsrEv.temporal },
-          derivationNote: `Derived as maxFsr (${resolvedFsr}, source ${fsrEv.provenance.sourceId}) x parcel.siteAreaSqm (${parcel.siteAreaSqm}). Qualification floored to the FSR evidence's qualification; exact arithmetic does not upgrade it.`,
+          derivationNote: `Derived as maxFsr (${resolvedFsr}, source ${fsrEv.provenance.sourceId}) x parcel.siteAreaSqm (${parcel.siteAreaSqm}; ${describeSiteAreaBasis(parcel)}). This is the legal FSR ceiling only, not an achievable floor area under height, setback, coverage or site-shape limits. Qualification floored to the FSR evidence's qualification; exact arithmetic does not upgrade it.`,
         },
         ...auditOf(fsrEv),
       });
@@ -163,7 +189,7 @@ export function evaluateDensity(
           reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
           explanation: `${conflict.distinctValues.length} distinct explicit GFA caps (${conflict.distinctValues.join(", ")}) found for ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}.`,
           evidenceConsidered: conflict.deduped.map((e) => e.provenance.sourceId),
-          flaggedAt: new Date().toISOString(),
+          flaggedAt: e85EvaluationTimestamp(),
         },
       });
     } else {
@@ -209,7 +235,7 @@ export function evaluateDensity(
           reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
           explanation: `${conflict.distinctValues.length} distinct maximum dwelling-unit values (${conflict.distinctValues.join(", ")}) govern this proposal in ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}, with no basis to prefer one.`,
           evidenceConsidered: conflict.deduped.map((e) => e.provenance.sourceId),
-          flaggedAt: new Date().toISOString(),
+          flaggedAt: e85EvaluationTimestamp(),
         },
       });
     } else {

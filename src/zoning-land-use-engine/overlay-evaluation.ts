@@ -11,6 +11,7 @@
  * Two supplied, applicable overlays with unresolved relative precedence
  * escalate to MANUAL_REVIEW_REQUIRED(OVERLAY_PRECEDENCE_UNRESOLVED).
  */
+import { e85EvaluationTimestamp } from "./evaluation-clock";
 import type { E85RuleRecord, E85OverlayRule } from "./rule-family-types";
 import type { E85ParcelReference } from "./jurisdiction-types";
 import type { E85CallerContext } from "./request-types";
@@ -43,7 +44,7 @@ export function evaluateOverlay(
           reasonCode: "OVERLAY_DATA_MISSING",
           reason: `The caller flagged overlay "${overlayDesignation}" as applicable to this parcel, but no matching E85OverlayRule was supplied for ${jurisdictionId}/${zoneDesignation}.`,
           sourcesChecked: overlayRules.map((r) => r.overlayDesignation),
-          checkedAt: new Date().toISOString(),
+          checkedAt: e85EvaluationTimestamp(),
         },
       });
     }
@@ -79,7 +80,7 @@ export function evaluateOverlay(
         reasonCode: "OVERLAY_PRECEDENCE_UNRESOLVED",
         explanation: `${distinctDesignations.size} distinct overlays (${[...distinctDesignations].join(", ")}) apply to ${jurisdictionId}/${zoneDesignation} as of ${asOfDate} and no source states their relative precedence.`,
         evidenceConsidered: applicableOverlays.map((o) => o.overlayDesignation),
-        flaggedAt: new Date().toISOString(),
+        flaggedAt: e85EvaluationTimestamp(),
       },
     });
   }

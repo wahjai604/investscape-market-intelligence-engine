@@ -15,6 +15,7 @@
  * if nothing else applies the answer is still UNKNOWN — never PROHIBITED. A
  * permission whose scope the proposal context cannot decide is a GAP.
  */
+import { e85EvaluationTimestamp } from "./evaluation-clock";
 import type { E85RuleRecord } from "./rule-family-types";
 import type { E85Evidence } from "./evidence-types";
 import type { E85UsePermission } from "./use-taxonomy";
@@ -73,7 +74,7 @@ export function evaluateUsePermission(
           reasonCode: "EFFECTIVE_DATE_UNKNOWN",
           reason: `Use-permission evidence for "${useCode}" exists but its effective-date basis is UNKNOWN, so temporal applicability as of ${asOfDate} could not be determined.`,
           sourcesChecked: rules.filter((r) => r.family === "USE").map((r) => r.jurisdictionId),
-          checkedAt: new Date().toISOString(),
+          checkedAt: e85EvaluationTimestamp(),
         },
       };
     }
@@ -90,7 +91,7 @@ export function evaluateUsePermission(
       },
       warning:
         `No applicable use-permission evidence found for use "${useCode}" in ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}; resolved status is UNKNOWN (absence is never treated as PROHIBITED).` +
-        (outOfScope ? ` Permission evidence for this use exists only for other proposals (scope ${outOfScope.applicabilityKeys.map((k) => `{${k}}`).join(", ")}), which this proposal was proven not to fall within.` : ""),
+        (outOfScope ? ` Permission evidence for this use exists only for other proposals (scope ${outOfScope.applicabilityKeys.map((k) => `{${k}}`).join(", ")}), which the supplied proposal context (including any caller-denied condition) places this proposal outside. This is not a finding that the use is prohibited.` : ""),
       resolvedValue: { useCode, status: "UNKNOWN" } satisfies E85UsePermission,
       ...(outOfScope ? { applicability: outOfScope } : {}),
     };
@@ -106,7 +107,7 @@ export function evaluateUsePermission(
         reasonCode: "CONFLICTING_AUTHORITATIVE_SOURCES",
         explanation: `${conflict.distinctValues.length} distinct use-permission statuses (${conflict.distinctValues.map((v) => v.status).join(", ")}) were found for use "${useCode}" in ${jurisdictionId}/${zoneDesignation} as of ${asOfDate}, with no basis to prefer one over another.`,
         evidenceConsidered: conflict.deduped.map((e) => e.provenance.sourceId),
-        flaggedAt: new Date().toISOString(),
+        flaggedAt: e85EvaluationTimestamp(),
       },
     };
   }
