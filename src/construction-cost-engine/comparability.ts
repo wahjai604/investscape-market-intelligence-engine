@@ -437,7 +437,17 @@ export function evaluateCandidate(
     };
   }
 
-  const normalized = normalization.result;
+  let normalized = normalization.result;
+  const unitBasisMatch = evaluateUnitBasis(request.unitBasis, normalized.unitBasis);
+
+  // A deterministically convertible basis (per_sf <-> per_sm) is converted
+  // here, so `normalized` always carries figures in the basis the candidate
+  // is reported in. Leaving it unconverted would let a downstream consumer
+  // label a $/SF number as $/SM.
+  if (unitBasisMatch.level === "close") {
+    const converted = normalizeObservation(obs, { unitBasis: request.unitBasis });
+    if (converted.status === "NORMALIZED") normalized = converted.result;
+  }
 
   const dimensions: CCComparabilityDimensions = {
     geographyMatch: evaluateGeography(request.geography, obs.geography),
@@ -445,7 +455,7 @@ export function evaluateCandidate(
     assetMatch: evaluateAssetClass(request.assetClass, obs.assetClass),
     subtypeMatch: evaluateSubtype(request.canonicalSubtype, obs.source.sourceId, obs.propertySubtype),
     costRepresentationMatch: evaluateCostRepresentation(request.costRepresentation, normalized.costRepresentation),
-    unitBasisMatch: evaluateUnitBasis(request.unitBasis, normalized.unitBasis),
+    unitBasisMatch,
     currencyMatch: evaluateCurrency(request.currency, normalized.currency),
     periodMatch: evaluatePeriod(request.effectivePeriod, obs.periodStart, obs.periodEnd),
     freshnessMatch: evaluateFreshness(input.freshness),

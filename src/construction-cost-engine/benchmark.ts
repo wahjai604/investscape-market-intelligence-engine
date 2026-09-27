@@ -24,6 +24,7 @@
 import { evaluateConstructionCostRequest } from "./pipeline";
 import { evaluateComparability } from "./comparability";
 import { escalateCost } from "./escalation";
+import { convertAreaValue, costUnitLabel } from "./normalize";
 import { CC_DEFAULT_ESCALATION_POLICY } from "./escalation-policy";
 import { comparabilityToTier, escalationRelationshipCap, floorConfidence, freshnessToTier, singleObservationCap, sourceQualityToTier } from "./confidence";
 import type { ConstructionCostCandidateInput } from "./types";
@@ -120,13 +121,41 @@ function deduplicateByObservationIdentity<T extends ConstructionCostComparabilit
   return result;
 }
 
-function figureFromNormalized(n: { low?: number; high?: number; value?: number; unitBasis?: string; currency?: string }, unit: string): CCBenchmarkCostFigure {
-  return { low: n.low, high: n.high, value: n.value, unit, currency: n.currency as CCBenchmarkCostFigure["currency"] };
+/**
+ * The benchmark figure's unit is always derived from the basis its numbers
+ * are actually in (the candidate's normalized basis) — never copied from the
+ * source observation's unit string, which would mislabel a converted figure.
+ */
+function figureFromNormalized(candidate: ConstructionCostComparabilityCandidate): CCBenchmarkCostFigure {
+  const n = candidate.normalized!;
+  return { low: n.low, high: n.high, value: n.value, unit: costUnitLabel(n.currency, n.unitBasis) ?? candidate.observation.unit, currency: n.currency };
 }
 
-function figureFromEscalated(escalation: Extract<EscalationOutcome, { status: "ESCALATED" }>): CCBenchmarkCostFigure {
+function sourceAreaBasis(unit: string): "per_sf" | "per_sm" | undefined {
+  if (unit.endsWith("_per_sf")) return "per_sf";
+  if (unit.endsWith("_per_sm")) return "per_sm";
+  return undefined;
+}
+
+/**
+ * Phase 4 escalates the SOURCE observation, so its figure is in the source's
+ * own basis. When comparability converted the candidate to a different area
+ * basis, the escalated figure is converted with the same fixed constant
+ * (escalation is a scalar ratio, so the order of the two operations does not
+ * change the result).
+ */
+function figureFromEscalated(
+  escalation: Extract<EscalationOutcome, { status: "ESCALATED" }>,
+  candidate: ConstructionCostComparabilityCandidate,
+): CCBenchmarkCostFigure {
   const c = escalation.result.escalatedCost;
-  return { low: c.low, high: c.high, value: c.value, unit: c.unit, currency: c.currency };
+  const from = sourceAreaBasis(c.unit);
+  const to = candidate.normalized?.unitBasis;
+  if (from === undefined || (to !== "per_sf" && to !== "per_sm") || from === to) {
+    return { low: c.low, high: c.high, value: c.value, unit: c.unit, currency: c.currency };
+  }
+  const convert = (v: number | undefined) => (v === undefined ? undefined : convertAreaValue(v, from, to));
+  return { low: convert(c.low), high: convert(c.high), value: convert(c.value), unit: costUnitLabel(c.currency, to)!, currency: c.currency };
 }
 
 function mapPipelineReasonToBenchmarkReason(
@@ -268,8 +297,31 @@ export function evaluateConstructionCostBenchmark(
 
   // --- Aggregation across surviving (possibly escalated) top-tier candidates. ---
   const figures = survivors.map((s) =>
-    s.escalation?.status === "ESCALATED" ? figureFromEscalated(s.escalation as Extract<EscalationOutcome, { status: "ESCALATED" }>) : figureFromNormalized(s.candidate.normalized!, s.candidate.observation.unit),
+    s.escalation?.status === "ESCALATED" ? figureFromEscalated(s.escalation as Extract<EscalationOutcome, { status: "ESCALATED" }>, s.candidate) : figureFromNormalized(s.candidate),
   );
+
+  // Figures in different units (e.g. an unconstrained request whose top tier
+  // mixes per_sf and per_sm, or USD and CAD) can never be aggregated into one
+  // range. Reported as a conversion gap rather than a mixed-unit union.
+  const distinctUnits = [...new Set(figures.map((f) => f.unit))].sort();
+  if (distinctUnits.length > 1) {
+    const provenance = sortedDeterministically(topTier).map((c) => buildProvenanceEntry(c, poolFreshness(pool, c), undefined));
+    return {
+      status: "data_gap",
+      gap: buildGap(
+        request,
+        "CONVERSION_UNSUPPORTED",
+        `The top-tier comparable observations are expressed in different units (${distinctUnits.join(", ")}) and cannot be aggregated into a single benchmark.`,
+        topTier,
+        [],
+        checkedAt,
+        "Pin request.unitBasis (per_sf or per_sm) and request.currency so every contributing figure is expressed in one unit.",
+        undefined,
+        undefined,
+        provenance,
+      ),
+    };
+  }
 
   const aggregation = aggregate(figures);
   if (aggregation.status === "DISAGREEMENT") {
@@ -291,7 +343,8 @@ export function evaluateConstructionCostBenchmark(
     };
   }
 
-  const unit = survivors[0].escalation?.status === "ESCALATED" ? (survivors[0].escalation.result.escalatedCost.unit) : survivors[0].candidate.observation.unit;
+  const unit = figures[0].unit;
+  const outputUnitBasis = survivors[0].candidate.normalized?.unitBasis;
   const currency = figures[0].currency;
   const asOfPeriod =
     request.targetPeriod ?? { start: survivors[0].candidate.observation.periodStart, end: survivors[0].candidate.observation.periodEnd, label: survivors[0].candidate.observation.citation.period };
@@ -373,7 +426,7 @@ export function evaluateConstructionCostBenchmark(
       canonicalSubtype: request.canonicalSubtype,
       costRepresentation: request.costRepresentation,
       currency: request.currency ?? currency,
-      unitBasis: request.unitBasis,
+      unitBasis: outputUnitBasis,
     },
     contributingObservations,
     benchmark: { ...aggregation.figure, unit, currency, asOfPeriod, escalated },

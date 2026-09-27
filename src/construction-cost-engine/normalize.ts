@@ -58,11 +58,22 @@ function costRepresentationForMetric(metric: string): CCCostRepresentation | und
   return undefined;
 }
 
-function convertAreaValue(value: number, from: "per_sf" | "per_sm", to: "per_sf" | "per_sm"): number {
+export function convertAreaValue(value: number, from: "per_sf" | "per_sm", to: "per_sf" | "per_sm"): number {
   if (from === to) return value;
   // 1 SM = 10.7639 SF, so a cost expressed per (the larger) square metre is
   // per-square-foot-cost multiplied by that constant; the inverse divides.
   return from === "per_sf" ? value * SQ_FT_PER_SQ_M : value / SQ_FT_PER_SQ_M;
+}
+
+/**
+ * The unit label for a cost figure in `currency` per `unitBasis`, in the same
+ * `<CURRENCY>_<basis>` convention the source data already uses (e.g.
+ * "USD_per_sf"). Returns undefined when either part is unknown so a caller
+ * never fabricates a label for a figure whose unit it cannot state.
+ */
+export function costUnitLabel(currency: CCCurrency | undefined, unitBasis: CCUnitBasis | undefined): string | undefined {
+  if (currency === undefined || (unitBasis !== "per_sf" && unitBasis !== "per_sm" && unitBasis !== "per_unit")) return undefined;
+  return `${currency}_${unitBasis}`;
 }
 
 /**
