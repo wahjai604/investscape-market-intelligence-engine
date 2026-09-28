@@ -90,7 +90,8 @@ the evidence does not support.
    each registered consolidation from pinned instruments only. The lower bound
    is `UNKNOWN` until Q2 is answered (R1-1), or is the incorporated instrument's
    commencement where that is proven. The upper bound is open, with a
-   proposed `currencyProvenTo` bound (NOT IMPLEMENTED). Its current evidence
+   proposed coverage bound (NOT IMPLEMENTED and not
+   approved; see `E85-reviewed-open-coverage-decision.md`). Its current evidence
    is an instant, not a day. The amendment index was captured by browser
    print-to-PDF at 2026-09-28 11:29 PDT (18:29:51Z). That time comes from the
    printed page header and the PDF `CreationDate`; the PDF is pinned by its
@@ -168,11 +169,15 @@ work. Step 4 is gated on the City (Q6 and the Schedule D history).
   public response shape is unchanged: `temporalFindings` does not carry the
   field. In the dry run, C-2C 2023-01-01 is `BEFORE_KNOWN_START`, the other
   C-2C cases are `OPEN_END_PREVENTS_SELECTION`, and R1-1 is never classified.
-- **Not implemented: reviewed-open coverage.** No policy lets an
-  `OPEN_REVIEWED_NO_END_ESTABLISHED` version count as covering an AS_OF date
-  up to its review date. The `currencyProvenTo` bound in section 3 step 1 is
-  still a proposal. An AS_OF date after the 2026-09-28 index capture is
-  treated the same as any other date after the start.
+- **Not implemented: reviewed-open coverage.** No policy is approved; only
+  `CLOSED` intervals apply (see `E85-reviewed-open-coverage-decision.md`).
+  The 2026-09-28 index capture is an observation at 11:29 PDT, not full-day
+  currency, and never a coverage bound by itself. A listing-lag design (O3)
+  is recorded there as unapproved: it covers nothing, because no defensible
+  source for a maximum listing delay exists. Legal-version coverage and
+  designation coverage are separate requirements. A layer observation, or a
+  layer's authority, never establishes a designation's legal start or
+  continuity. All five pinned cases stay `DATA_GAP`.
 - `TEMPORAL_VERSION_APPLIED` is the only NON_MATERIAL temporal record (as
   section 1 states). Today only synthetic CLOSED evidence reaches it.
 - The end-review date 2026-09-26 is `GIT_PINNED_AUDIT` provenance

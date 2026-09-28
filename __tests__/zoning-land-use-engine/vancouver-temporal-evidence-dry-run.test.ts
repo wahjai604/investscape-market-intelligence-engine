@@ -290,5 +290,30 @@ const sha256 = (file: string): string => crypto.createHash("sha256").update(fs.r
     expect(assembly.temporalEvidence).toBeUndefined();
     expect(legalPack.vancouverLegalPackPublicReadiness(assembly).publicReady).toBe(false);
   });
+
+  // O0 guards (docs/E85-reviewed-open-coverage-decision.md §9 A): only CLOSED intervals apply.
+  test("no reviewed-open coverage: MIXED/BOTH_OPEN_END coincidence is never accepted", () => {
+    // Case 4: C-2C is OPEN_REVIEWED_NO_END_ESTABLISHED and its designation is observation-only.
+    const c = legalPack.VANCOUVER_C_2C_VERSION_VALIDITY;
+    expect(c.state).toBe("OPEN_REVIEWED_NO_END_ESTABLISHED");
+    expect(evaluateE85DesignationApplicability(legalPack.vancouverObservedDesignation("C-2C"), { kind: "RESOLVED", request: { mode: "AS_OF", asOfDate: "2026-09-14" } }).kind).toBe("DESIGNATION_OBSERVATION_ONLY_NOT_LEGALLY_DATED");
+    const pkg = dryRun("C-2C", "barber_shop_or_beauty_salon", ["USE", "DIMENSIONAL"], "2026-09-14").withEvidence;
+    expect(pkg.status).toBe("DATA_GAP");
+    const codes = [...pkg.materiality, ...pkg.blockers].map((m) => m.sourceCode);
+    expect(codes).not.toContain("TEMPORAL_VERSION_APPLIED");
+    expect(codes).not.toContain("DESIGNATION_COINCIDENCE_ESTABLISHED");
+    expect(pkg.materiality.some((m) => m.materiality === "NON_MATERIAL" && /TEMPORAL|DESIGNATION/.test(m.sourceCode))).toBe(false);
+  });
+
+  test("the review date is never a coverage bound", () => {
+    const reviewDate = legalPack.VANCOUVER_END_REVIEW_DATE_PROVENANCE.date;
+    expect(reviewDate).toBe("2026-09-28");
+    for (const [sourceId, { validity }] of legalPack.VANCOUVER_VERSION_VALIDITY_BY_SOURCE) {
+      const rest = "endReview" in validity ? { ...validity, endReview: undefined } : validity;
+      expect({ sourceId, carriesReviewDate: JSON.stringify(rest).includes(reviewDate) }).toEqual({ sourceId, carriesReviewDate: false });
+    }
+    for (const zone of ["R1-1", "C-2C"]) expect(JSON.stringify(legalPack.vancouverObservedDesignation(zone))).not.toContain(reviewDate);
+    expect(JSON.stringify(legalPack.VANCOUVER_LEGAL_PACK_MANIFEST)).not.toMatch(/currencyProvenTo|coverageBound/);
+  });
 });
 
