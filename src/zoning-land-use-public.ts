@@ -16,11 +16,34 @@
  * MACHINE_RESOLVED means the engine could resolve the requested fields from
  * the evidence it holds; it is never relabelled "verified", and a result that
  * depends on a caller assertion says so on the field. Practical capacity is
- * reported NOT_ASSESSED. Temporal findings (including the blanket
- * TEMPORAL_ANALYSIS_NOT_YET_APPLIED disclosure while no real source-version
- * lineage exists) are carried through, never dropped. The decision trace
- * stays server-side: `evaluateE85PublicRequest` returns it separately from the
- * response DTO for logging only.
+ * reported NOT_ASSESSED. The decision trace stays server-side:
+ * `evaluateE85PublicRequest` returns it separately from the response DTO for
+ * logging only.
+ *
+ * TEMPORAL. Temporal findings are carried through, never dropped. The engine
+ * CAN apply a legal version on this path: when the server supplies
+ * `temporalEvidence` (version-validity lineages and designation validity) for
+ * an explicit AS_OF request, the orchestrator selects a unique, linked,
+ * content-identical version, applies it to composition, and records it as
+ * NON_MATERIAL TEMPORAL_VERSION_APPLIED; designation/legal-text coincidence is
+ * required separately (see decision-temporal-application.ts). That machinery
+ * is exercised only with SYNTHETIC evidence today (temporal-application.test.ts).
+ * No real pack supplies lineages: the Vancouver pack's `asOfResolution` is
+ * DISABLED and its assembly produces no temporal evidence, so its responses
+ * keep the blanket MATERIAL TEMPORAL_ANALYSIS_NOT_YET_APPLIED blocker and
+ * answer DATA_GAP. (That blocker's own reason text still says selection is
+ * "not yet wired"; it is accurate only in the sense that no lineage was
+ * supplied for the request.)
+ *
+ * PACK READINESS (e85-public-2). `packReadiness` discloses the server-loaded
+ * legal pack's source readiness: release status, AS_OF resolution, licence,
+ * definition history, amendment-index currency, withheld values and open
+ * gates. It is SOURCE READINESS, not legal status: it is mapped after the
+ * decision, never feeds it, and cannot change `status`, a field's standing or
+ * any blocker. It carries no by-law text. It comes only from
+ * `E85PublicServerInputs.legalPack`; the request parser rejects every name a
+ * caller could use to supply or override it, and a disclosure that
+ * contradicts itself or the rule packs in use fails closed.
  *
  * This module does not load or pin any source. Producing a trustworthy
  * `E85PublicServerInputs` is the server's job; see the API route's blocker notes.
@@ -34,8 +57,14 @@ import type { E85OverallStatus } from "./zoning-land-use-engine/result-status";
 import type { E85PracticalCapacityAssessment, E85RegulatoryEnvelopeResult } from "./zoning-land-use-engine/envelope-types";
 import type { E85ApplicabilityDimension } from "./zoning-land-use-engine/rule-applicability-types";
 import { assembleE85DecisionPackage } from "./zoning-land-use-engine/decision-orchestrator";
+import { E85LegalPackIntegrityError, isE85Sha256, type E85LegalPackDisclosures } from "./zoning-land-use-engine/legal-pack-integrity";
+import type { E85SourceLicenseStatus } from "./zoning-land-use-engine/source-readiness-types";
 
-export const E85_PUBLIC_CONTRACT_VERSION = "e85-public-1";
+/**
+ * e85-public-2: adds the always-present `packReadiness` disclosure. Every
+ * e85-public-1 field is unchanged in name, type and meaning.
+ */
+export const E85_PUBLIC_CONTRACT_VERSION = "e85-public-2";
 
 const RULE_FAMILIES: readonly E85RuleFamily[] = ["USE", "DENSITY", "DIMENSIONAL", "PARKING", "AMENITY", "OVERLAY", "REQUIREMENT"];
 const SITE_AREA_KINDS: readonly E85SiteAreaKind[] = ["BYLAW_DEFINED_SITE_AREA", "GROSS_TITLE_AREA", "NET_AFTER_DEDICATIONS", "UNSPECIFIED"];
@@ -79,6 +108,16 @@ export const E85_PUBLIC_SERVER_CONTROLLED_FIELDS: readonly string[] = [
   "decisionId",
   "trace",
   "overlaysApplicable",
+  // Pack readiness is server-controlled; a caller can neither supply nor override it.
+  "packReadiness",
+  "legalPack",
+  "legalPackId",
+  "disclosures",
+  "releaseStatus",
+  "asOfResolution",
+  "licenseStatus",
+  "openGates",
+  "withheldValues",
 ];
 
 // ---------------------------------------------------------------- request
@@ -308,9 +347,120 @@ export interface E85PublicServerInputs {
   readonly resolvedAt?: string;
   readonly composedAt?: string;
   readonly assembledAt?: string;
+  /**
+   * The loaded legal pack behind `availableRulePacks` and its disclosures, as
+   * the server assembled them (e.g. `vancouverLegalPackPublicServerInput`).
+   * Absent means the response says NOT_SUPPLIED; it is never inferred.
+   */
+  readonly legalPack?: { readonly legalPackId: string; readonly disclosures: E85LegalPackDisclosures };
 }
 
 // ---------------------------------------------------------------- response
+
+/**
+ * Source readiness of the server-loaded legal pack. NOT the decision's legal
+ * status: it never changes `status`, standings or blockers, and it carries no
+ * by-law text.
+ */
+export type E85PublicPackReadiness =
+  | {
+      readonly state: "DISCLOSED";
+      readonly basis: "SERVER_LOADED_LEGAL_PACK";
+      readonly legalPackId: string;
+      readonly releaseStatus: E85LegalPackDisclosures["releaseStatus"];
+      readonly asOfResolution: E85LegalPackDisclosures["asOfResolution"];
+      readonly licence: {
+        readonly status: E85LegalPackDisclosures["openUnknowns"]["licence"];
+        readonly sources: readonly { readonly sourceId: string; readonly licenseStatus: E85SourceLicenseStatus }[];
+      };
+      readonly definitionHistory: E85LegalPackDisclosures["openUnknowns"]["definitionHistory"];
+      readonly versionValidity: E85LegalPackDisclosures["openUnknowns"]["versionValidity"];
+      readonly amendmentIndex: {
+        /** When the amendment index was captured. Not an effective date of anything. */
+        readonly captureDate: string;
+        readonly indexSha256: string;
+        readonly currency: E85LegalPackDisclosures["openUnknowns"]["amendmentCurrency"];
+      };
+      readonly withheldValues: readonly { readonly factId: string; readonly what: string; readonly gateId: string }[];
+      readonly openGates: readonly { readonly gateId: string; readonly description: string }[];
+      readonly meaning: string;
+    }
+  | { readonly state: "NOT_SUPPLIED"; readonly meaning: string };
+
+const PACK_READINESS_MEANING =
+  "Source readiness of the server-loaded legal pack. It does not change the decision status, any field's standing or any blocker. The pack is not released for public reliance, and no by-law text is reproduced.";
+const PACK_READINESS_NOT_SUPPLIED =
+  "The server supplied no legal-pack readiness disclosure for this response. Nothing is implied about release, licence or currency.";
+const LICENSE_STATUSES: readonly E85SourceLicenseStatus[] = ["PUBLIC_REUSE", "INTERNAL_LICENSE_REQUIRED", "REDISTRIBUTION_RESTRICTED", "LICENSE_UNKNOWN"];
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Every way a server disclosure is missing a part, contradicts itself, or does
+ * not cover the rule packs actually supplied. Checked at runtime because the
+ * object crosses a server boundary, whatever its static type says.
+ */
+export function e85PackReadinessProblems(server: E85PublicServerInputs): string[] {
+  const lp = server.legalPack;
+  if (lp === undefined) return [];
+  const problems: string[] = [];
+  const d = lp.disclosures as Partial<E85LegalPackDisclosures> | undefined;
+  if (typeof lp.legalPackId !== "string" || lp.legalPackId.length === 0) problems.push("legalPackId is missing");
+  if (d === undefined || d === null || typeof d !== "object") return [...problems, "disclosures are missing"];
+  if (d.releaseStatus !== "NOT_RELEASED") problems.push(`releaseStatus ${String(d.releaseStatus)} is not a disclosable value`);
+  if (d.asOfResolution !== "DISABLED") problems.push(`asOfResolution ${String(d.asOfResolution)} is not a disclosable value`);
+  const u = d.openUnknowns;
+  if (u === undefined || u.versionValidity !== "UNKNOWN" || u.definitionHistory !== "NOT_PROVEN_COMPLETE" || u.licence !== "LICENSE_UNKNOWN" || u.amendmentCurrency !== "CHECKED_THROUGH_INDEX_CAPTURE_ONLY") {
+    problems.push("openUnknowns are missing or no longer record every known unknown");
+  }
+  const c = d.currencyCheckedThrough;
+  if (c === undefined || !ISO_DATE.test(String(c.indexCaptureDate)) || !isE85Sha256(c.indexSha256)) problems.push("amendment-index capture date or digest is missing or malformed");
+  const licences = Array.isArray(d.sourceLicences) ? d.sourceLicences : [];
+  if (licences.length === 0) problems.push("sourceLicences are missing");
+  for (const s of licences) {
+    if (!LICENSE_STATUSES.includes(s.licenseStatus)) problems.push(`${String(s.sourceId)}: licence ${String(s.licenseStatus)} is not a licence status`);
+    else if (u?.licence === "LICENSE_UNKNOWN" && s.licenseStatus !== "LICENSE_UNKNOWN") problems.push(`${s.sourceId}: licence ${s.licenseStatus} contradicts the pack's LICENSE_UNKNOWN`);
+  }
+  for (const pack of server.availableRulePacks) {
+    if (!licences.some((s) => s.sourceId === pack.sourceId)) problems.push(`rule pack ${pack.packId} (source ${pack.sourceId}) is not covered by the disclosure`);
+  }
+  const gates = Array.isArray(d.openGates) ? d.openGates : [];
+  if (gates.length === 0) problems.push("openGates are missing");
+  const gateIds = new Set<string>();
+  for (const g of gates) {
+    if (typeof g.gateId !== "string" || g.gateId.length === 0 || typeof g.description !== "string" || g.description.length === 0) problems.push("an open gate has no id or description");
+    else if (gateIds.has(g.gateId)) problems.push(`open gate ${g.gateId} is duplicated`);
+    else gateIds.add(g.gateId);
+  }
+  const withheld = Array.isArray(d.withheldValues) ? d.withheldValues : undefined;
+  if (withheld === undefined) problems.push("withheldValues are missing");
+  for (const w of withheld ?? []) if (!gateIds.has(w.gateId)) problems.push(`withheld ${String(w.factId)} names gate ${String(w.gateId)}, which is not open`);
+  // AS_OF resolution is disabled for this pack: temporal evidence cannot come from it.
+  if (d.asOfResolution === "DISABLED" && server.temporalEvidence !== undefined) problems.push("temporalEvidence was supplied although the pack's asOfResolution is DISABLED");
+  return problems;
+}
+
+/** Maps the server's disclosure to the public DTO, or throws `E85LegalPackIntegrityError` rather than disclose a contradiction. */
+export function toE85PublicPackReadiness(server: E85PublicServerInputs): E85PublicPackReadiness {
+  const lp = server.legalPack;
+  if (lp === undefined) return { state: "NOT_SUPPLIED", meaning: PACK_READINESS_NOT_SUPPLIED };
+  const problems = e85PackReadinessProblems(server);
+  if (problems.length > 0) throw new E85LegalPackIntegrityError(String(lp.legalPackId), problems);
+  const d = lp.disclosures;
+  return {
+    state: "DISCLOSED",
+    basis: "SERVER_LOADED_LEGAL_PACK",
+    legalPackId: lp.legalPackId,
+    releaseStatus: d.releaseStatus,
+    asOfResolution: d.asOfResolution,
+    licence: { status: d.openUnknowns.licence, sources: d.sourceLicences.map((s) => ({ sourceId: s.sourceId, licenseStatus: s.licenseStatus })) },
+    definitionHistory: d.openUnknowns.definitionHistory,
+    versionValidity: d.openUnknowns.versionValidity,
+    amendmentIndex: { captureDate: d.currencyCheckedThrough.indexCaptureDate, indexSha256: d.currencyCheckedThrough.indexSha256, currency: d.openUnknowns.amendmentCurrency },
+    withheldValues: d.withheldValues.map((w) => ({ factId: w.factId, what: w.what, gateId: w.gateId })),
+    openGates: d.openGates.map((g) => ({ gateId: g.gateId, description: g.description })),
+    meaning: PACK_READINESS_MEANING,
+  };
+}
 
 /** A value the engine resolved, carried with its own citation. */
 export interface E85PublicField {
@@ -388,6 +538,8 @@ export interface E85PublicResponse {
   readonly temporalFindings: readonly { readonly sourceRef: string; readonly sourceCode: string; readonly materiality: E85DecisionMateriality; readonly reason: string }[];
   readonly sourceFindings: readonly { readonly packId: string; readonly sourceId: string; readonly sourceVersionId?: string; readonly finding: unknown }[];
   readonly engine: { readonly rulePackIds: readonly string[]; readonly unresolvedPackIds: readonly string[]; readonly policyVersionId: string };
+  /** e85-public-2. Always present: DISCLOSED from the server's loaded pack, or NOT_SUPPLIED. Source readiness only, never legal status. */
+  readonly packReadiness: E85PublicPackReadiness;
 }
 
 const STATUS_MEANING: Record<E85OverallStatus, string> = {
@@ -520,6 +672,8 @@ export function toE85PublicResponse(pkg: E85DecisionPackage, request: E85PublicR
       unresolvedPackIds: pkg.packResolution.unresolvedPackIds,
       policyVersionId: server.policyVersion.policyVersionId,
     },
+    // Mapped last and from `server` only: nothing above reads it.
+    packReadiness: toE85PublicPackReadiness(server),
   };
 }
 
@@ -567,6 +721,9 @@ export function buildE85DecisionRequestFromPublic(server: E85PublicServerInputs,
  * part that may leave the server; `trace` is for server-side logs.
  */
 export function evaluateE85PublicRequest(server: E85PublicServerInputs, request: E85PublicRequest): { response: E85PublicResponse; trace: E85DecisionPackage["trace"] } {
+  // Fail closed before evaluating: a contradictory disclosure means the server's inputs cannot be trusted.
+  const packProblems = e85PackReadinessProblems(server);
+  if (packProblems.length > 0) throw new E85LegalPackIntegrityError(String(server.legalPack?.legalPackId), packProblems);
   const pkg = assembleE85DecisionPackage(buildE85DecisionRequestFromPublic(server, request));
   return { response: toE85PublicResponse(pkg, request, server), trace: pkg.trace };
 }

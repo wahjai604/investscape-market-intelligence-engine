@@ -13,3 +13,4 @@ export * from "./r1-1-adapter";
 export * from "./c-2c-source";
 export * from "./c-2c-terminology";
 export * from "./c-2c-adapter";
+export * as legalPack from "./legal-pack";

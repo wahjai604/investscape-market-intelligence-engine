@@ -19,7 +19,8 @@
  * TEXT was read — the schedule's own reprint stamp, month precision. It is
  * NOT a fact effective date. Every structured fact in this pilot instead
  * carries its own proven `temporal`/`temporalAuthority` (By-law 13447 clause
- * 28, in force 2022-11-14) established independently in the fixture file,
+ * 28, brought into force 2022-11-14 by clause 89) established independently
+ * in legal-pack/c-2c-facts.ts,
  * exactly as `r1-1-source.ts` keeps value provenance (current schedule text)
  * and temporal provenance (the amending by-law) as two distinct axes.
  *
@@ -100,7 +101,7 @@ export const VANCOUVER_C_2C_SOURCE: E85SourceDefinition = {
     "Maximum unit frontage (15.3 m, §3.1.2.1/§3.2.2.1) is not published: no existing E85 dimensional field honestly represents a tenancy/unit-frontage limit, and inventing one was out of scope for this slice.",
     "The §3.1.2.13/§3.2.2.11 parking-area setback (1.2 m) is not published as a structured DIMENSIONAL fact: `E85DimensionalRule.setbacksMetres` is a free-string-keyed map whose keys are presented downstream as undifferentiated yard/building-envelope setbacks, and a parking-specific setback placed in that map would be indistinguishable from a general building setback to any downstream consumer. Recorded only as a source finding.",
     "The angular building envelope, the minimum-FSR proviso, the bedroom-mix definitional clause, Sub-Area A's geographic exclusion, accessory-use/-building percentage caps, and the RHS ODP/rental-replacement dependency are none of them modeled in any form — see the adapter's own source findings for each.",
-    "NO EFFECTIVE DATE IS ESTABLISHED AT THE VERSION LEVEL. The schedule's own reprint stamp is month-precision only and states no adoption/enactment/coming-into-force date. Every structured fact in this pilot instead carries its own proven `temporal`/`temporalAuthority` (By-law 13447 clause 28, in force 2022-11-14), established independently of this version stamp.",
+    "NO EFFECTIVE DATE IS ESTABLISHED AT THE VERSION LEVEL. The schedule's own reprint stamp is month-precision only and states no adoption/enactment/coming-into-force date. Every structured fact in this pilot instead carries its own proven `temporal`/`temporalAuthority` (By-law 13447 clause 28, brought into force on 2022-11-14 by its commencement clause 89), established independently of this version stamp.",
     "REDISTRIBUTION RIGHTS ARE UNKNOWN. The standalone schedule PDF carries no copyright, licence, open-data or terms-of-use statement.",
     "This record does not establish coverage of any other Vancouver commercial district (C-2, C-2A, C-2B, C-2C1, or any other C-series schedule).",
   ],

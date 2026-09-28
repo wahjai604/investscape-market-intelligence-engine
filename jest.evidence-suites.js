@@ -6,4 +6,6 @@
 module.exports = [
   "/__tests__/zoning-land-use-engine/vancouver-full-snapshot-quarantine\\.test\\.ts$",
   "/__tests__/zoning-land-use-engine/vancouver-full-snapshot-public-path\\.test\\.ts$",
+  "/__tests__/zoning-land-use-engine/vancouver-legal-pack-source-bytes\\.test\\.ts$",
+  "/__tests__/zoning-land-use-engine/vancouver-legal-pack-server-assembly-evidence\\.test\\.ts$",
 ];

@@ -163,4 +163,8 @@ export * from "./temporal-request-types";
 // (non-public) boundary.
 export * from "./decision-temporal-materiality-adapter";
 
+// Legal-pack packaging: binds curated facts to source bytes, source version
+// and adapter identity, and refuses to load on mismatch.
+export * from "./legal-pack-integrity";
+
 export * as adapters from "./adapters";
