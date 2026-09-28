@@ -29,7 +29,7 @@
  * randomness, no I/O, no mutation of caller-supplied values anywhere in this
  * file.
  */
-import type { E85DecisionMaterialityRecord } from "./decision-package-types";
+import type { E85DecisionMaterialityRecord, E85TemporalLineageDiagnostic } from "./decision-package-types";
 import type { E85TemporalDecisionImpact, E85TemporalImpactKind } from "./temporal-decision-impact";
 
 /**
@@ -121,6 +121,37 @@ function buildManualReviewRecord(impact: E85TemporalDecisionImpact, assessedAt: 
 }
 
 /**
+ * Internal diagnostic for an AS_OF `GROUP_NO_CANDIDATE` lineage, classified
+ * ONLY when every member is open-ended with a known start. START_UNKNOWN,
+ * conflicting or partial members, and an AS_OF date between members' starts
+ * are left unclassified. Never alters code, materiality, refs or gap reason.
+ */
+function noCandidateDiagnostic(impact: E85TemporalDecisionImpact): E85TemporalLineageDiagnostic | undefined {
+  if (impact.requestMode !== "AS_OF" || impact.asOfDate === undefined) return undefined;
+  if (impact.origin !== "GROUPING_DERIVED" || impact.group.kind !== "GROUP_NO_CANDIDATE") return undefined;
+  const members = impact.group.members;
+  if (members.length === 0) return undefined;
+  const starts: string[] = [];
+  for (const m of members) {
+    const r = m.adapterResult;
+    if (r.outcome !== "OPEN_END_UNRESEARCHED" && r.outcome !== "OPEN_END_REVIEWED_NO_END_ESTABLISHED") return undefined;
+    starts.push(r.evidence.effectiveFrom);
+  }
+  starts.sort();
+  const asOfDate = impact.asOfDate;
+  if (asOfDate < starts[0]) return { kind: "BEFORE_KNOWN_START", asOfDate, knownStarts: starts };
+  if (asOfDate >= starts[starts.length - 1]) return { kind: "OPEN_END_PREVENTS_SELECTION", asOfDate, knownStarts: starts };
+  return undefined;
+}
+
+function diagnosticSentence(d: E85TemporalLineageDiagnostic): string {
+  const starts = d.knownStarts.join(", ");
+  return d.kind === "BEFORE_KNOWN_START"
+    ? `The supplied version (known start ${starts}) does not cover AS_OF "${d.asOfDate}", and an applicable earlier version has not been established.`
+    : `AS_OF "${d.asOfDate}" is on or after the known start (${starts}), but no end is established; only a CLOSED validity is selectable.`;
+}
+
+/**
  * Maps exactly one `E85TemporalDecisionImpact` onto exactly one
  * `E85DecisionMaterialityRecord`. Exhaustive over the closed
  * `E85TemporalImpactKind` vocabulary — an unsupported kind falls through the
@@ -142,13 +173,18 @@ function mapOneImpact(impact: E85TemporalDecisionImpact, assessedAt: string): E8
     case "CURRENT_LINEAGE_NO_CANDIDATE":
     case "AS_OF_LINEAGE_BLOCKED":
     case "AS_OF_LINEAGE_EVIDENCE_INCOMPLETE":
-    case "AS_OF_LINEAGE_NO_CANDIDATE":
-      return buildGapRecord(
+    case "AS_OF_LINEAGE_NO_CANDIDATE": {
+      const record = buildGapRecord(
         impact,
         "TEMPORAL_LINEAGE_NOT_READY",
         `Lineage "${impact.lineageId}" was not structurally ready for source-version selection (${kind}), so no source-version candidate could be considered for the requested ${requestDescription(impact)}.`,
         assessedAt,
       );
+      const diagnostic = noCandidateDiagnostic(impact);
+      if (diagnostic === undefined) return record;
+      const reason = `${record.reason} ${diagnosticSentence(diagnostic)}`;
+      return { ...record, reason, gap: { ...record.gap!, reason }, temporalLineageDiagnostic: diagnostic };
+    }
     case "AS_OF_SELECTED":
       return buildGapRecord(
         impact,

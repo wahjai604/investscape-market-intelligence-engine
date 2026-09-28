@@ -209,3 +209,88 @@ describe("E85 Phase 15.18A (Slice 3F-2) — buildE85TemporalLineageMaterialityRe
     }
   });
 });
+
+describe("AS_OF GROUP_NO_CANDIDATE internal diagnostic (diagnostic only)", () => {
+  type Outcome = "OPEN_END_UNRESEARCHED" | "OPEN_END_REVIEWED_NO_END_ESTABLISHED" | "START_UNKNOWN" | "CONFLICTING_START";
+
+  function member(outcome: Outcome, effectiveFrom?: string): unknown {
+    const base = { outcome, candidateId: `TEST-${outcome}-${effectiveFrom ?? "none"}`, bundle: {} };
+    const adapterResult =
+      outcome === "OPEN_END_UNRESEARCHED"
+        ? { ...base, validity: {}, evidence: { effectiveFrom, start: {} } }
+        : outcome === "OPEN_END_REVIEWED_NO_END_ESTABLISHED"
+          ? { ...base, validity: {}, evidence: { effectiveFrom, start: {}, reviewedAt: "2026-09-26", sourcesChecked: ["TEST"] } }
+          : outcome === "CONFLICTING_START"
+            ? { ...base, conflictingStartAssertions: [] }
+            : base;
+    return { lineageId: "TEST-LINEAGE-D", adapterResult, membershipRationale: "TEST" };
+  }
+
+  function impact(members: unknown[], opts: { mode?: "AS_OF" | "CURRENT"; asOfDate?: string; groupKind?: E85TemporalLineageGroup["kind"]; impactKind?: E85TemporalImpactKind } = {}): E85TemporalDecisionImpact {
+    const mode = opts.mode ?? "AS_OF";
+    return {
+      lineageId: "TEST-LINEAGE-D",
+      requestMode: mode,
+      ...(mode === "AS_OF" ? { asOfDate: opts.asOfDate ?? "2026-01-01" } : {}),
+      impactKind: opts.impactKind ?? (mode === "AS_OF" ? "AS_OF_LINEAGE_NO_CANDIDATE" : "CURRENT_LINEAGE_NO_CANDIDATE"),
+      disposition: "DATA_GAP",
+      policy: { blockerRelevant: true, completenessRecommendation: "PARTIAL", machineResolvedEligible: false, manualReviewRecommendation: "NONE" },
+      origin: "GROUPING_DERIVED",
+      group: { kind: opts.groupKind ?? "GROUP_NO_CANDIDATE", lineageId: "TEST-LINEAGE-D", members, nonCandidateMembers: members, collisionFindings: [] },
+    } as unknown as E85TemporalDecisionImpact;
+  }
+
+  function one(i: E85TemporalDecisionImpact) {
+    const [r] = buildE85TemporalLineageMaterialityRecords([i], ASSESSED_AT);
+    return r;
+  }
+
+  /** Everything except the reason text and the diagnostic must be what the generic branch produces. */
+  function expectInvariants(i: E85TemporalDecisionImpact) {
+    const r = one(i);
+    const expectedCode = "TEMPORAL_LINEAGE_NOT_READY";
+    expect([r.sourceCode, r.kind, r.materiality, r.sourcePhase, r.gap?.reasonCode]).toEqual([expectedCode, "GAP", "MATERIAL", "TEMPORAL_REQUEST", expectedCode]);
+    expect(r.sourceRef).toBe(`TEMPORAL_LINEAGE:TEST-LINEAGE-D:${i.impactKind}:${i.requestMode}${i.requestMode === "AS_OF" ? `:${i.asOfDate}` : ""}`);
+    expect(r.gap?.reason).toBe(r.reason);
+    return r;
+  }
+
+  test.each(["OPEN_END_UNRESEARCHED", "OPEN_END_REVIEWED_NO_END_ESTABLISHED"] as const)("%s member, AS_OF before its start: BEFORE_KNOWN_START", (outcome) => {
+    const r = expectInvariants(impact([member(outcome, "2026-05-19")], { asOfDate: "2023-01-01" }));
+    expect(r.temporalLineageDiagnostic).toEqual({ kind: "BEFORE_KNOWN_START", asOfDate: "2023-01-01", knownStarts: ["2026-05-19"] });
+    expect(r.reason).toContain(`The supplied version (known start 2026-05-19) does not cover AS_OF "2023-01-01", and an applicable earlier version has not been established.`);
+  });
+
+  test.each([["on the start (inclusive)", "2026-05-19"], ["after the start", "2026-09-14"]])("AS_OF %s: OPEN_END_PREVENTS_SELECTION", (_label, asOfDate) => {
+    const r = expectInvariants(impact([member("OPEN_END_REVIEWED_NO_END_ESTABLISHED", "2026-05-19")], { asOfDate }));
+    expect(r.temporalLineageDiagnostic).toEqual({ kind: "OPEN_END_PREVENTS_SELECTION", asOfDate, knownStarts: ["2026-05-19"] });
+    expect(r.reason).toContain("no end is established");
+  });
+
+  const generic = `Lineage "TEST-LINEAGE-D" was not structurally ready for source-version selection (AS_OF_LINEAGE_NO_CANDIDATE), so no source-version candidate could be considered for the requested AS_OF "2026-01-01".`;
+
+  test.each<[string, () => E85TemporalDecisionImpact]>([
+    ["a START_UNKNOWN member", () => impact([member("START_UNKNOWN")])],
+    ["a CONFLICTING_START member", () => impact([member("CONFLICTING_START")])],
+    ["open and START_UNKNOWN members mixed", () => impact([member("OPEN_END_UNRESEARCHED", "2026-05-19"), member("START_UNKNOWN")])],
+    ["an AS_OF between two members' starts", () => impact([member("OPEN_END_UNRESEARCHED", "2025-01-01"), member("OPEN_END_UNRESEARCHED", "2027-01-01")])],
+    ["no members", () => impact([])],
+  ])("%s: no classification, generic record unchanged", (_label, make) => {
+    const r = expectInvariants(make());
+    expect(r.temporalLineageDiagnostic).toBeUndefined();
+    expect(r.reason).toBe(generic);
+    expect("temporalLineageDiagnostic" in r).toBe(false);
+  });
+
+  test("CURRENT mode and the other not-ready kinds are never classified", () => {
+    const open = [member("OPEN_END_UNRESEARCHED", "2026-05-19")];
+    for (const i of [
+      impact(open, { mode: "CURRENT" }),
+      impact(open, { groupKind: "GROUP_EVIDENCE_INCOMPLETE", impactKind: "AS_OF_LINEAGE_EVIDENCE_INCOMPLETE", asOfDate: "2023-01-01" }),
+      impact(open, { groupKind: "GROUP_BLOCKED", impactKind: "AS_OF_LINEAGE_BLOCKED", asOfDate: "2023-01-01" }),
+    ]) {
+      const r = expectInvariants(i);
+      expect(r.temporalLineageDiagnostic).toBeUndefined();
+    }
+  });
+});

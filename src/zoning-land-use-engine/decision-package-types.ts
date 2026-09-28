@@ -179,6 +179,27 @@ export interface E85DecisionMaterialityRecord {
   gap?: E85DataGap;
   /** The underlying manual-review record, when the upstream problem carried one. */
   manualReview?: E85ManualReviewRecord;
+  /**
+   * Internal and diagnostic only. Present only on an AS_OF
+   * TEMPORAL_LINEAGE_NOT_READY record whose lineage is GROUP_NO_CANDIDATE
+   * because EVERY member is open-ended with a known start. Never changes
+   * kind, materiality, sourceCode, sourceRef or gap.reasonCode, and is not
+   * carried into the public response.
+   */
+  temporalLineageDiagnostic?: E85TemporalLineageDiagnostic;
+}
+
+/** See `E85DecisionMaterialityRecord.temporalLineageDiagnostic`. */
+export interface E85TemporalLineageDiagnostic {
+  /**
+   * BEFORE_KNOWN_START: the AS_OF date precedes every member's known start.
+   * OPEN_END_PREVENTS_SELECTION: the AS_OF date is on or after every member's
+   * known start, but no end is established, so nothing is selectable.
+   */
+  readonly kind: "BEFORE_KNOWN_START" | "OPEN_END_PREVENTS_SELECTION";
+  readonly asOfDate: string;
+  /** Sorted, from each member's adapter `evidence.effectiveFrom`. */
+  readonly knownStarts: readonly string[];
 }
 
 /** Whether the Phase 4 numbers in this package may be relied on as the whole answer. */
