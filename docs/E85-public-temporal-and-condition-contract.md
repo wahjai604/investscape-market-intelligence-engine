@@ -22,13 +22,15 @@ record:
 
 Two facts decide what it would take to remove it:
 
-1. **Supplying lineage evidence does not clear it.** It replaces the blanket record with one
-   record per lineage, and **every** outcome of
+1. **Supplying lineage evidence does not clear it by itself.** It replaces the
+   blanket record with one record per lineage, and **every** outcome of
    `buildE85TemporalLineageMaterialityRecords` is `MATERIAL`, including a
    clean `AS_OF_SELECTED`, which becomes
-   `TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED`. No code path makes a temporal
-   record `NON_MATERIAL`. So even perfect evidence keeps the result
-   `DATA_GAP`. Removing the blocker needs new engine code, not just data.
+   `TEMPORAL_CANDIDATE_SELECTED_NOT_APPLIED`. The only `NON_MATERIAL`
+   temporal record is `TEMPORAL_VERSION_APPLIED` (section 3a). It is emitted
+   only when a CLOSED version is selected and applied to composition, and
+   each applying feature also needs an established designation coincidence.
+   No pinned Vancouver version is CLOSED, so real requests stay `DATA_GAP`.
 2. **Fact-level dates are a different axis.** Facts carry their own
    `AMENDMENT_DATE_KNOWN` windows (for example, C-2C 2022-11-14 under By-law 13447
    cl.89). These filter facts inside Phase 4. They say nothing about which
@@ -131,8 +133,41 @@ work. Step 4 is gated on the City (Q6 and the Schedule D history).
   it is `DESIGNATION_COINCIDENCE_NOT_ESTABLISHED`, which is MATERIAL. Open-ended
   coincidence does not clear it.
 - Only a CLOSED version validity is a selectable candidate. The pinned
-  Vancouver consolidations are `START_UNKNOWN`, so with real evidence they stay
-  `TEMPORAL_LINEAGE_NOT_READY` and `DATA_GAP`.
+  Vancouver validities (internal dry run only, `temporal-evidence.ts`; not
+  wired to the public path) are neither CLOSED nor selectable:
+  - R1-1 `2026-06-consolidation` is `START_UNKNOWN` pending Q2. The 14747 §37
+    commencement (2026-06-30) is kept as pinned `AMENDMENT_EVIDENCE`. It is
+    not used as the consolidation's validity start.
+  - C-2C `2026-05-consolidation` is `OPEN_REVIEWED_NO_END_ESTABLISHED` from
+    14697 (2026-05-19), with the end reviewed only to the 2026-09-15 index
+    capture.
+  So with real evidence both stay `TEMPORAL_LINEAGE_NOT_READY` and `DATA_GAP`.
+- Internal diagnostic (`temporalLineageDiagnostic` on the materiality record).
+  It is set only on an AS_OF `TEMPORAL_LINEAGE_NOT_READY` record from a
+  `GROUP_NO_CANDIDATE` lineage whose members are **all** open-ended with a
+  known start:
+  - `BEFORE_KNOWN_START`: the AS_OF date is before every known start. The
+    reason adds: the supplied version does not cover the AS_OF date, and an
+    applicable earlier version has not been established.
+  - `OPEN_END_PREVENTS_SELECTION`: the AS_OF date is on or after every known
+    start, but no end is established.
+  START_UNKNOWN or conflicting members, and an AS_OF date between members'
+  starts, are left unclassified. The diagnostic changes only the reason text.
+  Code, kind, materiality, `sourceRef` and `gap.reasonCode` are unchanged. The
+  public response shape is unchanged: `temporalFindings` does not carry the
+  field. In the dry run, C-2C 2023-01-01 is `BEFORE_KNOWN_START`, the other
+  C-2C cases are `OPEN_END_PREVENTS_SELECTION`, and R1-1 is never classified.
+- **Not implemented: reviewed-open coverage.** No policy lets an
+  `OPEN_REVIEWED_NO_END_ESTABLISHED` version count as covering an AS_OF date
+  up to its review date. The `currencyProvenTo` bound in section 3 step 1 is
+  still a proposal. An AS_OF date after the 2026-09-15 index capture is
+  treated the same as any other date after the start.
+- `TEMPORAL_VERSION_APPLIED` is the only NON_MATERIAL temporal record (as
+  section 1 states). Today only synthetic CLOSED evidence reaches it.
+- The end-review date 2026-09-26 is `GIT_PINNED_AUDIT` provenance
+  (`VANCOUVER_END_REVIEW_DATE_PROVENANCE`): git-pinned in the readiness
+  audit, with no SHA-256 entry. It is a label only. It does not affect
+  validity, selection, currency or public output.
 - Phase 7's `TEMPORAL_APPLICABILITY_UNKNOWN` measures only that a feature
   record carries no legal effective date. In the package `warnings` it is
   qualified per feature by the designation result. A feature is left out only
