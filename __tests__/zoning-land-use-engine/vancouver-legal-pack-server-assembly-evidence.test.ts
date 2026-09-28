@@ -136,7 +136,7 @@ function observedPdfDigests(): Map<string, string> {
       "UNKNOWN",
       "CHECKED_THROUGH_INDEX_CAPTURE_ONLY",
     ]);
-    expect(pr.amendmentIndex.captureDate).toBe("2026-09-15");
+    expect(pr.amendmentIndex.captureDate).toBe("2026-09-28");
     expect(pr.withheldValues.map((w) => w.factId)).toEqual(["r1-1-requirement-002"]);
   });
 

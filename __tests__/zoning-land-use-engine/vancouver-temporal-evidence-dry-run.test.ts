@@ -161,11 +161,30 @@ const sha256 = (file: string): string => crypto.createHash("sha256").update(fs.r
       expect(d.state !== "DESIGNATION_START_UNKNOWN" && d.state !== "CONFLICTING_DESIGNATION_START" && d.start.kind).toBe("OPEN_OBSERVATION_ASSERTION");
     });
 
-    test("the 2026-09-26 review date is GIT_PINNED_AUDIT, not a SHA-256-pinned source, and is provenance only", () => {
+    test("the 2026-09-28 review date is SHA256_LF_NORMALIZED_REVIEW_RECORD, distinct from the index capture, and is provenance only", () => {
       const p = legalPack.VANCOUVER_END_REVIEW_DATE_PROVENANCE;
-      expect(p).toEqual({ provenance: "GIT_PINNED_AUDIT", date: "2026-09-26", document: "VANCOUVER-LEGAL-PACK-READINESS.md", commit: "60728b5" });
-      // Not among the SHA-256-pinned source documents, and no pinned source carries this date as its own.
-      expect(legalPack.VANCOUVER_TEMPORAL_PINNED_SOURCES.some((s) => s.instrument.includes("READINESS") || s.supports.includes("2026-09-26"))).toBe(false);
+      expect(p).toEqual({
+        provenance: "SHA256_LF_NORMALIZED_REVIEW_RECORD",
+        date: "2026-09-28",
+        document: "vancouver-temporal/AMENDMENT-INDEX-RECAPTURE-2026-09-28.md",
+        lineEndingNormalizedTextSha256: "523dd99cb521f5d43b9b389a2fc227a3672e0b8ebb4848aaf2f3a6cbea317794",
+      });
+      // The record's pin is over LINE-ENDING-NORMALIZED text (CRLF -> LF, UTF-8), not raw bytes:
+      // the repository converts line endings on checkout, so the same record may be stored with either.
+      const raw = fs.readFileSync(path.join(EVIDENCE, p.document), "utf8");
+      const normalized = raw.replace(/\r\n/g, "\n");
+      expect(crypto.createHash("sha256").update(normalized, "utf8").digest("hex")).toBe(p.lineEndingNormalizedTextSha256);
+      // The same text with CRLF endings still matches after normalization.
+      expect(crypto.createHash("sha256").update(normalized.replace(/\n/g, "\r\n").replace(/\r\n/g, "\n"), "utf8").digest("hex")).toBe(p.lineEndingNormalizedTextSha256);
+      // The record names both captures and the review date. The capture is the END_REVIEW source; the record is not a source.
+      const index = legalPack.VANCOUVER_TEMPORAL_PINNED_SOURCES.find((s) => s.role === "END_REVIEW")!;
+      // The index capture's digest, by contrast, is a RAW-BYTE hash of the PDF.
+      const rel = checksumIndex().get(index.sha256)!;
+      expect(sha256(path.join(EVIDENCE, rel))).toBe(index.sha256);
+      expect(normalized).toContain(index.sha256);
+      expect(normalized).toContain("7a0093b8378147a53144a57d29857bf7c73b24cf4d0ac8052afca1677beeb83c");
+      expect(normalized).toContain("performed on 2026-09-28");
+      expect(legalPack.VANCOUVER_TEMPORAL_PINNED_SOURCES.some((s) => s.instrument.includes("RECAPTURE") || s.supports.includes(p.date))).toBe(false);
       // It appears in validity only as the end-review cutoff; it is never an effectiveFrom or effectiveTo.
       const c = legalPack.VANCOUVER_C_2C_VERSION_VALIDITY;
       if (c.state !== "OPEN_REVIEWED_NO_END_ESTABLISHED") throw new Error("expected open-reviewed");

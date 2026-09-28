@@ -24,8 +24,11 @@
  *     is to come into force and take effect on the date of its enactment",
  *     enacted "this 19th day of May, 2026". 14697 is the latest instrument
  *     amending C-2C in that index.
- *   - The end review is the amendment index captured 2026-09-15, which lists
- *     no later amendment to either schedule. It proves nothing after that.
+ *   - The end review is the amendment index captured 2026-09-28 at 11:29
+ *     PDT (browser print to PDF), which lists no later amendment to either
+ *     schedule and is entry-for-entry identical to the 2026-09-15 capture in
+ *     the Zoning and Development By-law section. It proves nothing after the
+ *     capture.
  *
  * WHAT IS DELIBERATELY OPEN. R1-1 has no established start (pending Q2), so it
  * is START_UNKNOWN. C-2C has a start but no end, so it is
@@ -45,6 +48,7 @@ export interface E85VancouverPinnedTemporalSource {
   /** AMENDMENT_EVIDENCE: dates an incorporated amendment, NOT the consolidation's validity start. */
   readonly role: "VERSION_START_AUTHORITY" | "AMENDMENT_EVIDENCE" | "END_REVIEW" | "DESIGNATION_OBSERVATION";
   readonly instrument: string;
+  /** SHA-256 of the file's RAW BYTES, exactly as pinned in PDF-SOURCES.sha256 (no normalization). */
   readonly sha256: string;
   /** What in the bytes supports the date. A short locator, not by-law text beyond the operative words. */
   readonly supports: string;
@@ -53,25 +57,31 @@ export interface E85VancouverPinnedTemporalSource {
 export const VANCOUVER_TEMPORAL_PINNED_SOURCES: readonly E85VancouverPinnedTemporalSource[] = [
   { role: "AMENDMENT_EVIDENCE", instrument: "By-law 14747", sha256: "dc06460992fa36e09a2db08ff2ca506ed7625790bdd0b87ba3fe6ede4386d1c7", supports: "s.37 commencement on 2026-06-30 (amendment only; consolidation start pending Q2)" },
   { role: "VERSION_START_AUTHORITY", instrument: "By-law 14697", sha256: "b28b9d4223dfa4761381c6975deace4d0c41ded9922d335d3b2f9ff1c8122478", supports: "cl.19 in force on enactment; enacted 2026-05-19" },
-  { role: "END_REVIEW", instrument: "City zoning amendments index (captured 2026-09-15)", sha256: "7a0093b8378147a53144a57d29857bf7c73b24cf4d0ac8052afca1677beeb83c", supports: "no amendment to R1-1 or C-2C after 14747 / 14697" },
+  { role: "END_REVIEW", instrument: "City zoning amendments index (captured 2026-09-28 11:29 PDT)", sha256: "3481f17b6d8df77716cd6645f08d05afd7be35d34239ea6ede4988ba382a1b01", supports: "no amendment to R1-1 or C-2C after 14747 / 14697" },
   { role: "DESIGNATION_OBSERVATION", instrument: "zoning-districts-and-labels export (EPSG:26910)", sha256: "35e65736c1a577eb38e2d5165b90c1e88946e13a28abe2711fd3773a7393a0ef", supports: "City processing date 2026-06-29 (time zone unstated)" },
 ];
 
 const INDEX = VANCOUVER_TEMPORAL_PINNED_SOURCES[2];
 
 /**
- * Provenance of the end-review date. GIT_PINNED_AUDIT: the date is recorded
- * in `VANCOUVER-LEGAL-PACK-READINESS.md` at evidence-repo commit 60728b5, and
- * has NO SHA-256 entry, unlike the source documents in
+ * Provenance of the end-review date: the date the index comparison was
+ * PERFORMED, which is not the index capture time (that is in the END_REVIEW
+ * source's instrument). SHA256_LF_NORMALIZED_REVIEW_RECORD: the date is stated
+ * in the evidence-repo comparison record, pinned by a SHA-256 computed over its
+ * LINE-ENDING-NORMALIZED text (UTF-8, every CRLF converted to LF before
+ * hashing), NOT over its raw bytes: the repository converts line endings on
+ * checkout, so a raw-byte hash would depend on the checkout. Contrast the
+ * END_REVIEW source's `sha256`, which is a raw-byte hash of the PDF. The record is a
+ * review note, not a source document, so it is not in
  * `VANCOUVER_TEMPORAL_PINNED_SOURCES`. This label describes provenance only.
  * Nothing reads it: it does not affect validity, selection, currency or
  * public output.
  */
 export const VANCOUVER_END_REVIEW_DATE_PROVENANCE = {
-  provenance: "GIT_PINNED_AUDIT",
-  date: "2026-09-26",
-  document: "VANCOUVER-LEGAL-PACK-READINESS.md",
-  commit: "60728b5",
+  provenance: "SHA256_LF_NORMALIZED_REVIEW_RECORD",
+  date: "2026-09-28",
+  document: "vancouver-temporal/AMENDMENT-INDEX-RECAPTURE-2026-09-28.md",
+  lineEndingNormalizedTextSha256: "523dd99cb521f5d43b9b389a2fc227a3672e0b8ebb4848aaf2f3a6cbea317794",
 } as const;
 
 /** The date the amendment-index review was performed (see `VANCOUVER_END_REVIEW_DATE_PROVENANCE`). */

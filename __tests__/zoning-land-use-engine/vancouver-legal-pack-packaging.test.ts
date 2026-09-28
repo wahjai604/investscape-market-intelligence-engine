@@ -201,7 +201,7 @@ describe("the pack claims nothing the evidence does not support", () => {
     const dates = JSON.stringify(MANIFEST).match(/\d{4}-\d{2}-\d{2}/g) ?? [];
     // Disclosures and gates may name dates they discuss; structured fields may carry only the capture date.
     const structured = JSON.stringify({ ...MANIFEST, packLevelDisclosures: [], openGates: [] }).match(/\d{4}-\d{2}-\d{2}/g) ?? [];
-    expect(new Set(structured)).toEqual(new Set(["2026-09-15"]));
+    expect(new Set(structured)).toEqual(new Set(["2026-09-28"]));
     expect(dates.length).toBeGreaterThan(0);
   });
 

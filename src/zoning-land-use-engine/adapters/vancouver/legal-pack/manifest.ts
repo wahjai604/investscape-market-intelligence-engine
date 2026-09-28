@@ -43,8 +43,8 @@ export const VANCOUVER_LEGAL_PACK_MANIFEST: E85LegalPackManifest = {
   releaseStatus: "NOT_RELEASED",
   asOfResolution: "DISABLED",
   currencyCheckedThrough: {
-    indexCaptureDate: "2026-09-15",
-    indexSha256: "7a0093b8378147a53144a57d29857bf7c73b24cf4d0ac8052afca1677beeb83c",
+    indexCaptureDate: "2026-09-28",
+    indexSha256: "3481f17b6d8df77716cd6645f08d05afd7be35d34239ea6ede4988ba382a1b01",
   },
   openUnknowns: {
     versionValidity: "UNKNOWN",
@@ -117,7 +117,7 @@ export const VANCOUVER_LEGAL_PACK_MANIFEST: E85LegalPackManifest = {
   packLevelDisclosures: [
     "Sections 10 and 11 of By-law 3575 apply to every use and may vary dimensional values (e.g. section 10.22.1, By-law 13947).",
     "The Section 2 definition chain is not proven complete.",
-    "Amendment currency is checked through the City amendment index captured 2026-09-15 only.",
+    "Amendment currency is checked through the City amendment index captured 2026-09-28 only.",
     "Neither source version's own effective date is established; each fact carries the date of its own amending instrument.",
     "By-law text licence unknown: values and citations only; consult the by-law.",
   ],
@@ -128,7 +128,7 @@ export const VANCOUVER_LEGAL_PACK_MANIFEST: E85LegalPackManifest = {
     { gateId: "CITY_Q4_DEFINITION_HISTORY", description: "No authoritative Section 2 definition amendment history is held." },
     { gateId: "CITY_Q5_MISSING_C_2C_INSTRUMENTS", description: "The instruments behind the C-2C 'RS'->'R1' substitution and the §2.2.1(f) limb are not located." },
     { gateId: "CITY_Q6_LAYER_AUTHORITY", description: "Whether the zoning layer is authoritative for district-at-point is unanswered." },
-    { gateId: "AMENDMENT_INDEX_RECAPTURE", description: "Re-capture the amendment index at promotion; amendments after 2026-09-15 are unchecked." },
+    { gateId: "AMENDMENT_INDEX_RECAPTURE", description: "Re-capture the amendment index at promotion; amendments after 2026-09-28 are unchecked." },
     { gateId: "SCHEDULE_J_SOURCE_IDENTITY", description: "Schedule J has no source identity; the cash-in-lieu rate stays withheld." },
   ],
 };

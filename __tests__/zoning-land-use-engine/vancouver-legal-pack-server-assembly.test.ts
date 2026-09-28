@@ -56,7 +56,7 @@ describe("Vancouver legal pack server assembly", () => {
     expect(d.releaseStatus).toBe("NOT_RELEASED");
     expect(d.asOfResolution).toBe("DISABLED");
     expect(d.openUnknowns).toEqual({ versionValidity: "UNKNOWN", definitionHistory: "NOT_PROVEN_COMPLETE", licence: "LICENSE_UNKNOWN", amendmentCurrency: "CHECKED_THROUGH_INDEX_CAPTURE_ONLY" });
-    expect(d.currencyCheckedThrough.indexCaptureDate).toBe("2026-09-15");
+    expect(d.currencyCheckedThrough.indexCaptureDate).toBe("2026-09-28");
     expect(d.sourceLicences.every((s) => s.licenseStatus === "LICENSE_UNKNOWN" && s.versionEffectiveDateBasis === "UNKNOWN")).toBe(true);
     expect(d.withheldValues).toEqual([{ factId: "r1-1-requirement-002", what: "Schedule J §8.1.1 cash-in-lieu rate", gateId: "SCHEDULE_J_SOURCE_IDENTITY" }]);
     expect(d.packLevelDisclosures).toEqual(MANIFEST.packLevelDisclosures);

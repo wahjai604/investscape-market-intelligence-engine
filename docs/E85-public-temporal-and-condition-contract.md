@@ -53,12 +53,12 @@ the City of Vancouver (questions Q1–Q6 in `VANCOUVER-LEGAL-PACK-READINESS.md` 
 | Version `effectiveDateBasis` | `UNKNOWN`, month-precision stamp only. Correct as is. | `UNKNOWN`, same |
 | Latest incorporated instrument and its commencement | Pinned: 14747, enacted 2026-06-03, in force 2026-06-30 (§37) | Pinned: 14697, in force 2026-05-19 (cl.19) |
 | Was the reprint published before that instrument took effect? | **City, Q2**. Unresolved, so no lower bound can be set from the stamp. | Not raised. The stamp and 14697 are consistent, but that is not confirmed. |
-| Currency (no later amendment) | Pinned only to the index capture on 2026-09-15 | Same |
+| Currency (no later amendment) | Pinned only to the index capture on 2026-09-28 (11:29 PDT; entry-for-entry identical to the 2026-09-15 capture for the Zoning and Development By-law) | Same |
 | Meaning of the volume-level "effective July 29, 2026" statement | **City, Q3** | **City, Q3** |
 | Prior versions (for as-of dates before the current consolidation) | 13817 Schedule A is pinned as the 2023 baseline, but it is not a registered source version | Not pinned |
 
 With pinned evidence alone, the most any version window could say is
-"no later amendment located through 2026-09-15". An as-of date after the
+"no later amendment located through 2026-09-28". An as-of date after the
 index capture must stay blocked until the index is re-captured.
 
 ### 2.2 Rule level (the facts under that version)
@@ -90,8 +90,19 @@ the evidence does not support.
    each registered consolidation from pinned instruments only. The lower bound
    is `UNKNOWN` until Q2 is answered (R1-1), or is the incorporated instrument's
    commencement where that is proven. The upper bound is open, with a
-   `currencyProvenTo: 2026-09-15`. Any as-of date after `currencyProvenTo`
-   produces `TEMPORAL_CANDIDATE_OUTSIDE_VALIDITY`.
+   proposed `currencyProvenTo` bound (NOT IMPLEMENTED). Its current evidence
+   is an instant, not a day. The amendment index was captured by browser
+   print-to-PDF at 2026-09-28 11:29 PDT (18:29:51Z). That time comes from the
+   printed page header and the PDF `CreationDate`; the PDF is pinned by its
+   raw-byte SHA-256 `3481f17b…1b01` in the evidence repo. The index shows
+   nothing about amendments enacted, or taking effect, later that day, so the
+   date-only value `2026-09-28` must not be read as full-day coverage.
+   Before any coverage bound is implemented, it needs an explicit policy:
+   - which instant or date the bound is;
+   - the time granularity (date or instant);
+   - the time zone;
+   - whether the capture date itself is covered.
+   Until then, no as-of date is treated as covered by the index capture.
 2. **Engine: a server lineage builder.** Turn step 1 into
    `E85TemporalLineageMember`s on the server (never from the caller). Wire it
    into `E85PublicServerInputs`, where it is currently deliberately absent. The
@@ -139,7 +150,7 @@ work. Step 4 is gated on the City (Q6 and the Schedule D history).
     commencement (2026-06-30) is kept as pinned `AMENDMENT_EVIDENCE`. It is
     not used as the consolidation's validity start.
   - C-2C `2026-05-consolidation` is `OPEN_REVIEWED_NO_END_ESTABLISHED` from
-    14697 (2026-05-19), with the end reviewed only to the 2026-09-15 index
+    14697 (2026-05-19), with the end reviewed only to the 2026-09-28 index
     capture.
   So with real evidence both stay `TEMPORAL_LINEAGE_NOT_READY` and `DATA_GAP`.
 - Internal diagnostic (`temporalLineageDiagnostic` on the materiality record).
@@ -160,7 +171,7 @@ work. Step 4 is gated on the City (Q6 and the Schedule D history).
 - **Not implemented: reviewed-open coverage.** No policy lets an
   `OPEN_REVIEWED_NO_END_ESTABLISHED` version count as covering an AS_OF date
   up to its review date. The `currencyProvenTo` bound in section 3 step 1 is
-  still a proposal. An AS_OF date after the 2026-09-15 index capture is
+  still a proposal. An AS_OF date after the 2026-09-28 index capture is
   treated the same as any other date after the start.
 - `TEMPORAL_VERSION_APPLIED` is the only NON_MATERIAL temporal record (as
   section 1 states). Today only synthetic CLOSED evidence reaches it.

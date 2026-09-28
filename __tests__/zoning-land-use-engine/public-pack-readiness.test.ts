@@ -110,7 +110,7 @@ describe("response mapping from the server's loaded pack", () => {
       },
       definitionHistory: "NOT_PROVEN_COMPLETE",
       versionValidity: "UNKNOWN",
-      amendmentIndex: { captureDate: "2026-09-15", indexSha256: "7a0093b8378147a53144a57d29857bf7c73b24cf4d0ac8052afca1677beeb83c", currency: "CHECKED_THROUGH_INDEX_CAPTURE_ONLY" },
+      amendmentIndex: { captureDate: "2026-09-28", indexSha256: "3481f17b6d8df77716cd6645f08d05afd7be35d34239ea6ede4988ba382a1b01", currency: "CHECKED_THROUGH_INDEX_CAPTURE_ONLY" },
       withheldValues: [{ factId: "r1-1-requirement-002", what: "Schedule J §8.1.1 cash-in-lieu rate", gateId: "SCHEDULE_J_SOURCE_IDENTITY" }],
       openGates: M.openGates.map((g) => ({ gateId: g.gateId, description: g.description })),
       meaning: expect.stringContaining("does not change the decision status"),
